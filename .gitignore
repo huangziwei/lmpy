@@ -1,6 +1,8 @@
 __pycache__/
 .DS_Store
 dev/
+example/data/
+example/.*
 
 # Distribution / packaging
 .Python

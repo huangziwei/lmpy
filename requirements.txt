@@ -1,5 +1,7 @@
 numpy
 scipy
-sklearn
-matplotlib
 pandas
+polars
+pyarrow
+formulaic
+matplotlib

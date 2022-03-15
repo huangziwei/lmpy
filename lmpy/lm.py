@@ -664,7 +664,7 @@ def data(name, package='R', save_to='./data', overwrite=False):
     
     import urllib.request
     import os
-    import pandas as pd
+    import polars as pl
     
     datapath = save_to + f'/{package}/'
     
@@ -681,5 +681,5 @@ def data(name, package='R', save_to='./data', overwrite=False):
         url = f'https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}.csv'
         urllib.request.urlretrieve(url, datapath + f'{name}.csv')
         
-    df = pd.read_csv(datapath + f'{name}.csv')
+    df = pl.read_csv(datapath + f'{name}.csv', null_values='NA').to_pandas()
     return df
