@@ -7,7 +7,7 @@ from scipy.linalg import lu, cholesky, solve_triangular
 from scipy.stats import norm, t, f
 from scipy.optimize import minimize
 
-__all__ = ['lm']
+__all__ = ['lm', 'data']
 
 class lm:
     
@@ -646,3 +646,27 @@ def significance_code(p_values):
             sig.append(' ')
             
     return sig
+
+def data(name, package='R', save_to='./data', overwrite=False):
+    
+    import urllib.request
+    import os
+    import pandas as pd
+    
+    datapath = save_to + f'/{package}/'
+    
+    if not os.path.exists(save_to):
+        os.makedirs(save_to)
+        
+    if not os.path.exists(datapath):
+        os.makedirs(datapath)
+        
+    if os.path.exists(datapath + f'{name}.csv') is True and overwrite is False:
+        pass
+    else:
+        print(f'Downloading {name} (from {package})...')
+        url = f'https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}.csv'
+        urllib.request.urlretrieve(url, datapath + f'{name}.csv')
+        
+    df = pd.read_csv(datapath + f'{name}.csv')
+    return df
