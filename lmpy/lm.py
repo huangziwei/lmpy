@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from formulaic import model_matrix
 
-from scipy.linalg import lu, cholesky, solve_triangular
+from scipy.linalg import qr, lu, cholesky, solve_triangular
 from scipy.stats import norm, t, f
 from scipy.optimize import minimize
 
@@ -574,9 +575,9 @@ def _qr(X: np.array,
     QR decomposition.
     """
     
-    Q, R = scipy.linalg.qr(X, mode='economic')
+    Q, R = qr(X, mode='economic')
     f = Q.T @ y
-    b = scipy.linalg.solve_triangular(R, f)
+    b = solve_triangular(R, f)
 
     if return_ss:
         XtX = X.T @ X
@@ -628,6 +629,18 @@ def _sse(X, y):
 #########
 # Utils #
 #########
+
+def AIC(*ms):
+    
+    aic = [m.AIC for m in ms]
+    df = [m.p + 1 for m in ms]
+    formuli = [m.formula for m in ms]
+    
+    df = pd.DataFrame(np.vstack([formuli, df, aic]).T, 
+            columns=['formula', 'df', 'AIC']).set_index('formula')
+    
+    return df
+
 
 def significance_code(p_values):
     

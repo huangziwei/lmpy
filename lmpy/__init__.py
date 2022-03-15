@@ -1,1 +1,1 @@
-from .lm import lm, data
+from .lm import lm, data, AIC
