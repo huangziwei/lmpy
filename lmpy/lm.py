@@ -311,8 +311,8 @@ class lm:
         # https://stackoverflow.com/q/37917437
         return -2 * self.loglike + np.log(self.n) * (self.p + 1)
     
-    def predict(self, Xnew=None, interval=None, alpha=0.05):
-        return self.compute_yhat(Xnew=Xnew, interval=interval, alpha=alpha)
+    def predict(self, new=None, interval=None, alpha=0.05):
+        return self.compute_yhat(Xnew=new, interval=interval, alpha=alpha)
     
     def summary(self, digits=3, cor=False):
         
@@ -326,6 +326,8 @@ class lm:
         self.results = res
         
         docstring += res.to_string()
+        docstring += '\n---'
+        docstring += "\nSignif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
         
         docstring += f'\n\nn = {self.n}, p = {self.p}, Residual SE = {np.sqrt(self.sigma_squared):.3f} on {self.df_residuals} DF\n'
         docstring += f'R-Squared = {self.r_squared:.4f}, adjusted R-Squared = {self.r_squared_adjusted:.4f}\n'
@@ -636,11 +638,53 @@ def AIC(*ms):
     df = [m.p + 1 for m in ms]
     formuli = [m.formula for m in ms]
     
-    df = pd.DataFrame(np.vstack([formuli, df, aic]).T, 
-            columns=['formula', 'df', 'AIC']).set_index('formula')
+    df = pd.DataFrame.from_dict({
+        'formula': formuli,
+        'df': df,
+        'AIC': aic
+    }).set_index('formula')
     
-    return df
+    print(df.to_string(formatters={"AIC": "{:.2f}".format}))
 
+def anova(m0, m1):
+    
+    models = [m0, m1]
+    
+    docstring = 'Analysis of Variance Table\n\n'
+    for i, model in enumerate(models):
+        docstring += f"model {i}: {model.formula}\n"
+        
+    df0 = m0.df_residuals
+    df1 = m1.df_residuals
+    
+    
+    rss0 = m0.rss
+    rss1 = m1.rss
+    
+    fstat = ((rss0 - rss1)/(df0-df1))/(rss1/df1)
+    f_p_value = f.sf(fstat, df0-df1, df1)
+    res = significance_code([f_p_value])[0]
+    
+    
+    df_model = ['', f'{df0-df1:.0f}']
+    SoS = ['', f'{np.sum((m1.yhat.values - m1.y.values.mean())**2):.3f}']
+
+    
+    
+    df = pd.DataFrame.from_dict({
+        'Res.Df': [df0, df1],
+        'RSS': [rss0, rss1],
+        'Df': df_model,
+        'Sum of Sq': SoS,
+        'F': ['', f'{fstat:.3f}'],
+        'Pr(>F)': ['', f'{f_p_value:.3f}'],
+        ' ': ['', res],
+    })
+
+    print(docstring)
+    print(df.to_string(formatters={'RSS': '{:.3f}'.format}))
+    print('---')
+    print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
 
 def significance_code(p_values):
     
