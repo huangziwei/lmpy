@@ -40,6 +40,8 @@ __all__ = [
     "expand",
     "deparse",
     "materialize",
+    "materialize_bars",
+    "ReTerms",
 ]
 
 
@@ -574,7 +576,16 @@ class ExpandedFormula:
 
 
 def _is_bar(node) -> bool:
+    if isinstance(node, BinOp) and node.op in ("|", "||"):
+        return True
     return isinstance(node, Paren) and isinstance(node.expr, BinOp) and node.expr.op in ("|", "||")
+
+
+def _bar_node(node) -> BinOp:
+    """Return the underlying BinOp from a bar (stripping a possible Paren)."""
+    if isinstance(node, Paren):
+        return node.expr
+    return node
 
 
 def _split_additive(node) -> list[tuple[int, object]]:
@@ -714,8 +725,7 @@ def _collect_bars(node) -> list[BinOp]:
 
     def walk(n):
         if _is_bar(n):
-            assert isinstance(n, Paren) and isinstance(n.expr, BinOp)
-            bars.append(n.expr)
+            bars.append(_bar_node(n))
             return
         if isinstance(n, BinOp) and n.op in ("+", "-"):
             walk(n.left)
@@ -942,8 +952,14 @@ def _factor_from_series(series: pd.Series, label: str, ordered_hint: bool = Fals
             ordered=bool(cat.ordered) or ordered_hint,
             label=label,
         )
-    # Object / string — R's factor() uses locale-aware sort(unique(x)).
-    levels = sorted(series.dropna().unique().tolist(), key=_factor_sort_key)
+    # R's factor() uses locale-aware sort(unique(x)) on strings, but numeric
+    # columns sort numerically (factor() first coerces to character and R's
+    # sort on numerics is numeric when the input was numeric).
+    uniq = series.dropna().unique().tolist()
+    if pd.api.types.is_numeric_dtype(series):
+        levels = sorted(uniq)
+    else:
+        levels = sorted(uniq, key=_factor_sort_key)
     code_map = {lv: i for i, lv in enumerate(levels)}
     codes = np.array([code_map.get(v, -1) for v in series], dtype=int)
     return _FactorBlock(codes=codes, levels=levels, ordered=ordered_hint, label=label)
@@ -1111,6 +1127,20 @@ def _eval_call(call: Call, data: pd.DataFrame):
             new_codes = np.array([code_map.get(v, -1) for v in s], dtype=int)
             blk = _FactorBlock(codes=new_codes, levels=lvls, ordered=True, label=label)
         return blk
+
+    if fn == "dummy":
+        # lme4's dummy(f, level) → 0/1 indicator for `f == level`.
+        src = call.args[0]
+        s = _series(data, src.ident) if isinstance(src, Name) else pd.Series(_eval_numeric(src, data))
+        level_node = call.args[1] if len(call.args) >= 2 else call.kwargs.get("level")
+        if isinstance(level_node, Literal):
+            level = level_node.value
+        elif isinstance(level_node, Name):
+            level = level_node.ident
+        else:
+            raise TypeError("dummy(): second arg must be a literal level")
+        values = (s.to_numpy() == level).astype(float).reshape(-1, 1)
+        return _NumBlock(values=values, suffixes=[""], label=label)
 
     if fn == "relevel":
         # relevel(f, ref) — move `ref` to position 0.
@@ -1722,3 +1752,275 @@ def materialize(expanded: ExpandedFormula, data: pd.DataFrame) -> pd.DataFrame:
     for b in blocks:
         all_names.extend(b.suffixes)
     return pd.DataFrame(all_values, columns=all_names, index=data.index)
+
+
+# ---------------------------------------------------------------------------
+# lme4 random-effect bars → Z, Λᵀ template, θ
+# ---------------------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class ReTerms:
+    """Materialized random-effect side of a mixed-effects formula.
+
+    Matches the layout lme4 produces internally:
+      * ``Z``        — ``(n, q)`` dense RE design matrix.
+      * ``Lambdat``  — ``(q, q)`` integer template; each nonzero's value is a
+        1-indexed θ position so callers can fill in real parameters later.
+      * ``theta``    — ``(n_theta,)`` initial θ (identity: 1 on the diagonal
+        of each per-level Cholesky factor, 0 off-diagonal).
+      * ``flist_names`` / ``flist_levels`` / ``cnms`` / ``Gp`` — bookkeeping
+        that mirrors lme4's ``reTrms`` fields for downstream consumers.
+    """
+    Z: np.ndarray
+    Lambdat: np.ndarray
+    theta: np.ndarray
+    flist_names: list[str]
+    flist_levels: dict[str, list]
+    cnms: dict[str, object]
+    Gp: list[int]
+
+
+def _bar_lhs_to_ef(lhs_node) -> ExpandedFormula:
+    """Treat a bar's LHS as the RHS of a fake formula and expand it."""
+    return expand(Formula(lhs=None, rhs=lhs_node))
+
+
+def _materialize_re_lhs(lhs_ef: ExpandedFormula, data: pd.DataFrame) -> tuple[np.ndarray, list[str]]:
+    """Materialize a bar's LHS as a dense (n, c) matrix + component names.
+
+    Uses the same code path as the fixed-effect materializer: contrast-coded
+    factors, Khatri–Rao for interactions, promote1 for hole-filling.
+    """
+    blocks: list[_NumBlock] = []
+    running_terms: list[Term] = []
+    if lhs_ef.intercept:
+        blocks.append(_encode_term(_EMPTY_TERM, data, running_terms, lhs_ef.intercept))
+        running_terms.append(_EMPTY_TERM)
+    for t in lhs_ef.terms:
+        blocks.append(_encode_term(t, data, running_terms, lhs_ef.intercept))
+        running_terms.append(t)
+    if not blocks:
+        return np.zeros((len(data), 0)), []
+    values = np.hstack([b.values for b in blocks])
+    names: list[str] = []
+    for b in blocks:
+        names.extend(b.suffixes)
+    return values, names
+
+
+def _flatten_nested_group(node) -> list:
+    """Expand ``a/b`` in a bar's RHS. ``a/b`` → ``[a, b:a]`` (lme4 names the
+    interaction child:parent). Deeper chains ``a/b/c`` recurse the same way.
+    """
+    if isinstance(node, Paren):
+        return _flatten_nested_group(node.expr)
+    if isinstance(node, BinOp) and node.op == "/":
+        left = _flatten_nested_group(node.left)
+        right = _flatten_nested_group(node.right)
+        out = list(left)
+        # Every level on the right nests under the deepest existing level.
+        for r in right:
+            out.append(BinOp(op=":", left=r, right=out[-1]))
+        return out
+    return [node]
+
+
+def _eval_group(node, data: pd.DataFrame) -> tuple[np.ndarray, list, str]:
+    """Resolve a bar's grouping expression → (codes, levels, label)."""
+    if isinstance(node, Paren):
+        return _eval_group(node.expr, data)
+    if isinstance(node, Name):
+        s = _series(data, node.ident)
+        fb = _factor_from_series(s, label=node.ident)
+        return fb.codes, fb.levels, node.ident
+    if isinstance(node, BinOp) and node.op == ":":
+        lc, lv, ln = _eval_group(node.left, data)
+        rc, rv, rn = _eval_group(node.right, data)
+        label = f"{ln}:{rn}"
+        n = len(lc)
+        # Sort pairs by (l_code, r_code) — since lv and rv are already in
+        # canonical order, this gives lex order on level identities.
+        seen: set[tuple[int, int]] = set()
+        for i in range(n):
+            if lc[i] >= 0 and rc[i] >= 0:
+                seen.add((int(lc[i]), int(rc[i])))
+        ordered = sorted(seen)
+        pair_to_idx = {p: i for i, p in enumerate(ordered)}
+        codes = np.array([
+            pair_to_idx.get((int(lc[i]), int(rc[i])), -1) if lc[i] >= 0 and rc[i] >= 0 else -1
+            for i in range(n)
+        ], dtype=int)
+        levels = [f"{lv[a]}:{rv[b]}" for a, b in ordered]
+        return codes, levels, label
+    if isinstance(node, Call):
+        blk = _eval_atom(node, data)
+        if isinstance(blk, _FactorBlock):
+            return blk.codes, blk.levels, _deparse(node)
+    # Fallback: evaluate as numeric then factor-ize.
+    try:
+        v = _eval_numeric(node, data)
+        s = pd.Series(v)
+        fb = _factor_from_series(s, label=_deparse(node))
+        return fb.codes, fb.levels, _deparse(node)
+    except Exception as e:
+        raise TypeError(f"can't resolve grouping {_deparse(node)!r}: {e}") from e
+
+
+def materialize_bars(expanded: ExpandedFormula, data: pd.DataFrame) -> ReTerms:
+    """Build lme4's Z / Λᵀ template / θ from the bars of an expanded formula.
+
+    Matches lme4's conventions: bars with nested groupings ``a/b`` split into
+    ``(lhs|a) + (lhs|b:a)``; ``(lhs||g)`` splits into independent scalar bars
+    per LHS column; final bar order is stable-sorted by descending number of
+    grouping-factor levels. θ is initialized to the identity Cholesky factor.
+    """
+    referenced: set[str] = set()
+    for t in expanded.terms:
+        for a in t.atoms:
+            _collect_names(a, referenced)
+    for b in expanded.bars:
+        _collect_names(b, referenced)
+    for o in expanded.offsets:
+        _collect_names(o, referenced)
+    referenced &= set(data.columns)
+    if referenced:
+        keep = ~data[list(referenced)].isna().any(axis=1)
+        data = data.loc[keep]
+    n = len(data)
+
+    # Normalize each parsed bar into (lhs_matrix, cnames, group_codes,
+    # group_levels, group_label). For `||` split LHS into scalar bars; for
+    # nested `a/b` split group into [a, b:a].
+    @dataclass
+    class _SimpleBar:
+        Z_lhs: np.ndarray         # (n, c)
+        cnames: list[str]         # component names (length c)
+        g_codes: np.ndarray       # (n,) int codes into g_levels
+        g_levels: list
+        g_label: str
+
+    simple: list[_SimpleBar] = []
+    for bar in expanded.bars:
+        if not (isinstance(bar, BinOp) and bar.op in ("|", "||")):
+            continue
+        lhs_node = bar.left
+        group_nodes = _flatten_nested_group(bar.right)
+        is_double = bar.op == "||"
+        lhs_ef = _bar_lhs_to_ef(lhs_node)
+        if is_double:
+            # Split LHS: intercept (if any) as one scalar bar, each term as
+            # another (with intercept=False so it stays a single component).
+            lhs_parts: list[ExpandedFormula] = []
+            if lhs_ef.intercept:
+                lhs_parts.append(ExpandedFormula(
+                    intercept=True, terms=[], bars=[], offsets=[],
+                ))
+            for t in lhs_ef.terms:
+                lhs_parts.append(ExpandedFormula(
+                    intercept=False, terms=[t], bars=[], offsets=[],
+                ))
+        else:
+            lhs_parts = [lhs_ef]
+        for g_node in group_nodes:
+            g_codes, g_levels, g_label = _eval_group(g_node, data)
+            for lef in lhs_parts:
+                Z_lhs, cnames = _materialize_re_lhs(lef, data)
+                if Z_lhs.shape[1] == 0:
+                    continue
+                simple.append(_SimpleBar(
+                    Z_lhs=Z_lhs, cnames=cnames,
+                    g_codes=g_codes, g_levels=g_levels, g_label=g_label,
+                ))
+
+    # Sort by descending #levels of the grouping factor (stable).
+    simple.sort(key=lambda sb: -len(sb.g_levels))
+
+    # Build Z, Lambdat, theta per-bar.
+    Z_blocks: list[np.ndarray] = []
+    Lt_sizes: list[int] = []        # per-bar q contribution
+    Lt_templates: list[np.ndarray] = []  # per-bar full (k*c, k*c) template
+    theta_parts: list[np.ndarray] = []
+    theta_offset = 0
+
+    Gp = [0]
+    flist_names: list[str] = []
+    flist_levels: dict[str, list] = {}
+    cnms: dict[str, object] = {}
+
+    for sb in simple:
+        c = sb.Z_lhs.shape[1]
+        k = len(sb.g_levels)
+        n_theta_block = c * (c + 1) // 2
+
+        # Z: column = level * c + component
+        Zb = np.zeros((n, k * c))
+        valid = sb.g_codes >= 0
+        lvl = sb.g_codes[valid]
+        rows = np.where(valid)[0]
+        for comp in range(c):
+            Zb[rows, lvl * c + comp] = sb.Z_lhs[rows, comp]
+        Z_blocks.append(Zb)
+
+        # Per-level c×c upper-triangular template. lme4 stores Λ (lower) in
+        # column-major, so Λᵀ's upper triangle is filled row-by-row: θ[0] at
+        # (0,0), θ[1] at (0,1), θ[2] at (0,2), θ[3] at (1,1), θ[4] at (1,2),
+        # θ[5] at (2,2), ...
+        tmpl = np.zeros((c, c), dtype=int)
+        idx = 0
+        for i in range(c):
+            for j in range(i, c):
+                idx += 1
+                tmpl[i, j] = theta_offset + idx
+        Ltb = np.zeros((k * c, k * c), dtype=int)
+        for l in range(k):
+            Ltb[l*c:(l+1)*c, l*c:(l+1)*c] = tmpl
+        Lt_templates.append(Ltb)
+        Lt_sizes.append(k * c)
+
+        # Initial theta: identity Cholesky (1 on diag of Λ, 0 elsewhere).
+        theta_block = np.zeros(n_theta_block)
+        idx = 0
+        for i in range(c):
+            for j in range(i, c):
+                idx += 1
+                if i == j:
+                    theta_block[idx - 1] = 1.0
+        theta_parts.append(theta_block)
+
+        theta_offset += n_theta_block
+        Gp.append(Gp[-1] + k * c)
+
+        # flist / cnms bookkeeping.
+        gname = sb.g_label
+        if gname not in flist_names:
+            flist_names.append(gname)
+            flist_levels[gname] = list(sb.g_levels)
+        cnms_key = gname
+        # If this group appears in multiple bars, lme4 suffixes .1, .2, ...
+        suffix = 0
+        while cnms_key in cnms:
+            suffix += 1
+            cnms_key = f"{gname}.{suffix}"
+        cnms[cnms_key] = sb.cnames if c > 1 else sb.cnames[0]
+
+    q_total = sum(Lt_sizes)
+    if q_total == 0:
+        Z = np.zeros((n, 0))
+        Lambdat = np.zeros((0, 0), dtype=int)
+        theta = np.zeros(0)
+    else:
+        Z = np.hstack(Z_blocks)
+        Lambdat = np.zeros((q_total, q_total), dtype=int)
+        off = 0
+        for blk in Lt_templates:
+            s = blk.shape[0]
+            Lambdat[off:off+s, off:off+s] = blk
+            off += s
+        theta = np.concatenate(theta_parts)
+
+    return ReTerms(
+        Z=Z, Lambdat=Lambdat, theta=theta,
+        flist_names=flist_names, flist_levels=flist_levels,
+        cnms=cnms, Gp=Gp,
+    )
