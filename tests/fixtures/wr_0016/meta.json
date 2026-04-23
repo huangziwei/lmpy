@@ -1,0 +1,14 @@
+{
+  "id": "wr_0016",
+  "kind": "wr",
+  "formula": "breaks ~ wool * tension",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1.solutions",
+  "dataset": {
+    "pkg": "R",
+    "name": "warpbreaks"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.num_factor", "shared.response_shape.univariate"],
+  "need_vars": ["breaks", "wool", "tension"]
+}

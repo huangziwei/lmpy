@@ -1,0 +1,14 @@
+{
+  "id": "cur_0027",
+  "kind": "wr",
+  "formula": "Sepal.Length ~ poly(Petal.Length, 2) * Species",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "iris"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.poly_orth", "wr.transform.asis_factor", "wr.interaction.num_factor", "wr.interaction.transform_in_int", "shared.response_shape.univariate"],
+  "need_vars": ["Sepal.Length", "Petal.Length", "Species"]
+}

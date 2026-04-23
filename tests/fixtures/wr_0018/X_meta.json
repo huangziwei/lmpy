@@ -1,0 +1,8 @@
+{
+  "colnames": ["speed", "I(speed^2)"],
+  "assign": [1, 2],
+  "contrasts": null,
+  "term_labels": ["speed", "I(speed^2)"],
+  "intercept": false,
+  "response": 1
+}

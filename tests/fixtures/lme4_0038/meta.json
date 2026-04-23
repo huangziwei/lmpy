@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0038",
+  "kind": "lme4",
+  "formula": "cbind(incidence, size - incidence) ~ period + (1 | herd)",
+  "source_pkg": "lme4",
+  "source_fn": "glFormula",
+  "source_rd": "modular",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "cbpp"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.cbind", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["incidence", "size", "period", "herd"]
+}

@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "block", "N", "K"],
+  "assign": [0, 1, 2, 3],
+  "contrasts": null,
+  "term_labels": ["block", "N", "K"],
+  "intercept": true,
+  "response": 1
+}

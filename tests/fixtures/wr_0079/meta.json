@@ -1,0 +1,14 @@
+{
+  "id": "wr_0079",
+  "kind": "wr",
+  "formula": "effort ~ Type",
+  "source_pkg": "nlme",
+  "source_fn": "lme",
+  "source_rd": "ergoStool",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "ergoStool"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["effort", "Type"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "cur_0024",
+  "kind": "wr",
+  "formula": "Reaction ~ Days + offset(Days)",
+  "source_pkg": "lme4",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "sleepstudy"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "wr.transform.offset", "shared.response_shape.univariate"],
+  "need_vars": ["Reaction", "Days"]
+}

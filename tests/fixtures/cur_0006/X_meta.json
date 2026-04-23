@@ -1,0 +1,16 @@
+{
+  "colnames": ["(Intercept)", "C(Tree, contr.poly).L", "C(Tree, contr.poly).Q", "C(Tree, contr.poly).C", "C(Tree, contr.poly)^4", "age"],
+  "assign": [0, 1, 1, 1, 1, 2],
+  "contrasts": {
+    "C(Tree, contr.poly)": [
+      [-0.6325, 0.5345, -0.3162, 0.1195],
+      [-0.3162, -0.2673, 0.6325, -0.4781],
+      [-3.5108e-17, -0.5345, 1.7554e-16, 0.7171],
+      [0.3162, -0.2673, -0.6325, -0.4781],
+      [0.6325, 0.5345, 0.3162, 0.1195]
+    ]
+  },
+  "term_labels": ["C(Tree, contr.poly)", "age"],
+  "intercept": true,
+  "response": 1
+}

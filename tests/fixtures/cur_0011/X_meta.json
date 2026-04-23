@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "wt", "hp", "cyl", "wt:cyl", "hp:cyl"],
+  "assign": [0, 1, 2, 3, 4, 5],
+  "contrasts": null,
+  "term_labels": ["wt", "hp", "cyl", "wt:cyl", "hp:cyl"],
+  "intercept": true,
+  "response": 1
+}

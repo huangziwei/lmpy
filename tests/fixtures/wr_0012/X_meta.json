@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "x", "z"],
+  "assign": [0, 1, 2],
+  "contrasts": null,
+  "term_labels": ["x", "z"],
+  "intercept": true,
+  "response": 1
+}

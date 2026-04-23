@@ -1,0 +1,14 @@
+{
+  "id": "cur_0018",
+  "kind": "wr",
+  "formula": "mpg ~ exp(qsec/10)",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.transform.exp", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "qsec"]
+}

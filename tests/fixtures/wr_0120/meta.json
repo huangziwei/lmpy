@@ -1,0 +1,14 @@
+{
+  "id": "wr_0120",
+  "kind": "wr",
+  "formula": "~a + b",
+  "source_pkg": "stats",
+  "source_fn": "model.matrix",
+  "source_rd": "model.matrix",
+  "dataset": {
+    "pkg": "faraway",
+    "name": "speedo"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity"],
+  "need_vars": ["a", "b"]
+}

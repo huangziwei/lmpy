@@ -1,0 +1,14 @@
+{
+  "id": "wr_0003",
+  "kind": "wr",
+  "formula": "count ~ time.ipc + prop.partner",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "sperm.comp1"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["count", "time.ipc", "prop.partner"]
+}

@@ -1,0 +1,7 @@
+{
+  "colnames": ["(Intercept)", "ttt2b", "ttt2c", "ttt2d"],
+  "assign": [0, 1, 1, 1],
+  "contrasts": {
+    "ttt2": "contr.treatment"
+  }
+}

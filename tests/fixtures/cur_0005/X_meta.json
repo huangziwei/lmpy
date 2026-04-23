@@ -1,0 +1,14 @@
+{
+  "colnames": ["(Intercept)", "C(Species, contr.SAS)setosa", "C(Species, contr.SAS)versicolor"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "C(Species, contr.SAS)": [
+      [1, 0],
+      [0, 1],
+      [0, 0]
+    ]
+  },
+  "term_labels": "C(Species, contr.SAS)",
+  "intercept": true,
+  "response": 1
+}

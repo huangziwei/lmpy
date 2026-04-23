@@ -1,0 +1,17 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "cr.smooth.spec",
+      "label": "s(x)",
+      "term": "x",
+      "dim": 1,
+      "bs": 10,
+      "bs_dim": 10,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

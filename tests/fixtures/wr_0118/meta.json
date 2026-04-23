@@ -1,0 +1,14 @@
+{
+  "id": "wr_0118",
+  "kind": "wr",
+  "formula": "cbind(ncases, ncontrols) ~ agegp",
+  "source_pkg": "stats",
+  "source_fn": "model.frame",
+  "source_rd": "model.extract",
+  "dataset": {
+    "pkg": "R",
+    "name": "esoph"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.cbind"],
+  "need_vars": ["ncases", "ncontrols", "agegp"]
+}

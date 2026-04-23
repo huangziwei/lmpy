@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "Air.Flow", "Water.Temp", "Acid.Conc."],
+  "assign": [0, 1, 2, 3],
+  "contrasts": null,
+  "term_labels": ["Air.Flow", "Water.Temp", "Acid.Conc."],
+  "intercept": true,
+  "response": 1
+}

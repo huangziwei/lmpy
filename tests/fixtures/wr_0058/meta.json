@@ -1,0 +1,14 @@
+{
+  "id": "wr_0058",
+  "kind": "wr",
+  "formula": "cbind(Menarche, Total - Menarche) ~ Age",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "menarche",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "menarche"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.cbind"],
+  "need_vars": ["Menarche", "Total", "Age"]
+}

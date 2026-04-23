@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "Prewt", "TreatCont", "TreatFT"],
+  "assign": [0, 1, 2, 2],
+  "contrasts": {
+    "Treat": "contr.treatment"
+  },
+  "term_labels": ["Prewt", "Treat"],
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "age"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "age",
+  "intercept": true,
+  "response": 1
+}

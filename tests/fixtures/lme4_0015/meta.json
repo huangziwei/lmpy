@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0015",
+  "kind": "lme4",
+  "formula": "r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item)",
+  "source_pkg": "lme4",
+  "source_fn": "glmer",
+  "source_rd": "VerbAgg",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "VerbAgg"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.power", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.crossed_expand", "shared.response_shape.univariate", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.grouping.crossed", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["r2", "Anger", "Gender", "btype", "situ", "id", "item"]
+}

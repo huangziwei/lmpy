@@ -1,0 +1,14 @@
+{
+  "id": "wr_0119",
+  "kind": "wr",
+  "formula": "dist ~ speed",
+  "source_pkg": "stats",
+  "source_fn": "model.frame",
+  "source_rd": "model.frame",
+  "dataset": {
+    "pkg": "R",
+    "name": "cars"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": "speed"
+}

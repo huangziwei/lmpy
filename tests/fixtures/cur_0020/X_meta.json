@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "poly(wt, 2, raw = TRUE)1", "poly(wt, 2, raw = TRUE)2"],
+  "assign": [0, 1, 1],
+  "contrasts": null,
+  "term_labels": "poly(wt, 2, raw = TRUE)",
+  "intercept": true,
+  "response": 1
+}

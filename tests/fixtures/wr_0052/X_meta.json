@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "lbase", "trtprogabide", "lage", "V4", "lbase:trtprogabide"],
+  "assign": [0, 1, 2, 3, 4, 5],
+  "contrasts": {
+    "trt": "contr.treatment"
+  },
+  "term_labels": ["lbase", "trt", "lage", "V4", "lbase:trt"],
+  "intercept": true,
+  "response": 1
+}

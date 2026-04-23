@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "InsulBefore", "Temp", "InsulBefore:Temp"],
+  "assign": [0, 1, 2, 3],
+  "contrasts": {
+    "Insul": "contr.treatment"
+  },
+  "term_labels": ["Insul", "Temp", "Insul:Temp"],
+  "intercept": true,
+  "response": 1
+}

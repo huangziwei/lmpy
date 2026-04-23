@@ -1,0 +1,7 @@
+{
+  "colnames": ["(Intercept)", "factor(year)2005", "factor(year)2006", "prev"],
+  "assign": [0, 1, 1, 2],
+  "contrasts": {
+    "factor(year)": "contr.treatment"
+  }
+}

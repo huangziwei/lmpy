@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0130",
+  "kind": "mgcv",
+  "formula": "y ~ te(x, z, bs = c(\"tr\", \"tr\"), m = c(2, 2))",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "smooth.construct",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg2"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.constructor.te", "mgcv.mixing.smooth_only"],
+  "need_vars": ["y", "x", "z"]
+}

@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "grouptrt1", "grouptrt2"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "group": "contr.treatment"
+  },
+  "term_labels": "group",
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,14 @@
+{
+  "id": "cur_0055",
+  "kind": "mgcv",
+  "formula": "yield ~ Variety + s(nitro, by = Variety)",
+  "source_pkg": "nlme",
+  "source_fn": "gam",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Oats"
+  },
+  "features": ["mgcv.constructor.s_1d", "mgcv.bs.tp", "mgcv.modifier.by_factor", "mgcv.mixing.parametric_plus", "mgcv.mixing.smooth_only", "mgcv.mixing.by_with_main", "shared.response_shape.univariate"],
+  "need_vars": ["yield", "Variety", "nitro"]
+}

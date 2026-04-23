@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "relevel(Species, ref = \"virginica\")setosa", "relevel(Species, ref = \"virginica\")versicolor"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "relevel(Species, ref = \"virginica\")": "contr.treatment"
+  },
+  "term_labels": "relevel(Species, ref = \"virginica\")",
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "tree"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "tree",
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,14 @@
+{
+  "id": "cur_0050",
+  "kind": "lme4",
+  "formula": "strength ~ (1 | interaction(batch, cask))",
+  "source_pkg": "lme4",
+  "source_fn": "lmer",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "Pastes"
+  },
+  "features": ["lme4.re_spec.intercept_only", "lme4.grouping.interaction_col", "lme4.mixing.re_only", "lme4.edge_lme4.transform_group", "shared.response_shape.univariate"],
+  "need_vars": ["strength", "batch", "cask"]
+}

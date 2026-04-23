@@ -1,0 +1,29 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "cp.smooth.spec",
+      "label": "s(x)",
+      "term": "x",
+      "dim": 1,
+      "bs": 12,
+      "bs_dim": 12,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    },
+    {
+      "index": 2,
+      "class": "ps.smooth.spec",
+      "label": "s(z)",
+      "term": "z",
+      "dim": 1,
+      "bs": 13,
+      "bs_dim": 13,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

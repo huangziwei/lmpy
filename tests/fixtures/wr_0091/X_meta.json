@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "Speciesversicolor", "Speciesvirginica"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "Species": "contr.treatment"
+  },
+  "term_labels": "Species",
+  "intercept": true,
+  "response": 1
+}

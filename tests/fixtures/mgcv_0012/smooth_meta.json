@@ -1,0 +1,25 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "pl.smooth.spec",
+      "error": "smoothCon failed"
+    },
+    {
+      "index": 2,
+      "class": "pl.smooth.spec",
+      "error": "smoothCon failed"
+    },
+    {
+      "index": 3,
+      "class": "pl.smooth.spec",
+      "error": "smoothCon failed"
+    },
+    {
+      "index": 4,
+      "class": "pl.smooth.spec",
+      "error": "smoothCon failed"
+    }
+  ],
+  "parametric_rhs": "1"
+}

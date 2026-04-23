@@ -1,0 +1,17 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "tp.smooth.spec",
+      "label": "s(x,y)",
+      "term": ["x", "y"],
+      "dim": 2,
+      "bs": 100,
+      "bs_dim": 100,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

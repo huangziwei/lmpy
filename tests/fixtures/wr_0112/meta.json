@@ -1,0 +1,14 @@
+{
+  "id": "wr_0112",
+  "kind": "wr",
+  "formula": "x ~ 1",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "logLik",
+  "dataset": {
+    "pkg": "faraway",
+    "name": "cathedral"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X"],
+  "need_vars": "x"
+}

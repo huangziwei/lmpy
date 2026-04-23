@@ -1,0 +1,14 @@
+{
+  "colnames": ["(Intercept)", "C(wool, contr.sum)1", "tensionL", "tensionM", "C(wool, contr.sum)1:tensionL", "C(wool, contr.sum)1:tensionM"],
+  "assign": [0, 1, 2, 2, 3, 3],
+  "contrasts": {
+    "C(wool, contr.sum)": [
+      [1],
+      [-1]
+    ],
+    "tension": "contr.treatment"
+  },
+  "term_labels": ["C(wool, contr.sum)", "tension", "C(wool, contr.sum):tension"],
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,15 @@
+{
+  "flist_names": ["batch", "cask"],
+  "flist_levels": {
+    "batch": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"],
+    "cask": ["a", "b", "c"]
+  },
+  "cnms": {
+    "batch": "(Intercept)",
+    "cask": "(Intercept)"
+  },
+  "Gp": [0, 10, 13],
+  "nl": [10, 3],
+  "n": 60,
+  "q": 13
+}

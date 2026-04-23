@@ -1,0 +1,14 @@
+{
+  "id": "cur_0051",
+  "kind": "lme4",
+  "formula": "Reaction ~ Days + (Days || Subject) + (1 | Days)",
+  "source_pkg": "lme4",
+  "source_fn": "lmer",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "sleepstudy"
+  },
+  "features": ["lme4.re_spec.uncorr_slope", "lme4.re_spec.intercept_only", "lme4.grouping.crossed", "lme4.mixing.fe_plus_re", "lme4.mixing.slope_also_fe", "shared.response_shape.univariate"],
+  "need_vars": ["Reaction", "Days", "Subject"]
+}

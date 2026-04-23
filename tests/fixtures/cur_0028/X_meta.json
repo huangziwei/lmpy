@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "poly(Petal.Length, 2, raw = TRUE)1", "poly(Petal.Length, 2, raw = TRUE)2", "Speciesversicolor", "Speciesvirginica", "poly(Petal.Length, 2, raw = TRUE)1:Speciesversicolor", "poly(Petal.Length, 2, raw = TRUE)2:Speciesversicolor", "poly(Petal.Length, 2, raw = TRUE)1:Speciesvirginica", "poly(Petal.Length, 2, raw = TRUE)2:Speciesvirginica"],
+  "assign": [0, 1, 1, 2, 2, 3, 3, 3, 3],
+  "contrasts": {
+    "Species": "contr.treatment"
+  },
+  "term_labels": ["poly(Petal.Length, 2, raw = TRUE)", "Species", "poly(Petal.Length, 2, raw = TRUE):Species"],
+  "intercept": true,
+  "response": 1
+}

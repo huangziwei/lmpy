@@ -1,0 +1,14 @@
+{
+  "id": "wr_0117",
+  "kind": "wr",
+  "formula": "ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp",
+  "source_pkg": "stats",
+  "source_fn": "model.frame",
+  "source_rd": "model.extract",
+  "dataset": {
+    "pkg": "R",
+    "name": "esoph"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.transformed"],
+  "need_vars": ["ncases", "ncontrols", "agegp", "tobgp", "alcgp"]
+}

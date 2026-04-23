@@ -1,0 +1,14 @@
+{
+  "id": "wr_0142",
+  "kind": "wr",
+  "formula": "cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)",
+  "source_pkg": "stats",
+  "source_fn": "glm",
+  "source_rd": "zC",
+  "dataset": {
+    "pkg": "R",
+    "name": "esoph"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.contrast.C_wrapper", "wr.transform.identity", "shared.response_shape.cbind"],
+  "need_vars": ["ncases", "ncontrols", "agegp", "tobgp", "alcgp"]
+}

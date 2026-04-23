@@ -1,0 +1,14 @@
+{
+  "id": "wr_0127",
+  "kind": "wr",
+  "formula": "yield ~ N + K + Error(block/(N + K))",
+  "source_pkg": "stats",
+  "source_fn": "aov",
+  "source_rd": "se.contrast",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "npk"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.slash", "wr.transform.identity", "wr.interaction.nested", "shared.response_shape.univariate"],
+  "need_vars": ["yield", "N", "K", "block"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0182",
+  "kind": "mgcv",
+  "formula": "y ~ s(x0, x1, x2)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "vis.gam",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_iso_3d", "mgcv.mixing.smooth_only"],
+  "need_vars": ["y", "x0", "x1", "x2"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0018",
+  "kind": "wr",
+  "formula": "dist ~ speed + I(speed^2) - 1",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1.solutions",
+  "dataset": {
+    "pkg": "R",
+    "name": "cars"
+  },
+  "features": ["wr.intercept.minus_one", "wr.op.plus", "wr.transform.I_square", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": "speed"
+}

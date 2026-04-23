@@ -1,0 +1,14 @@
+{
+  "id": "wr_0080",
+  "kind": "wr",
+  "formula": "distance ~ age + Sex",
+  "source_pkg": "nlme",
+  "source_fn": "lme",
+  "source_rd": "fitted.lme",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Orthodont"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["distance", "age", "Sex"]
+}

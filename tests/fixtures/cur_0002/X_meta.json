@@ -1,0 +1,14 @@
+{
+  "colnames": ["(Intercept)", "C(Species, contr.sum)1", "C(Species, contr.sum)2"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "C(Species, contr.sum)": [
+      [1, 0],
+      [0, 1],
+      [-1, -1]
+    ]
+  },
+  "term_labels": "C(Species, contr.sum)",
+  "intercept": true,
+  "response": 1
+}

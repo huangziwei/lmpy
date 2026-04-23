@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "complaints", "privileges", "learning", "raises", "critical", "advance"],
+  "assign": [0, 1, 2, 3, 4, 5, 6],
+  "contrasts": null,
+  "term_labels": ["complaints", "privileges", "learning", "raises", "critical", "advance"],
+  "intercept": true,
+  "response": 1
+}

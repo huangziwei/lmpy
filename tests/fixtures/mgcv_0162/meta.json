@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0162",
+  "kind": "mgcv",
+  "formula": "y ~ s(x2) + s(fac, x2, bs = \"sz\") + s(x0)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "smooth.construct.sz.smooth.spec",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg4"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.bs.sz", "mgcv.constructor.s_iso_2d", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths"],
+  "need_vars": ["y", "x2", "fac", "x0"]
+}

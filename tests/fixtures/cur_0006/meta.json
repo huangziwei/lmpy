@@ -1,0 +1,14 @@
+{
+  "id": "cur_0006",
+  "kind": "wr",
+  "formula": "circumference ~ C(Tree, contr.poly) + age",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "Orange"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.contrast.poly", "wr.transform.asis_factor", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["circumference", "Tree", "age"]
+}

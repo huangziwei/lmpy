@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0042",
+  "kind": "lme4",
+  "formula": "Mate ~ (1 | Female) + (1 | Male) + Cross",
+  "source_pkg": "lme4",
+  "source_fn": "glmer",
+  "source_rd": "salamander",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "salamander"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.grouping.crossed", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["Mate", "Female", "Male", "Cross"]
+}

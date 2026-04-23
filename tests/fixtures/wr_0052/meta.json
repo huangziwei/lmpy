@@ -1,0 +1,14 @@
+{
+  "id": "wr_0052",
+  "kind": "wr",
+  "formula": "y ~ lbase * trt + lage + V4",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "epil",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "epil"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.num_factor", "shared.response_shape.univariate"],
+  "need_vars": ["y", "lbase", "trt", "lage", "V4"]
+}

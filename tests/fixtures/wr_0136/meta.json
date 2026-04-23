@@ -1,0 +1,14 @@
+{
+  "id": "wr_0136",
+  "kind": "wr",
+  "formula": "y ~ ns(x, 6) + z",
+  "source_pkg": "stats",
+  "source_fn": "glm",
+  "source_rd": "termplot",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "topo"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.ns", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x", "z"]
+}

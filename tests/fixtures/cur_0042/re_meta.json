@@ -1,0 +1,15 @@
+{
+  "flist_names": ["cask:batch", "batch"],
+  "flist_levels": {
+    "cask:batch": ["a:A", "a:B", "a:C", "a:D", "a:E", "a:F", "a:G", "a:H", "a:I", "a:J", "b:A", "b:B", "b:C", "b:D", "b:E", "b:F", "b:G", "b:H", "b:I", "b:J", "c:A", "c:B", "c:C", "c:D", "c:E", "c:F", "c:G", "c:H", "c:I", "c:J"],
+    "batch": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+  },
+  "cnms": {
+    "cask:batch": "(Intercept)",
+    "batch": "(Intercept)"
+  },
+  "Gp": [0, 30, 40],
+  "nl": [30, 10],
+  "n": 60,
+  "q": 40
+}

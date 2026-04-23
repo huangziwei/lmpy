@@ -1,0 +1,14 @@
+{
+  "id": "cur_0059",
+  "kind": "mgcv",
+  "formula": "y ~ s(x0, k = 3)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["mgcv.constructor.s_1d", "mgcv.bs.tp", "mgcv.modifier.k", "mgcv.mixing.smooth_only", "mgcv.edge_mgcv.low_k", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x0"]
+}

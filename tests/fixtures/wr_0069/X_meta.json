@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "day", "I(day^2)"],
+  "assign": [0, 1, 2],
+  "contrasts": null,
+  "term_labels": ["day", "I(day^2)"],
+  "intercept": true,
+  "response": 1
+}

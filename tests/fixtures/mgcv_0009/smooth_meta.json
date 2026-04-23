@@ -1,0 +1,17 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "tensor.smooth.spec",
+      "label": "te(Height,Girth)",
+      "term": ["Height", "Girth"],
+      "dim": 2,
+      "bs": null,
+      "bs_dim": null,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 2
+    }
+  ],
+  "parametric_rhs": "1"
+}

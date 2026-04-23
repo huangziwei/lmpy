@@ -1,0 +1,41 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "tp.smooth.spec",
+      "label": "s(x0)",
+      "term": "x0",
+      "dim": 1,
+      "bs": 4,
+      "bs_dim": 4,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 0
+    },
+    {
+      "index": 2,
+      "class": "tp.smooth.spec",
+      "label": "s(x1)",
+      "term": "x1",
+      "dim": 1,
+      "bs": 12,
+      "bs_dim": 12,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    },
+    {
+      "index": 3,
+      "class": "tp.smooth.spec",
+      "label": "s(x2)",
+      "term": "x2",
+      "dim": 1,
+      "bs": 15,
+      "bs_dim": 15,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

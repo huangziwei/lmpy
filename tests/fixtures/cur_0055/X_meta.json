@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "VarietyMarvellous", "VarietyVictory"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "Variety": "contr.treatment"
+  },
+  "parametric_rhs": "Variety"
+}

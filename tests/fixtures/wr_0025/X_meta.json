@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "Rail"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "Rail",
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,14 @@
+{
+  "id": "cur_0067",
+  "kind": "wr",
+  "formula": "height ~ weight + I(weight^2) + I(weight^3) + I(weight^4) + I(weight^5) + I(weight^6) + I(weight^7) + I(weight^8) + I(weight^9) + I(weight^10) + I(weight^11) + I(weight^12) + I(weight^13) + I(weight^14)",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "women"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "wr.transform.I_square", "shared.response_shape.univariate"],
+  "need_vars": ["height", "weight"]
+}

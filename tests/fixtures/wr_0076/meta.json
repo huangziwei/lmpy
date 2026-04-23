@@ -1,0 +1,14 @@
+{
+  "id": "wr_0076",
+  "kind": "wr",
+  "formula": "distance ~ Sex * I(age - 11)",
+  "source_pkg": "nlme",
+  "source_fn": "lme",
+  "source_rd": "anova.lme",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Orthodont"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.I_square", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.transform_in_int", "wr.interaction.num_factor", "shared.response_shape.univariate"],
+  "need_vars": ["distance", "Sex", "age"]
+}

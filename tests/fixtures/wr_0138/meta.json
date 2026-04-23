@@ -1,0 +1,14 @@
+{
+  "id": "wr_0138",
+  "kind": "wr",
+  "formula": "breaks ~ wool + tension",
+  "source_pkg": "stats",
+  "source_fn": "aov",
+  "source_rd": "TukeyHSD",
+  "dataset": {
+    "pkg": "R",
+    "name": "warpbreaks"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["breaks", "wool", "tension"]
+}

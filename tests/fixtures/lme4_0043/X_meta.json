@@ -1,0 +1,5 @@
+{
+  "colnames": ["(Intercept)", "TxDrug", "Week", "TxDrug:Week"],
+  "assign": [0, 1, 2, 3],
+  "contrasts": null
+}

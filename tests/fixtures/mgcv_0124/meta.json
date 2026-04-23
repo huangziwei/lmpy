@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0124",
+  "kind": "mgcv",
+  "formula": "travel ~ s(Rail, bs = \"re\")",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "random.effects",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Rail"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.re", "mgcv.constructor.s_1d", "mgcv.mixing.smooth_only", "mgcv.mixing.smooth_and_re"],
+  "need_vars": ["travel", "Rail"]
+}

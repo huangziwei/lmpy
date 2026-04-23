@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "poly(x, 5)1", "poly(x, 5)2", "poly(x, 5)3", "poly(x, 5)4", "poly(x, 5)5"],
+  "assign": [0, 1, 1, 1, 1, 1],
+  "contrasts": null,
+  "term_labels": "poly(x, 5)",
+  "intercept": true,
+  "response": 1
+}

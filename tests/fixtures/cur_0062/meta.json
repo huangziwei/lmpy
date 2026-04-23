@@ -1,0 +1,14 @@
+{
+  "id": "cur_0062",
+  "kind": "mgcv",
+  "formula": "y ~ te(x0)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["mgcv.constructor.te", "mgcv.bs.tp", "mgcv.mixing.smooth_only", "mgcv.edge_mgcv.te_one_var", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x0"]
+}

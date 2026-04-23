@@ -1,0 +1,14 @@
+{
+  "id": "wr_0141",
+  "kind": "wr",
+  "formula": "breaks ~ wool + C(tension, base = 2)",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "zC",
+  "dataset": {
+    "pkg": "R",
+    "name": "warpbreaks"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.contrast.C_wrapper", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["breaks", "wool", "tension"]
+}

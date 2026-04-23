@@ -1,0 +1,14 @@
+{
+  "id": "wr_0092",
+  "kind": "wr",
+  "formula": "Sepal.Width ~ Sepal.Length",
+  "source_pkg": "stats",
+  "source_fn": "model.frame",
+  "source_rd": "checkMFClasses",
+  "dataset": {
+    "pkg": "R",
+    "name": "iris"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["Sepal.Width", "Sepal.Length"]
+}

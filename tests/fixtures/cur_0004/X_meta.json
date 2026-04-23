@@ -1,0 +1,14 @@
+{
+  "colnames": ["(Intercept)", "C(Species, contr.poly).L", "C(Species, contr.poly).Q"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "C(Species, contr.poly)": [
+      [-0.7071, 0.4082],
+      [-7.8505e-17, -0.8165],
+      [0.7071, 0.4082]
+    ]
+  },
+  "term_labels": "C(Species, contr.poly)",
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0034",
+  "kind": "lme4",
+  "formula": "shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site)",
+  "source_pkg": "lme4",
+  "source_fn": "glmer",
+  "source_rd": "gopherdat2",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "gopherdat2"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.asis_factor", "wr.transform.identity", "shared.response_shape.univariate", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["shells", "year", "prev", "Area", "Site"]
+}

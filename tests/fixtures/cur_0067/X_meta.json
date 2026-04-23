@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "weight", "I(weight^2)", "I(weight^3)", "I(weight^4)", "I(weight^5)", "I(weight^6)", "I(weight^7)", "I(weight^8)", "I(weight^9)", "I(weight^10)", "I(weight^11)", "I(weight^12)", "I(weight^13)", "I(weight^14)"],
+  "assign": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+  "contrasts": null,
+  "term_labels": ["weight", "I(weight^2)", "I(weight^3)", "I(weight^4)", "I(weight^5)", "I(weight^6)", "I(weight^7)", "I(weight^8)", "I(weight^9)", "I(weight^10)", "I(weight^11)", "I(weight^12)", "I(weight^13)", "I(weight^14)"],
+  "intercept": true,
+  "response": 1
+}

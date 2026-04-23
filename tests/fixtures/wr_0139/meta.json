@@ -1,0 +1,14 @@
+{
+  "id": "wr_0139",
+  "kind": "wr",
+  "formula": "y ~ 1",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "var.test",
+  "dataset": {
+    "pkg": "faraway",
+    "name": "cathedral"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X"],
+  "need_vars": "y"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0094",
+  "kind": "wr",
+  "formula": "100/mpg ~ disp + hp + wt + am",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "confint",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity"],
+  "need_vars": ["mpg", "disp", "hp", "wt", "am"]
+}

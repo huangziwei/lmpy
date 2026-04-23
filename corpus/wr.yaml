@@ -1,0 +1,1944 @@
+meta:
+  generated_by: scripts/tag_corpus.R
+  generated_at: 2026-04-23 17:52:50 CEST
+  kind: wr
+  count: 142
+cases:
+- id: wr_0001
+  formula: stack.loss ~ .
+  source_pkg: faraway
+  source_fn: lm
+  source_rd: prplot
+  dataset_hint: prplot
+  executable: yes
+  features:
+  - wr.op.dot
+  - shared.response_shape.univariate
+  - wr.intercept.default
+  notes: ''
+- id: wr_0002
+  formula: y ~ x - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0003
+  formula: count ~ time.ipc + prop.partner
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0004
+  formula: count ~ time.ipc + I(prop.partner * time.ipc)
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.I_product
+  - wr.transform.identity
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0005
+  formula: count ~ prop.partner
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0006
+  formula: count ~ 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0007
+  formula: count ~ f.age + f.height + f.weight + m.age + m.height + m.weight + m.vol
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0008
+  formula: count ~ f.age + f.height + f.weight + m.height + m.weight + m.vol
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0009
+  formula: count ~ f.weight
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0010
+  formula: count ~ m.vol
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0011
+  formula: y ~ z
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0012
+  formula: y ~ x + z
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0013
+  formula: weight ~ group
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0014
+  formula: weight ~ 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1
+  dataset_hint: ch1
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0015
+  formula: loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2
+    * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3)
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1.solutions
+  dataset_hint: ch1.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.I_product
+  - wr.transform.I_square
+  - wr.transform.identity
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0016
+  formula: breaks ~ wool * tension
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1.solutions
+  dataset_hint: ch1.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0017
+  formula: dist ~ speed + I(speed^2)
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1.solutions
+  dataset_hint: ch1.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.I_square
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0018
+  formula: dist ~ speed + I(speed^2) - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1.solutions
+  dataset_hint: ch1.solutions
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.op.plus
+  - wr.transform.I_square
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0019
+  formula: dist ~ I(speed^2)
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1.solutions
+  dataset_hint: ch1.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.I_square
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0020
+  formula: InsectSprays$count ~ XZ - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1.solutions
+  dataset_hint: ch1.solutions
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  notes: ''
+- id: wr_0021
+  formula: z ~ EV$J - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch1.solutions
+  dataset_hint: ch1.solutions
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0022
+  formula: area ~ CO2 + tree
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0023
+  formula: area ~ CO2
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0024
+  formula: area ~ tree
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0025
+  formula: travel ~ Rail
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0026
+  formula: travel ~ 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0027
+  formula: score ~ Worker * Machine
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0028
+  formula: score ~ Worker + Machine
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0029
+  formula: score ~ 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0030
+  formula: rf ~ 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch3
+  dataset_hint: ch3
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0031
+  formula: z ~ WX - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch3.solutions
+  dataset_hint: ch3.solutions
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0032
+  formula: wear ~ X - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0033
+  formula: y ~ X - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0034
+  formula: y1 ~ X - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0035
+  formula: y ~ poly(x, 5)
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch4.solutions
+  dataset_hint: ch4.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.poly_orth
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0036
+  formula: y ~ poly(x, 10)
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch4.solutions
+  dataset_hint: ch4.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.poly_orth
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0037
+  formula: z ~ X - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch5.solutions
+  dataset_hint: ch5.solutions
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0038
+  formula: mcycle$accel ~ sm$X - 1
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch7
+  dataset_hint: ch7
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  notes: ''
+- id: wr_0039
+  formula: accel ~ poly(times, 11)
+  source_pkg: gamair
+  source_fn: lm
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.poly_orth
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0040
+  formula: Claims ~ District + Group + Age + offset(log(Holders))
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: Insurance
+  dataset_hint: Insurance
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0041
+  formula: L75 ~ Noise/Age
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: OME
+  dataset_hint: OME
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.slash
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.nested
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0042
+  formula: L75 ~ Noise/(Age + OME)
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: OME
+  dataset_hint: OME
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.slash
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.nested
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0043
+  formula: Freq ~ Infl * Type * Cont + Sat
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: addterm
+  dataset_hint: addterm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.three_way
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0044
+  formula: y ~ trt * week
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: bacteria
+  dataset_hint: bacteria
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0045
+  formula: y ~ trt + week
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: bacteria
+  dataset_hint: bacteria
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0046
+  formula: y ~ trt + I(week > 2)
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: bacteria
+  dataset_hint: bacteria
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.I_square
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0047
+  formula: stemp ~ -1 + sX
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: beav1
+  dataset_hint: beav1
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0048
+  formula: low ~ .
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: birthwt
+  dataset_hint: birthwt
+  executable: yes
+  features:
+  - wr.op.dot
+  - shared.response_shape.univariate
+  - wr.intercept.default
+  notes: ''
+- id: wr_0049
+  formula: y ~ x1 + x2 + x3 + x4
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: cement
+  dataset_hint: cement
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0050
+  formula: SF ~ sex + ldose - 1
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: dose.p
+  dataset_hint: dose.p
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0051
+  formula: cbind(y, n - y) ~ P * A + V
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: eagles
+  dataset_hint: eagles
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.cbind
+  notes: ''
+- id: wr_0052
+  formula: y ~ lbase * trt + lage + V4
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: epil
+  dataset_hint: epil
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0053
+  formula: y ~ pred + factor(subject) + offset(log(time))
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: epil
+  dataset_hint: epil
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.asis_factor
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0054
+  formula: lot1 ~ log(u)
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: gamma.shape.glm
+  dataset_hint: gamma.shape.glm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.log
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0055
+  formula: Days + 0.1 ~ Age * Eth * Sex * Lrn
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: gamma.shape.glm
+  dataset_hint: gamma.shape.glm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.three_way
+  - wr.interaction.four_way
+  - wr.interaction.num_factor
+  notes: ''
+- id: wr_0056
+  formula: y ~ lag1 + lag2 + lag3
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: glm.nb
+  dataset_hint: glm.nb
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0057
+  formula: Days ~ .^2
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: loglm
+  dataset_hint: loglm
+  executable: yes
+  features:
+  - wr.op.dot
+  - wr.op.power
+  - wr.interaction.crossed_expand
+  - shared.response_shape.univariate
+  - wr.intercept.default
+  notes: ''
+- id: wr_0058
+  formula: cbind(Menarche, Total - Menarche) ~ Age
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: menarche
+  dataset_hint: menarche
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  notes: ''
+- id: wr_0059
+  formula: Days ~ .^4
+  source_pkg: MASS
+  source_fn: glm
+  source_rd: negative.binomial
+  dataset_hint: negative.binomial
+  executable: yes
+  features:
+  - wr.op.dot
+  - wr.op.power
+  - wr.interaction.crossed_expand
+  - shared.response_shape.univariate
+  - wr.intercept.default
+  notes: ''
+- id: wr_0060
+  formula: log10(perf) ~ .
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: stepAIC
+  dataset_hint: stepAIC
+  executable: yes
+  features:
+  - wr.op.dot
+  - shared.response_shape.transformed
+  - wr.intercept.default
+  notes: ''
+- id: wr_0061
+  formula: Gas ~ Temp
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: whiteside
+  dataset_hint: whiteside
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0062
+  formula: Gas ~ Insul/Temp - 1
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: whiteside
+  dataset_hint: whiteside
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.op.plus
+  - wr.op.slash
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.nested
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0063
+  formula: Gas ~ Insul/(Temp + I(Temp^2)) - 1
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: whiteside
+  dataset_hint: whiteside
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.op.plus
+  - wr.op.slash
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.transform_in_int
+  - wr.interaction.nested
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0064
+  formula: Gas ~ Insul + Temp
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: whiteside
+  dataset_hint: whiteside
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0065
+  formula: Gas ~ Insul * Temp
+  source_pkg: MASS
+  source_fn: lm
+  source_rd: whiteside
+  dataset_hint: whiteside
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0066
+  formula: follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time)
+  source_pkg: nlme
+  source_fn: gls
+  source_rd: ACF.gls
+  dataset_hint: ACF.gls
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.sin_cos
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0067
+  formula: rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB
+  source_pkg: nlme
+  source_fn: gls
+  source_rd: ACF.gls
+  dataset_hint: ACF.gls
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.I_square
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.transform_in_int
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0068
+  formula: follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time)
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: ACF.lme
+  dataset_hint: ACF.lme
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.sin_cos
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0069
+  formula: pixel ~ day + I(day^2)
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: Pixel
+  dataset_hint: Pixel
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.I_square
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0070
+  formula: distance ~ age
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: VarCorr
+  dataset_hint: VarCorr
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0071
+  formula: weight ~ Time * Diet
+  source_pkg: nlme
+  source_fn: gls
+  source_rd: Variogram.gls
+  dataset_hint: Variogram.gls
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0072
+  formula: weight ~ Time * Diet
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: Variogram.lme
+  dataset_hint: Variogram.lme
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0073
+  formula: distance ~ Sex * I(age - 11)
+  source_pkg: nlme
+  source_fn: gls
+  source_rd: anova.gls
+  dataset_hint: anova.gls
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.I_square
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.transform_in_int
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0074
+  formula: rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: anova.gls
+  dataset_hint: anova.gls
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.I_square
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.transform_in_int
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0075
+  formula: yield ~ variety - 1
+  source_pkg: nlme
+  source_fn: gls
+  source_rd: anova.gls
+  dataset_hint: anova.gls
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0076
+  formula: distance ~ Sex * I(age - 11)
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: anova.lme
+  dataset_hint: anova.lme
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.I_square
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.transform_in_int
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0077
+  formula: distance ~ age * Sex
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: comparePred
+  dataset_hint: comparePred
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0078
+  formula: A + B + C + w ~ 1
+  source_pkg: nlme
+  source_fn: nlme
+  source_rd: corAR1
+  dataset_hint: corAR1
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0079
+  formula: effort ~ Type
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: ergoStool
+  dataset_hint: ergoStool
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0080
+  formula: distance ~ age + Sex
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: fitted.lme
+  dataset_hint: fitted.lme
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0081
+  formula: pixel ~ day + day^2
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: getGroups.lme
+  dataset_hint: getGroups.lme
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0082
+  formula: distance ~ Sex * age
+  source_pkg: nlme
+  source_fn: lme
+  source_rd: logLik.lme
+  dataset_hint: logLik.lme
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0083
+  formula: Asym + R0 + lrc ~ 1
+  source_pkg: nlme
+  source_fn: nlme
+  source_rd: nlme
+  dataset_hint: nlme
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0084
+  formula: Fertility ~ .
+  source_pkg: stats
+  source_fn: lm
+  source_rd: add1
+  dataset_hint: add1
+  executable: yes
+  features:
+  - wr.op.dot
+  - shared.response_shape.univariate
+  - wr.intercept.default
+  notes: ''
+- id: wr_0085
+  formula: yield ~ block + N * P * K
+  source_pkg: stats
+  source_fn: aov
+  source_rd: alias
+  dataset_hint: alias
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.three_way
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0086
+  formula: sr ~ .
+  source_pkg: stats
+  source_fn: lm
+  source_rd: anova.lm
+  dataset_hint: anova.lm
+  executable: yes
+  features:
+  - wr.op.dot
+  - shared.response_shape.univariate
+  - wr.intercept.default
+  notes: ''
+- id: wr_0087
+  formula: sr ~ 1
+  source_pkg: stats
+  source_fn: lm
+  source_rd: anova.lm
+  dataset_hint: anova.lm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0088
+  formula: yield ~ block + N * P + K
+  source_pkg: stats
+  source_fn: aov
+  source_rd: aov
+  dataset_hint: aov
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0089
+  formula: yield ~ N * P * K + Error(block)
+  source_pkg: stats
+  source_fn: aov
+  source_rd: aov
+  dataset_hint: aov
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.three_way
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0090
+  formula: y ~ x + I(x^2) + I(x^3) + I((x - 10)^2)
+  source_pkg: stats
+  source_fn: lm
+  source_rd: case.names
+  dataset_hint: case.names
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.power3
+  - wr.transform.I_square
+  - wr.transform.identity
+  - wr.interaction.crossed_expand
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0091
+  formula: Sepal.Width ~ Species
+  source_pkg: stats
+  source_fn: model.frame
+  source_rd: checkMFClasses
+  dataset_hint: checkMFClasses
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0092
+  formula: Sepal.Width ~ Sepal.Length
+  source_pkg: stats
+  source_fn: model.frame
+  source_rd: checkMFClasses
+  dataset_hint: checkMFClasses
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0093
+  formula: c(1:3, 7, 6) ~ x
+  source_pkg: stats
+  source_fn: lm
+  source_rd: coef
+  dataset_hint: coef
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.transformed
+  notes: ''
+- id: wr_0094
+  formula: 100/mpg ~ disp + hp + wt + am
+  source_pkg: stats
+  source_fn: lm
+  source_rd: confint
+  dataset_hint: confint
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  notes: ''
+- id: wr_0095
+  formula: counts ~ outcome + treatment
+  source_pkg: stats
+  source_fn: glm
+  source_rd: confint
+  dataset_hint: confint
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0096
+  formula: Yield ~ A * B * C + Error(Block)
+  source_pkg: stats
+  source_fn: aov
+  source_rd: eff.aovlist
+  dataset_hint: eff.aovlist
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.three_way
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0097
+  formula: y ~ x
+  source_pkg: stats
+  source_fn: lm
+  source_rd: effects
+  dataset_hint: effects
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0098
+  formula: y + 10 ~ I(x - 3.8)
+  source_pkg: stats
+  source_fn: lm
+  source_rd: effects
+  dataset_hint: effects
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.I_square
+  notes: ''
+- id: wr_0099
+  formula: log(Volume) ~ log(Girth) + log(Height)
+  source_pkg: stats
+  source_fn: lm
+  source_rd: expand.model.frame
+  dataset_hint: expand.model.frame
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.log
+  - shared.response_shape.transformed
+  notes: ''
+- id: wr_0100
+  formula: y ~ x
+  source_pkg: stats
+  source_fn: glm
+  source_rd: expand.model.frame
+  dataset_hint: expand.model.frame
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0101
+  formula: Postwt ~ Prewt + Treat + offset(Prewt)
+  source_pkg: stats
+  source_fn: glm
+  source_rd: glm
+  dataset_hint: glm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0102
+  formula: lot1 ~ log(u)
+  source_pkg: stats
+  source_fn: glm
+  source_rd: glm
+  dataset_hint: glm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.log
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0103
+  formula: lot2 ~ log(u)
+  source_pkg: stats
+  source_fn: glm
+  source_rd: glm
+  dataset_hint: glm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.log
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0104
+  formula: lot2 ~ log(u) + log(u^2)
+  source_pkg: stats
+  source_fn: glm
+  source_rd: glm
+  dataset_hint: glm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.log
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0105
+  formula: sr ~ pop15 + pop75 + dpi + ddpi
+  source_pkg: stats
+  source_fn: lm
+  source_rd: influence.measures
+  dataset_hint: influence.measures
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0106
+  formula: yh ~ xh
+  source_pkg: stats
+  source_fn: lm
+  source_rd: influence.measures
+  dataset_hint: influence.measures
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0107
+  formula: cbind(yi, mi - yi) ~ xi
+  source_pkg: stats
+  source_fn: glm
+  source_rd: influence.measures
+  dataset_hint: influence.measures
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  notes: ''
+- id: wr_0108
+  formula: y ~ 0
+  source_pkg: stats
+  source_fn: lm
+  source_rd: is.empty
+  dataset_hint: is.empty
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0109
+  formula: weight ~ group
+  source_pkg: stats
+  source_fn: lm
+  source_rd: lm
+  dataset_hint: lm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0110
+  formula: weight ~ group - 1
+  source_pkg: stats
+  source_fn: lm
+  source_rd: lm
+  dataset_hint: lm
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0111
+  formula: y ~ X - 1
+  source_pkg: stats
+  source_fn: lm
+  source_rd: lmfit
+  dataset_hint: lmfit
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0112
+  formula: x ~ 1
+  source_pkg: stats
+  source_fn: lm
+  source_rd: logLik
+  dataset_hint: logLik
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0113
+  formula: rating ~ .
+  source_pkg: stats
+  source_fn: lm
+  source_rd: logLik
+  dataset_hint: logLik
+  executable: yes
+  features:
+  - wr.op.dot
+  - shared.response_shape.univariate
+  - wr.intercept.default
+  notes: ''
+- id: wr_0114
+  formula: distance ~ Sex * age
+  source_pkg: stats
+  source_fn: lm
+  source_rd: logLik
+  dataset_hint: logLik
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0115
+  formula: weight ~ poly(height, 2)
+  source_pkg: stats
+  source_fn: lm
+  source_rd: makepredictcall
+  dataset_hint: makepredictcall
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.poly_orth
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0116
+  formula: cbind(ncases, ncontrols) ~ agegp + tobgp + alcgp
+  source_pkg: stats
+  source_fn: model.frame
+  source_rd: model.extract
+  dataset_hint: model.extract
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  notes: ''
+- id: wr_0117
+  formula: ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp
+  source_pkg: stats
+  source_fn: model.frame
+  source_rd: model.extract
+  dataset_hint: model.extract
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.transformed
+  notes: ''
+- id: wr_0118
+  formula: cbind(ncases, ncontrols) ~ agegp
+  source_pkg: stats
+  source_fn: model.frame
+  source_rd: model.extract
+  dataset_hint: model.extract
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  notes: ''
+- id: wr_0119
+  formula: dist ~ speed
+  source_pkg: stats
+  source_fn: model.frame
+  source_rd: model.frame
+  dataset_hint: model.frame
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0120
+  formula: ~a + b
+  source_pkg: stats
+  source_fn: model.matrix
+  source_rd: model.matrix
+  dataset_hint: model.matrix
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  notes: ''
+- id: wr_0121
+  formula: extra ~ group
+  source_pkg: stats
+  source_fn: lm
+  source_rd: oneway.test
+  dataset_hint: oneway.test
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0122
+  formula: long.var.name.1 ~ long.var.name.2 + long.var.name.3 + long.var.name.4 +
+    long.var.name.5
+  source_pkg: stats
+  source_fn: lm
+  source_rd: plot.lm
+  dataset_hint: plot.lm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0123
+  formula: counts ~ outcome * treatment
+  source_pkg: stats
+  source_fn: glm
+  source_rd: plot.profile
+  dataset_hint: plot.profile
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0124
+  formula: SF ~ sex * ldose
+  source_pkg: stats
+  source_fn: glm
+  source_rd: predict.glm
+  dataset_hint: predict.glm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0125
+  formula: breaks ~ wool + tension
+  source_pkg: stats
+  source_fn: lm
+  source_rd: relevel
+  dataset_hint: relevel
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0126
+  formula: yield ~ block + N + K
+  source_pkg: stats
+  source_fn: aov
+  source_rd: se.contrast
+  dataset_hint: se.contrast
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0127
+  formula: yield ~ N + K + Error(block/(N + K))
+  source_pkg: stats
+  source_fn: aov
+  source_rd: se.contrast
+  dataset_hint: se.contrast
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.slash
+  - wr.transform.identity
+  - wr.interaction.nested
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0128
+  formula: score ~ A * B
+  source_pkg: stats
+  source_fn: aov
+  source_rd: se.contrast
+  dataset_hint: se.contrast
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0129
+  formula: Yield ~ A + B * C + Error(Block)
+  source_pkg: stats
+  source_fn: aov
+  source_rd: se.contrast
+  dataset_hint: se.contrast
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0130
+  formula: x ~ z
+  source_pkg: stats
+  source_fn: lm
+  source_rd: selfStart
+  dataset_hint: selfStart
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0131
+  formula: yb1 ~ x
+  source_pkg: stats
+  source_fn: glm
+  source_rd: simulate
+  dataset_hint: simulate
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0132
+  formula: yb2 ~ x2
+  source_pkg: stats
+  source_fn: glm
+  source_rd: simulate
+  dataset_hint: simulate
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0133
+  formula: reacttime ~ 1
+  source_pkg: stats
+  source_fn: lm
+  source_rd: SSD
+  dataset_hint: SSD
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0134
+  formula: y ~ N * P
+  source_pkg: stats
+  source_fn: aov
+  source_rd: summary.aov
+  dataset_hint: summary.aov
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0135
+  formula: weight ~ group + I(group != "Ctl")
+  source_pkg: stats
+  source_fn: lm
+  source_rd: summary.lm
+  dataset_hint: summary.lm
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.I_square
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0136
+  formula: y ~ ns(x, 6) + z
+  source_pkg: stats
+  source_fn: glm
+  source_rd: termplot
+  dataset_hint: termplot
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.ns
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0137
+  formula: log(time) ~ log(climb) + log(dist)
+  source_pkg: stats
+  source_fn: lm
+  source_rd: termplot
+  dataset_hint: termplot
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.log
+  - shared.response_shape.transformed
+  notes: ''
+- id: wr_0138
+  formula: breaks ~ wool + tension
+  source_pkg: stats
+  source_fn: aov
+  source_rd: TukeyHSD
+  dataset_hint: TukeyHSD
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0139
+  formula: y ~ 1
+  source_pkg: stats
+  source_fn: lm
+  source_rd: var.test
+  dataset_hint: var.test
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  notes: ''
+- id: wr_0140
+  formula: breaks ~ wool + tens + tension
+  source_pkg: stats
+  source_fn: aov
+  source_rd: zC
+  dataset_hint: zC
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0141
+  formula: breaks ~ wool + C(tension, base = 2)
+  source_pkg: stats
+  source_fn: lm
+  source_rd: zC
+  dataset_hint: zC
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.contrast.C_wrapper
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: wr_0142
+  formula: cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)
+  source_pkg: stats
+  source_fn: glm
+  source_rd: zC
+  dataset_hint: zC
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.contrast.C_wrapper
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  notes: ''

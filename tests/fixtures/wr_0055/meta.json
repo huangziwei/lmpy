@@ -1,0 +1,14 @@
+{
+  "id": "wr_0055",
+  "kind": "wr",
+  "formula": "Days + 0.1 ~ Age * Eth * Sex * Lrn",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "gamma.shape.glm",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "quine"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.three_way", "wr.interaction.four_way", "wr.interaction.num_factor"],
+  "need_vars": ["Days", "Age", "Eth", "Sex", "Lrn"]
+}

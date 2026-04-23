@@ -1,0 +1,17 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "tp.smooth.spec",
+      "label": "s(Height,Girth)",
+      "term": ["Height", "Girth"],
+      "dim": 2,
+      "bs": 25,
+      "bs_dim": 25,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

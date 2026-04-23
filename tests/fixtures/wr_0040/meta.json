@@ -1,0 +1,14 @@
+{
+  "id": "wr_0040",
+  "kind": "wr",
+  "formula": "Claims ~ District + Group + Age + offset(log(Holders))",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "Insurance",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "Insurance"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["Claims", "District", "Group", "Age", "Holders"]
+}

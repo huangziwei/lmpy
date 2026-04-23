@@ -1,0 +1,14 @@
+{
+  "id": "wr_0063",
+  "kind": "wr",
+  "formula": "Gas ~ Insul/(Temp + I(Temp^2)) - 1",
+  "source_pkg": "MASS",
+  "source_fn": "lm",
+  "source_rd": "whiteside",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "whiteside"
+  },
+  "features": ["wr.intercept.minus_one", "wr.op.plus", "wr.op.slash", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.transform_in_int", "wr.interaction.nested", "shared.response_shape.univariate"],
+  "need_vars": ["Gas", "Insul", "Temp"]
+}

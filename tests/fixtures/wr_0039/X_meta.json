@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "poly(times, 11)1", "poly(times, 11)2", "poly(times, 11)3", "poly(times, 11)4", "poly(times, 11)5", "poly(times, 11)6", "poly(times, 11)7", "poly(times, 11)8", "poly(times, 11)9", "poly(times, 11)10", "poly(times, 11)11"],
+  "assign": [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  "contrasts": null,
+  "term_labels": "poly(times, 11)",
+  "intercept": true,
+  "response": 1
+}

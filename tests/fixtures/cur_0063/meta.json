@@ -1,0 +1,14 @@
+{
+  "id": "cur_0063",
+  "kind": "mgcv",
+  "formula": "uptake ~ s(Plant, bs = \"re\")",
+  "source_pkg": "R",
+  "source_fn": "gam",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "CO2"
+  },
+  "features": ["mgcv.constructor.s_1d", "mgcv.bs.re", "mgcv.mixing.smooth_only", "mgcv.edge_mgcv.smooth_of_ordered", "shared.response_shape.univariate"],
+  "need_vars": ["uptake", "Plant"]
+}

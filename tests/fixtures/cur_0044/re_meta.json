@@ -1,0 +1,15 @@
+{
+  "flist_names": ["sample", "batch"],
+  "flist_levels": {
+    "sample": ["A:a", "A:b", "A:c", "B:a", "B:b", "B:c", "C:a", "C:b", "C:c", "D:a", "D:b", "D:c", "E:a", "E:b", "E:c", "F:a", "F:b", "F:c", "G:a", "G:b", "G:c", "H:a", "H:b", "H:c", "I:a", "I:b", "I:c", "J:a", "J:b", "J:c"],
+    "batch": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+  },
+  "cnms": {
+    "sample": "(Intercept)",
+    "batch": "(Intercept)"
+  },
+  "Gp": [0, 30, 40],
+  "nl": [30, 10],
+  "n": 60,
+  "q": 40
+}

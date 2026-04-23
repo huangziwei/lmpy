@@ -1,0 +1,14 @@
+{
+  "colnames": ["(Intercept)", "C(Species, contr.helmert)1", "C(Species, contr.helmert)2"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "C(Species, contr.helmert)": [
+      [-1, -1],
+      [1, -1],
+      [0, 2]
+    ]
+  },
+  "term_labels": "C(Species, contr.helmert)",
+  "intercept": true,
+  "response": 1
+}

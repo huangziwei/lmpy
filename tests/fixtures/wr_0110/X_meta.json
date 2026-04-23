@@ -1,0 +1,10 @@
+{
+  "colnames": ["groupctrl", "grouptrt1", "grouptrt2"],
+  "assign": [1, 1, 1],
+  "contrasts": {
+    "group": "contr.treatment"
+  },
+  "term_labels": "group",
+  "intercept": false,
+  "response": 1
+}

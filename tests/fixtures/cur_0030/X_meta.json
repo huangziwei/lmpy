@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "wt", "hp:I(wt^2)"],
+  "assign": [0, 1, 2],
+  "contrasts": null,
+  "term_labels": ["wt", "hp:I(wt^2)"],
+  "intercept": true,
+  "response": 1
+}

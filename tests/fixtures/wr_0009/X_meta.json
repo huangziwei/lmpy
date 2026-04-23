@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "f.weight"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "f.weight",
+  "intercept": true,
+  "response": 1
+}

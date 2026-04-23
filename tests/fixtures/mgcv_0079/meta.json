@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0079",
+  "kind": "mgcv",
+  "formula": "y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2)) + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "gam.models",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg4"
+  },
+  "features": ["wr.intercept.minus_one", "shared.response_shape.univariate", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.modifier.by_factor", "mgcv.mixing.parametric_plus", "mgcv.mixing.two_smooths"],
+  "need_vars": ["y", "x2", "fac", "x0"]
+}

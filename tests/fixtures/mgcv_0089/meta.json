@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0089",
+  "kind": "mgcv",
+  "formula": "y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "gam.side",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg2"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.constructor.ti_decomp", "mgcv.constructor.te", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths"],
+  "need_vars": ["y", "x", "z"]
+}

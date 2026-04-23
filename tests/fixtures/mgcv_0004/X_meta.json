@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "MachineB", "MachineC"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "Machine": "contr.treatment"
+  },
+  "parametric_rhs": "Machine"
+}

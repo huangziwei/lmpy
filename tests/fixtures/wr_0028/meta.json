@@ -1,0 +1,14 @@
+{
+  "id": "wr_0028",
+  "kind": "wr",
+  "formula": "score ~ Worker + Machine",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch2",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Machines"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["score", "Worker", "Machine"]
+}

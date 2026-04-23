@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "Worker", "MachineB", "MachineC", "Worker:MachineB", "Worker:MachineC"],
+  "assign": [0, 1, 2, 2, 3, 3],
+  "contrasts": {
+    "Machine": "contr.treatment"
+  },
+  "term_labels": ["Worker", "Machine", "Worker:Machine"],
+  "intercept": true,
+  "response": 1
+}

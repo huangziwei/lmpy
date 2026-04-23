@@ -1,0 +1,10 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "cs.smooth.spec",
+      "error": "smoothCon failed"
+    }
+  ],
+  "parametric_rhs": "1"
+}

@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "bs(wt)1", "bs(wt)2", "bs(wt)3"],
+  "assign": [0, 1, 1, 1],
+  "contrasts": null,
+  "term_labels": "bs(wt)",
+  "intercept": true,
+  "response": 1
+}

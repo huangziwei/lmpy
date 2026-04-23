@@ -1,0 +1,14 @@
+{
+  "id": "cur_0015",
+  "kind": "wr",
+  "formula": "Sepal.Length ~ 0 + C(Species, contr.treatment)",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "iris"
+  },
+  "features": ["wr.intercept.leading_zero", "wr.op.plus", "wr.contrast.treatment", "wr.transform.asis_factor", "shared.response_shape.univariate"],
+  "need_vars": ["Sepal.Length", "Species"]
+}

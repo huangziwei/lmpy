@@ -1,0 +1,14 @@
+{
+  "id": "wr_0115",
+  "kind": "wr",
+  "formula": "weight ~ poly(height, 2)",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "makepredictcall",
+  "dataset": {
+    "pkg": "R",
+    "name": "women"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.poly_orth", "shared.response_shape.univariate"],
+  "need_vars": ["weight", "height"]
+}

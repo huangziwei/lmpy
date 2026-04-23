@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0013",
+  "kind": "lme4",
+  "formula": "diameter ~ (1 | plate) + (1 | sample)",
+  "source_pkg": "lme4",
+  "source_fn": "lmer",
+  "source_rd": "Penicillin",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "Penicillin"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.grouping.crossed", "lme4.mixing.re_only"],
+  "need_vars": ["diameter", "plate"]
+}

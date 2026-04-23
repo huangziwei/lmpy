@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0016",
+  "kind": "mgcv",
+  "formula": "accel ~ s(times, k = 11, fx = TRUE)",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch7.solutions",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "mcycle"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.modifier.k", "mgcv.mixing.smooth_only"],
+  "need_vars": ["accel", "times"]
+}

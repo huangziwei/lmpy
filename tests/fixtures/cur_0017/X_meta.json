@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "log1p(hp)"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "log1p(hp)",
+  "intercept": true,
+  "response": 1
+}

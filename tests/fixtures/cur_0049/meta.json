@@ -1,0 +1,14 @@
+{
+  "id": "cur_0049",
+  "kind": "lme4",
+  "formula": "Yield ~ 1 + (1 | Batch)",
+  "source_pkg": "lme4",
+  "source_fn": "lmer",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "Dyestuff"
+  },
+  "features": ["lme4.intercept.only_intercept", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.mixing.re_only", "lme4.edge_lme4.singular_fit", "shared.response_shape.univariate"],
+  "need_vars": ["Yield", "Batch"]
+}

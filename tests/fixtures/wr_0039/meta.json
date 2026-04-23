@@ -1,0 +1,14 @@
+{
+  "id": "wr_0039",
+  "kind": "wr",
+  "formula": "accel ~ poly(times, 11)",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch7.solutions",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "mcycle"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.poly_orth", "shared.response_shape.univariate"],
+  "need_vars": ["accel", "times"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0044",
+  "kind": "lme4",
+  "formula": "outcome ~ time * treatment + (1 | patientID)",
+  "source_pkg": "lme4",
+  "source_fn": "glmer",
+  "source_rd": "toenail",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "toenail"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.num_factor", "shared.response_shape.univariate", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["outcome", "treatment", "patientID"]
+}

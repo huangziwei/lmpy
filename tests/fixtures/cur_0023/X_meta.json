@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "cut(wt, breaks = c(0, 3, 4, 6))(3,4]", "cut(wt, breaks = c(0, 3, 4, 6))(4,6]"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "cut(wt, breaks = c(0, 3, 4, 6))": "contr.treatment"
+  },
+  "term_labels": "cut(wt, breaks = c(0, 3, 4, 6))",
+  "intercept": true,
+  "response": 1
+}

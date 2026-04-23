@@ -1,0 +1,14 @@
+{
+  "id": "wr_0035",
+  "kind": "wr",
+  "formula": "y ~ poly(x, 5)",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch4.solutions",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "hubble"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.poly_orth", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x"]
+}

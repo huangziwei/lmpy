@@ -1,0 +1,13 @@
+{
+  "colnames": ["(Intercept)", "EthN", "SexM", "AgeF1", "AgeF2", "AgeF3", "LrnSL", "EthN:SexM", "EthN:AgeF1", "EthN:AgeF2", "EthN:AgeF3", "EthN:LrnSL", "SexM:AgeF1", "SexM:AgeF2", "SexM:AgeF3", "SexM:LrnSL", "AgeF1:LrnSL", "AgeF2:LrnSL", "AgeF3:LrnSL"],
+  "assign": [0, 1, 2, 3, 3, 3, 4, 5, 6, 6, 6, 7, 8, 8, 8, 9, 10, 10, 10],
+  "contrasts": {
+    "Eth": "contr.treatment",
+    "Sex": "contr.treatment",
+    "Age": "contr.treatment",
+    "Lrn": "contr.treatment"
+  },
+  "term_labels": ["Eth", "Sex", "Age", "Lrn", "Eth:Sex", "Eth:Age", "Eth:Lrn", "Sex:Age", "Sex:Lrn", "Age:Lrn"],
+  "intercept": true,
+  "response": 1
+}

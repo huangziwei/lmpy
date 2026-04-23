@@ -1,0 +1,5 @@
+{
+  "colnames": ["(Intercept)", "nitro"],
+  "assign": [0, 1],
+  "contrasts": null
+}

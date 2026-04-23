@@ -1,0 +1,3716 @@
+{
+  "generated_at": "2026-04-23 18:32:13 CEST",
+  "n_total": 400,
+  "n_ok": 302,
+  "n_no_data": 91,
+  "n_err": 7,
+  "entries": [
+    {
+      "id": "wr_0001",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/stackloss",
+      "rows": 21,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0002",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/hubble",
+      "rows": 24,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0003",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp1",
+      "rows": 15,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0004",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp1",
+      "rows": 15,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0005",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp1",
+      "rows": 15,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0006",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp1",
+      "rows": 15,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0007",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp2",
+      "rows": 15,
+      "cols_X": 8,
+      "enriched_tags": ["shared.var_type.integer", "shared.na_policy.omit", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0008",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp2",
+      "rows": 15,
+      "cols_X": 7,
+      "enriched_tags": ["shared.var_type.integer", "shared.na_policy.omit", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0009",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp2",
+      "rows": 22,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.na_policy.omit", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0010",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/sperm.comp2",
+      "rows": 15,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.na_policy.omit", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0011",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/topo",
+      "rows": 52,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0012",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/topo",
+      "rows": 52,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0013",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/PlantGrowth",
+      "rows": 30,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0014",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/mpg",
+      "rows": 205,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0015",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/Rubber",
+      "rows": 30,
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0016",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/warpbreaks",
+      "rows": 54,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0017",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/cars",
+      "rows": 50,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0018",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/cars",
+      "rows": 50,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0019",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/cars",
+      "rows": 50,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0020",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["InsectSprays", "count", "XZ"],
+      "formula": "InsectSprays$count ~ XZ - 1",
+      "source": "gamair::ch1.solutions"
+    },
+    {
+      "id": "wr_0021",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["z", "EV", "J"],
+      "formula": "z ~ EV$J - 1",
+      "source": "gamair::ch1.solutions"
+    },
+    {
+      "id": "wr_0022",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/stomata",
+      "rows": 24,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0023",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/stomata",
+      "rows": 24,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0024",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/stomata",
+      "rows": 24,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0025",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Rail",
+      "rows": 18,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0026",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Rail",
+      "rows": 18,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0027",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Machines",
+      "rows": 54,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0028",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Machines",
+      "rows": 54,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0029",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Machines",
+      "rows": 54,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0030",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": [],
+      "formula": "rf ~ 1",
+      "source": "gamair::ch3"
+    },
+    {
+      "id": "wr_0031",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["z", "WX"],
+      "formula": "z ~ WX - 1",
+      "source": "gamair::ch3.solutions"
+    },
+    {
+      "id": "wr_0032",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["wear", "X"],
+      "formula": "wear ~ X - 1",
+      "source": "gamair::ch4"
+    },
+    {
+      "id": "wr_0033",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["y", "X"],
+      "formula": "y ~ X - 1",
+      "source": "gamair::ch4"
+    },
+    {
+      "id": "wr_0034",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["y1", "X"],
+      "formula": "y1 ~ X - 1",
+      "source": "gamair::ch4"
+    },
+    {
+      "id": "wr_0035",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/hubble",
+      "rows": 24,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.matrix_column", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0036",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "gamair/hubble",
+      "rows": 24,
+      "cols_X": 11,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.matrix_column", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0037",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["z", "X"],
+      "formula": "z ~ X - 1",
+      "source": "gamair::ch5.solutions"
+    },
+    {
+      "id": "wr_0038",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["mcycle", "accel", "sm", "X"],
+      "formula": "mcycle$accel ~ sm$X - 1",
+      "source": "gamair::ch7"
+    },
+    {
+      "id": "wr_0039",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/mcycle",
+      "rows": 133,
+      "cols_X": 12,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.matrix_column", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0040",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/Insurance",
+      "rows": 64,
+      "cols_X": 8,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.numeric", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0041",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["L75", "Noise", "Age"],
+      "formula": "L75 ~ Noise/Age",
+      "source": "MASS::OME"
+    },
+    {
+      "id": "wr_0042",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["L75", "Noise", "Age", "OME"],
+      "formula": "L75 ~ Noise/(Age + OME)",
+      "source": "MASS::OME"
+    },
+    {
+      "id": "wr_0043",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/housing",
+      "rows": 72,
+      "cols_X": 26,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0044",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/bacteria",
+      "rows": 220,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0045",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/bacteria",
+      "rows": 220,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0046",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/bacteria",
+      "rows": 220,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.factor", "shared.var_type.logical", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0047",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["stemp", "sX"],
+      "formula": "stemp ~ -1 + sX",
+      "source": "MASS::beav1"
+    },
+    {
+      "id": "wr_0048",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/birthwt",
+      "rows": 189,
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0049",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/cement",
+      "rows": 13,
+      "cols_X": 5,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0050",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["SF", "sex", "ldose"],
+      "formula": "SF ~ sex + ldose - 1",
+      "source": "MASS::dose.p"
+    },
+    {
+      "id": "wr_0051",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/eagles",
+      "rows": 8,
+      "cols_X": 5,
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0052",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/epil",
+      "rows": 236,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0053",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["y", "pred", "subject"],
+      "formula": "y ~ pred + factor(subject) + offset(log(time))",
+      "source": "MASS::epil"
+    },
+    {
+      "id": "wr_0054",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["lot1", "u"],
+      "formula": "lot1 ~ log(u)",
+      "source": "MASS::gamma.shape.glm"
+    },
+    {
+      "id": "wr_0055",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/quine",
+      "rows": 146,
+      "cols_X": 32,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.two_level", "shared.rank.aliased_cols", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "wr_0056",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["y", "lag1", "lag2", "lag3"],
+      "formula": "y ~ lag1 + lag2 + lag3",
+      "source": "MASS::glm.nb"
+    },
+    {
+      "id": "wr_0057",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/quine",
+      "rows": 146,
+      "cols_X": 19,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.aliased_cols", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "wr_0058",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/menarche",
+      "rows": 25,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0059",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/quine",
+      "rows": 146,
+      "cols_X": 32,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.aliased_cols", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "wr_0060",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["perf", "."],
+      "formula": "log10(perf) ~ .",
+      "source": "MASS::stepAIC"
+    },
+    {
+      "id": "wr_0061",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/whiteside",
+      "rows": 56,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0062",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/whiteside",
+      "rows": 56,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0063",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/whiteside",
+      "rows": 56,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0064",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/whiteside",
+      "rows": 56,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0065",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/whiteside",
+      "rows": 56,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0066",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Ovary",
+      "rows": 308,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0067",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Dialyzer",
+      "rows": 140,
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0068",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Ovary",
+      "rows": 308,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0069",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Pixel",
+      "rows": 102,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0070",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0071",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/BodyWeight",
+      "rows": 176,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0072",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/BodyWeight",
+      "rows": 176,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0073",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0074",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Dialyzer",
+      "rows": 140,
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0075",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Wheat2",
+      "rows": 224,
+      "cols_X": 56,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0076",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0077",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0078",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["A", "B", "w"],
+      "formula": "A + B + C + w ~ 1",
+      "source": "nlme::corAR1"
+    },
+    {
+      "id": "wr_0079",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/ergoStool",
+      "rows": 36,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0080",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0081",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Pixel",
+      "rows": 102,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0082",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0083",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["Asym", "R0", "lrc"],
+      "formula": "Asym + R0 + lrc ~ 1",
+      "source": "nlme::nlme"
+    },
+    {
+      "id": "wr_0084",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/swiss",
+      "rows": 47,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0085",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/npk",
+      "rows": 24,
+      "cols_X": 9,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0086",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/savings",
+      "rows": 50,
+      "cols_X": 5,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0087",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/savings",
+      "rows": 50,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0088",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/npk",
+      "rows": 24,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0089",
+      "kind": "wr",
+      "status": "runtime_error",
+      "dataset": "MASS/npk",
+      "error": "could not find function \"Error\"",
+      "formula": "yield ~ N * P * K + Error(block)"
+    },
+    {
+      "id": "wr_0090",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/cathedral",
+      "rows": 25,
+      "cols_X": 5,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.aliased_cols"]
+    },
+    {
+      "id": "wr_0091",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0092",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0093",
+      "kind": "wr",
+      "status": "runtime_error",
+      "dataset": "faraway/cathedral",
+      "error": "variable lengths differ (found for 'x')",
+      "formula": "c(1:3, 7, 6) ~ x"
+    },
+    {
+      "id": "wr_0094",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 5,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0095",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["counts", "outcome", "treatment"],
+      "formula": "counts ~ outcome + treatment",
+      "source": "stats::confint"
+    },
+    {
+      "id": "wr_0096",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["Yield", "A", "B", "Block"],
+      "formula": "Yield ~ A * B * C + Error(Block)",
+      "source": "stats::eff.aovlist"
+    },
+    {
+      "id": "wr_0097",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/cathedral",
+      "rows": 25,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0098",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/cathedral",
+      "rows": 25,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0099",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "mgcv/trees",
+      "rows": 31,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0100",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/cathedral",
+      "rows": 25,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0101",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/anorexia",
+      "rows": 72,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0102",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["lot1", "u"],
+      "formula": "lot1 ~ log(u)",
+      "source": "stats::glm"
+    },
+    {
+      "id": "wr_0103",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["lot2", "u"],
+      "formula": "lot2 ~ log(u)",
+      "source": "stats::glm"
+    },
+    {
+      "id": "wr_0104",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["lot2", "u"],
+      "formula": "lot2 ~ log(u) + log(u^2)",
+      "source": "stats::glm"
+    },
+    {
+      "id": "wr_0105",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/savings",
+      "rows": 50,
+      "cols_X": 5,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0106",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["yh", "xh"],
+      "formula": "yh ~ xh",
+      "source": "stats::influence.measures"
+    },
+    {
+      "id": "wr_0107",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["yi", "mi", "xi"],
+      "formula": "cbind(yi, mi - yi) ~ xi",
+      "source": "stats::influence.measures"
+    },
+    {
+      "id": "wr_0108",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/cathedral",
+      "rows": 25,
+      "cols_X": 0,
+      "enriched_tags": "shared.var_type.integer"
+    },
+    {
+      "id": "wr_0109",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/PlantGrowth",
+      "rows": 30,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0110",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/PlantGrowth",
+      "rows": 30,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0111",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["y", "X"],
+      "formula": "y ~ X - 1",
+      "source": "stats::lmfit"
+    },
+    {
+      "id": "wr_0112",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/cathedral",
+      "rows": 25,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0113",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/attitude",
+      "rows": 30,
+      "cols_X": 7,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0114",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0115",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/women",
+      "rows": 15,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.matrix_column", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0116",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/esoph",
+      "rows": 88,
+      "cols_X": 12,
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0117",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/esoph",
+      "rows": 88,
+      "cols_X": 12,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0118",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/esoph",
+      "rows": 88,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0119",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/cars",
+      "rows": 50,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0120",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/speedo",
+      "rows": 16,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0121",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/sleep",
+      "rows": 20,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0122",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["long.var.name.1", "long.var.name.2", "long.var.name.3", "long.var.name.4", "long.var.name.5"],
+      "formula": "long.var.name.1 ~ long.var.name.2 + long.var.name.3 + long.var.name.4 + long.var.name.5",
+      "source": "stats::plot.lm"
+    },
+    {
+      "id": "wr_0123",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["counts", "outcome", "treatment"],
+      "formula": "counts ~ outcome * treatment",
+      "source": "stats::plot.profile"
+    },
+    {
+      "id": "wr_0124",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["SF", "sex", "ldose"],
+      "formula": "SF ~ sex * ldose",
+      "source": "stats::predict.glm"
+    },
+    {
+      "id": "wr_0125",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/warpbreaks",
+      "rows": 54,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0126",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/npk",
+      "rows": 24,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0127",
+      "kind": "wr",
+      "status": "runtime_error",
+      "dataset": "MASS/npk",
+      "error": "could not find function \"Error\"",
+      "formula": "yield ~ N + K + Error(block/(N + K))"
+    },
+    {
+      "id": "wr_0128",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["score", "A", "B"],
+      "formula": "score ~ A * B",
+      "source": "stats::se.contrast"
+    },
+    {
+      "id": "wr_0129",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["Yield", "A", "B", "Block"],
+      "formula": "Yield ~ A + B * C + Error(Block)",
+      "source": "stats::se.contrast"
+    },
+    {
+      "id": "wr_0130",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/topo",
+      "rows": 52,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0131",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["yb1", "x"],
+      "formula": "yb1 ~ x",
+      "source": "stats::simulate"
+    },
+    {
+      "id": "wr_0132",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["yb2", "x2"],
+      "formula": "yb2 ~ x2",
+      "source": "stats::simulate"
+    },
+    {
+      "id": "wr_0133",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": "reacttime",
+      "formula": "reacttime ~ 1",
+      "source": "stats::SSD"
+    },
+    {
+      "id": "wr_0134",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["y", "N", "P"],
+      "formula": "y ~ N * P",
+      "source": "stats::summary.aov"
+    },
+    {
+      "id": "wr_0135",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/PlantGrowth",
+      "rows": 30,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.logical", "shared.factor_cardinality.balanced_3_5", "shared.rank.aliased_cols"]
+    },
+    {
+      "id": "wr_0136",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/topo",
+      "rows": 52,
+      "cols_X": 8,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.matrix_column", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0137",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "MASS/hills",
+      "rows": 35,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0138",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/warpbreaks",
+      "rows": 54,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0139",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "faraway/cathedral",
+      "rows": 25,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0140",
+      "kind": "wr",
+      "status": "no_dataset",
+      "need_vars": ["breaks", "wool", "tens", "tension"],
+      "formula": "breaks ~ wool + tens + tension",
+      "source": "stats::zC"
+    },
+    {
+      "id": "wr_0141",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/warpbreaks",
+      "rows": 54,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "wr_0142",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/esoph",
+      "rows": 88,
+      "cols_X": 8,
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0007",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Dyestuff",
+      "rows": 30,
+      "cols_X": 1,
+      "q": 6,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0008",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 1,
+      "q": 40,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "lme4_0009",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 1,
+      "q": 40,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0010",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 1,
+      "q": 40,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0011",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 1,
+      "q": 40,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "lme4_0012",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 1,
+      "q": 13,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0013",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Penicillin",
+      "rows": 144,
+      "cols_X": 1,
+      "q": 30,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0014",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 2,
+      "q": 54,
+      "n_theta": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0015",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/VerbAgg",
+      "rows": 7584,
+      "cols_X": 15,
+      "q": 340,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.many_level", "shared.rank.full", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "lme4_0016",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cbpp",
+      "rows": 56,
+      "cols_X": 2,
+      "q": 15,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0017",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cake",
+      "rows": 270,
+      "cols_X": 6,
+      "q": 45,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0018",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cake",
+      "rows": 270,
+      "cols_X": 4,
+      "q": 45,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0019",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cake",
+      "rows": 270,
+      "cols_X": 4,
+      "q": 45,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0020",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cbpp",
+      "rows": 56,
+      "cols_X": 2,
+      "q": 15,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0021",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["incidence", "size", "period", "herd", "obs"],
+      "formula": "cbind(incidence, size - incidence) ~ period + (1 | herd) + (1 | obs)",
+      "source": "lme4::cbpp"
+    },
+    {
+      "id": "lme4_0022",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cbpp2",
+      "rows": 56,
+      "cols_X": 5,
+      "q": 15,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0023",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 36,
+      "n_theta": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0024",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 36,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0025",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/culcitalogreg",
+      "rows": 80,
+      "cols_X": 4,
+      "q": 10,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0026",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["tvol", "ttt2", "block"],
+      "formula": "tvol ~ ttt2 + (1 | block)",
+      "source": "lme4::culcitalvolume"
+    },
+    {
+      "id": "lme4_0027",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["propeaten", "ttt2", "block"],
+      "formula": "propeaten ~ ttt2 + (1 | block)",
+      "source": "lme4::culcitalvolume"
+    },
+    {
+      "id": "lme4_0028",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["tvol", "crab", "shrimp", "block"],
+      "formula": "tvol ~ crab * shrimp + (1 | block)",
+      "source": "lme4::culcitalvolume"
+    },
+    {
+      "id": "lme4_0029",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["propeaten", "crab", "shrimp", "block"],
+      "formula": "propeaten ~ crab * shrimp + (1 | block)",
+      "source": "lme4::culcitalvolume"
+    },
+    {
+      "id": "lme4_0030",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 2,
+      "q": 81,
+      "n_theta": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.var_type.matrix_column", "shared.factor_cardinality.many_level", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0031",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 36,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0032",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["Reaction", "Days", "Days2", "Subject"],
+      "formula": "Reaction ~ Days + Days2 + (1 | Subject)",
+      "source": "lme4::fixef"
+    },
+    {
+      "id": "lme4_0033",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 18,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0034",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/gopherdat2",
+      "rows": 30,
+      "cols_X": 4,
+      "q": 10,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.numeric", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0035",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["circumference", "age", "Asym", "xmid", "scal", "Tree"],
+      "formula": "circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym | Tree",
+      "source": "lme4::isREML"
+    },
+    {
+      "id": "lme4_0036",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["distance", "age", "Subject", "nsex", "nsexage"],
+      "formula": "distance ~ age + (age | Subject) + (0 + nsex | Subject) + (0 + nsexage | Subject)",
+      "source": "lme4::lmer"
+    },
+    {
+      "id": "lme4_0037",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 36,
+      "n_theta": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0038",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cbpp",
+      "rows": 56,
+      "cols_X": 2,
+      "q": 15,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0039",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 1,
+      "q": 18,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0040",
+      "kind": "lme4",
+      "status": "no_dataset",
+      "need_vars": ["y", "Animal ID"],
+      "formula": "y ~ 1 + (1 | `Animal ID`)",
+      "source": "lme4::predict.merMod"
+    },
+    {
+      "id": "lme4_0041",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "synthetic/seed_synth_singleton",
+      "rows": 100,
+      "cols_X": 2,
+      "q": 3,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.singleton", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0042",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/salamander",
+      "rows": 360,
+      "cols_X": 4,
+      "q": 120,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0043",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/schizophrenia",
+      "rows": 1603,
+      "cols_X": 4,
+      "q": 437,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "lme4_0044",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/toenail",
+      "rows": 1908,
+      "cols_X": 4,
+      "q": 294,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.factor", "shared.var_type.numeric", "shared.var_type.integer", "shared.factor_cardinality.two_level", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0002",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["region", "latitude"],
+      "formula": "T ~ region + s(time, k = 20, bs = \"cr\", by = region) + s(time, k = 40, bs = \"cr\", by = latitude)",
+      "source": "gamair::canWeather"
+    },
+    {
+      "id": "mgcv_0003",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "nlme/Machines",
+      "rows": 54,
+      "cols_X": 3,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0004",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "nlme/Machines",
+      "rows": 54,
+      "cols_X": 3,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0005",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/trees",
+      "rows": 31,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0006",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/trees",
+      "rows": 31,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0007",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/trees",
+      "rows": 31,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0008",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/trees",
+      "rows": 31,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0009",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/trees",
+      "rows": 31,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0010",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/trees",
+      "rows": 31,
+      "cols_X": 2,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0011",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["Volume", "Hclass", "Girth"],
+      "formula": "Volume ~ Hclass + s(Girth)",
+      "source": "gamair::ch4"
+    },
+    {
+      "id": "mgcv_0012",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0013",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "gamair/hubble",
+      "rows": 24,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0014",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "gamair/hubble",
+      "rows": 24,
+      "cols_X": 2,
+      "n_smooths": 0,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0015",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "MASS/mcycle",
+      "rows": 133,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0016",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "MASS/mcycle",
+      "rows": 133,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0017",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "MASS/mcycle",
+      "rows": 133,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0018",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "MASS/mcycle",
+      "rows": 133,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0019",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "times"],
+      "formula": "y ~ s(times, k = 40)",
+      "source": "gamair::ch7.solutions"
+    },
+    {
+      "id": "mgcv_0020",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "gamair/wine",
+      "rows": 38,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.na_policy.omit", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0021",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["dn", "n.lag", "pop"],
+      "formula": "dn ~ n.lag + pop + s(log(n.lag), by = n.lag) + s(log(pop), by = -pop) - 1",
+      "source": "gamair::ch7.solutions"
+    },
+    {
+      "id": "mgcv_0022",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["octane", "nm", "NIR"],
+      "formula": "octane ~ s(nm, by = NIR, k = 50)",
+      "source": "gamair::gas"
+    },
+    {
+      "id": "mgcv_0024",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["type", "MZ", "intensity"],
+      "formula": "type ~ s(MZ, by = intensity, k = 100)",
+      "source": "gamair::prostate"
+    },
+    {
+      "id": "mgcv_0026",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0027",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0028",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0029",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x0", "x2", "x1", "x4", "x3", "fac"],
+      "formula": "y ~ te(x0, x2, k = 5, bs = \"bs\", m = 1) + s(x1) + s(x4) + s(x3, fac, bs = \"fs\")",
+      "source": "mgcv::XWXd"
+    },
+    {
+      "id": "mgcv_0030",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0031",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0035",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["yb", "x0", "x1", "x2", "x3"],
+      "formula": "yb ~ s(x0) + s(x1) + s(x2) + s(x3)",
+      "source": "mgcv::bcg"
+    },
+    {
+      "id": "mgcv_0036",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0037",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["rsd", "x0"],
+      "formula": "rsd ~ s(x0, k = 40, bs = \"cs\")",
+      "source": "mgcv::choose.k"
+    },
+    {
+      "id": "mgcv_0038",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["rsd", "x1"],
+      "formula": "rsd ~ s(x1, k = 40, bs = \"cs\")",
+      "source": "mgcv::choose.k"
+    },
+    {
+      "id": "mgcv_0039",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["rsd", "x2"],
+      "formula": "rsd ~ s(x2, k = 40, bs = \"cs\")",
+      "source": "mgcv::choose.k"
+    },
+    {
+      "id": "mgcv_0040",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["rsd", "x3"],
+      "formula": "rsd ~ s(x3, k = 40, bs = \"cs\")",
+      "source": "mgcv::choose.k"
+    },
+    {
+      "id": "mgcv_0041",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0042",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0043",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["rsd", "x1", "x2"],
+      "formula": "rsd ~ s(x1, x2, k = 100, bs = \"ts\")",
+      "source": "mgcv::choose.k"
+    },
+    {
+      "id": "mgcv_0044",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0045",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["rsd", "x1", "x2"],
+      "formula": "rsd ~ te(x1, x2, k = 10, bs = \"cs\")",
+      "source": "mgcv::choose.k"
+    },
+    {
+      "id": "mgcv_0046",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0047",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0048",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0049",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0050",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["logt", "age", "sex", "nodes", "perfor", "rx", "obstruct", "adhere"],
+      "formula": "logt ~ s(age, by = sex) + sex + s(nodes) + perfor + rx + obstruct + adhere",
+      "source": "mgcv::clog"
+    },
+    {
+      "id": "mgcv_0051",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["yt", "x0", "x1", "x2", "x3"],
+      "formula": "yt ~ s(x0) + s(x1) + s(x2) + s(x3)",
+      "source": "mgcv::cnorm"
+    },
+    {
+      "id": "mgcv_0052",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["yi", "x0", "x1", "x2", "x3"],
+      "formula": "yi ~ s(x0) + s(x1) + s(x2) + s(x3)",
+      "source": "mgcv::cnorm"
+    },
+    {
+      "id": "mgcv_0053",
+      "kind": "mgcv",
+      "status": "runtime_error",
+      "dataset": "mgcv/gamSim_eg2",
+      "error": "undefined columns selected",
+      "formula": "y ~ s(t, k = 15) + s(x, k = 15)"
+    },
+    {
+      "id": "mgcv_0054",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["age", "sex", "nodes", "perfor", "rx", "obstruct", "adhere"],
+      "formula": "time ~ s(age, by = sex) + sex + s(nodes) + perfor + rx + obstruct + adhere",
+      "source": "mgcv::coxph"
+    },
+    {
+      "id": "mgcv_0055",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["strata", "age", "sex", "nodes", "perfor", "rx", "obstruct", "adhere"],
+      "formula": "cbind(time, strata) ~ s(age, by = sex) + sex + s(nodes) + perfor + rx + obstruct + adhere",
+      "source": "mgcv::coxph"
+    },
+    {
+      "id": "mgcv_0056",
+      "kind": "mgcv",
+      "status": "runtime_error",
+      "dataset": "mgcv/gamSim_eg5",
+      "error": "invalid type (closure) for variable 't'",
+      "formula": "t ~ s(x0) + s(x1) + s(x2, k = 15) + s(x3)"
+    },
+    {
+      "id": "mgcv_0057",
+      "kind": "mgcv",
+      "status": "runtime_error",
+      "dataset": "mgcv/gamSim_eg5",
+      "error": "invalid type (closure) for variable 't'",
+      "formula": "t ~ s(x0) + s(x1) + s(x2) + s(x3)"
+    },
+    {
+      "id": "mgcv_0058",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["dumt", "stratum", "spontaneous", "induced"],
+      "formula": "cbind(dumt, stratum) ~ spontaneous + induced",
+      "source": "mgcv::coxph"
+    },
+    {
+      "id": "mgcv_0059",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["z", "tf", "sex", "trt", "protime", "platelet", "age", "bili", "albumin"],
+      "formula": "z ~ tf - 1 + sex + trt + s(sqrt(protime)) + s(platelet) + s(age) + s(bili) + s(albumin)",
+      "source": "mgcv::coxpht"
+    },
+    {
+      "id": "mgcv_0060",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["dumt", "tf", "sex", "trt", "protime", "platelet", "age", "bili", "albumin"],
+      "formula": "cbind(dumt, tf) ~ sex + trt + s(sqrt(protime)) + s(platelet) + s(age) + s(bili) + s(albumin)",
+      "source": "mgcv::coxpht"
+    },
+    {
+      "id": "mgcv_0061",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0062",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0063",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0064",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0065",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 5,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0066",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0067",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0068",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0069",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0070",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0071",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0072",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0073",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0074",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0076",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0077",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0078",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0079",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 0,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer"]
+    },
+    {
+      "id": "mgcv_0080",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0081",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0082",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "X", "x0", "x1", "x2", "x3"],
+      "formula": "y ~ X + s(x0) + s(x1) + s(x2) + s(x3)",
+      "source": "mgcv::gam.models"
+    },
+    {
+      "id": "mgcv_0083",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg6",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 5,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0084",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["travel", "Z"],
+      "formula": "travel ~ Z",
+      "source": "mgcv::gam.models"
+    },
+    {
+      "id": "mgcv_0085",
+      "kind": "mgcv",
+      "status": "runtime_error",
+      "dataset": "mgcv/gamSim_eg5",
+      "error": "invalid type (closure) for variable 'offset(s)'",
+      "formula": "y ~ s(x0, bs = \"cr\") + s(x1, bs = \"cr\") + s(x2, bs = \"cr\") + s(x3, bs = \"cr\") + offset(s)"
+    },
+    {
+      "id": "mgcv_0086",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x0", "x1", "x2", "x3", "x4", "x5"],
+      "formula": "y ~ s(x0) + s(x1) + s(x2) + s(x3) + s(x4) + s(x5)",
+      "source": "mgcv::gam.selection"
+    },
+    {
+      "id": "mgcv_0087",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0088",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0089",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0090",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "a", "b", "x0", "x1", "x2", "x3"],
+      "formula": "y ~ s(a, bs = \"re\") + s(b, bs = \"re\") + s(a, b, bs = \"re\") + s(x0, id = 1) + s(x1, id = 1) + s(x2, k = 15) + s(x3)",
+      "source": "mgcv::gam.vcomp"
+    },
+    {
+      "id": "mgcv_0091",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0092",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0093",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0094",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0095",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0096",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0097",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0098",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0099",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x0", "id1", "x1", "x2", "x3"],
+      "formula": "y ~ s(x0, by = id1) + s(x1) + s(x2) + s(x3)",
+      "source": "mgcv::gfam"
+    },
+    {
+      "id": "mgcv_0100",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x", "fac", "z"],
+      "formula": "y ~ s(x, by = fac, pc = 0) + s(z)",
+      "source": "mgcv::identifiability"
+    },
+    {
+      "id": "mgcv_0101",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "X"],
+      "formula": "y ~ s(X)",
+      "source": "mgcv::linear.functional.terms"
+    },
+    {
+      "id": "mgcv_0102",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x", "fac", "L"],
+      "formula": "y ~ s(x) + s(fac, by = L, bs = \"re\")",
+      "source": "mgcv::linear.functional.terms"
+    },
+    {
+      "id": "mgcv_0103",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "X", "Z", "L", "L1"],
+      "formula": "y ~ s(X, Z, by = L) + L1 - 1",
+      "source": "mgcv::linear.functional.terms"
+    },
+    {
+      "id": "mgcv_0104",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "X", "Z", "L", "L1"],
+      "formula": "y ~ te(X, Z, by = L) + L1 - 1",
+      "source": "mgcv::linear.functional.terms"
+    },
+    {
+      "id": "mgcv_0105",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "X", "L"],
+      "formula": "y ~ s(X, by = L, k = 20)",
+      "source": "mgcv::linear.functional.terms"
+    },
+    {
+      "id": "mgcv_0109",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x0", "mx0", "x1", "mx1", "x2", "mx2", "x3", "mx3", "idx0", "idx1", "idx2", "idx3"],
+      "formula": "y ~ s(x0, by = ordered(!mx0)) + s(x1, by = ordered(!mx1)) + s(x2, by = ordered(!mx2)) + s(x3, by = ordered(!mx3)) + s(idx0, bs = \"re\", by = mx0) + s(idx1, bs = \"re\", by = mx1) + s(idx2, bs = \"re\", by = mx2) + s(idx3, bs = \"re\", by = mx3)",
+      "source": "mgcv::missing.data"
+    },
+    {
+      "id": "mgcv_0110",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0111",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0112",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0113",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x", "z", "v"],
+      "formula": "y ~ s(x) + s(z) + s(v, k = 20)",
+      "source": "mgcv::pcls"
+    },
+    {
+      "id": "mgcv_0114",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0115",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0116",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0117",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0118",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0119",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0120",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0121",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0122",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "n", "x0", "x1", "x2", "x3"],
+      "formula": "y/n ~ s(x0) + s(x1) + s(x2) + s(x3)",
+      "source": "mgcv::qq.gam"
+    },
+    {
+      "id": "mgcv_0123",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0124",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "nlme/Rail",
+      "rows": 18,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0125",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 3,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0128",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0129",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0130",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0131",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0133",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0134",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0135",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0137",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0138",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0139",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0143",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0144",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0145",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0146",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0151",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0152",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0153",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "r"],
+      "formula": "y ~ s(r, bs = \"re\")",
+      "source": "mgcv::smooth.construct.re.smooth.spec"
+    },
+    {
+      "id": "mgcv_0161",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "la", "lo"],
+      "formula": "y ~ s(la, lo, bs = \"sos\", k = 60)",
+      "source": "mgcv::smooth.construct.sos.smooth.spec"
+    },
+    {
+      "id": "mgcv_0162",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg4",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0163",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x", "f1", "f2"],
+      "formula": "y ~ s(x) + s(f1, x, bs = \"sz\") + s(f2, x, bs = \"sz\") + s(f1, f2, x, bs = \"sz\", id = 1)",
+      "source": "mgcv::smooth.construct.sz.smooth.spec"
+    },
+    {
+      "id": "mgcv_0164",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 2,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0165",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0166",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x0", "x1", "x1a", "x2"],
+      "formula": "y ~ s(x0, x1) + s(x1a, x2, m = c(2, 0)) + x2",
+      "source": "mgcv::smooth.construct.tp.smooth.spec"
+    },
+    {
+      "id": "mgcv_0168",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0169",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x0", "x1", "x2", "x3", "x4", "x5"],
+      "formula": "y ~ s(x0, bs = \"ts\") + s(x1, bs = \"ts\") + s(x2, bs = \"ts\") + s(x3, bs = \"ts\") + s(x4, bs = \"ts\") + s(x5, bs = \"ts\")",
+      "source": "mgcv::step.gam"
+    },
+    {
+      "id": "mgcv_0170",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "x0", "x1", "x2", "x3", "x4", "x5"],
+      "formula": "y ~ s(x0, bs = \"cr\") + s(x1, bs = \"cr\") + s(x2, bs = \"cr\") + s(x3, bs = \"cr\") + s(x4, bs = \"cr\") + s(x5, bs = \"cr\")",
+      "source": "mgcv::step.gam"
+    },
+    {
+      "id": "mgcv_0172",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg6",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 5,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0173",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0174",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0175",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0177",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "v", "w", "u"],
+      "formula": "y ~ t2(v, w, u, k = c(25, 5), d = c(2, 1), bs = c(\"tp\", \"cr\"), full = TRUE)",
+      "source": "mgcv::t2"
+    },
+    {
+      "id": "mgcv_0178",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0179",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0181",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg2",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0182",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "mgcv_0183",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "fac", "x"],
+      "formula": "y ~ fac + s(x)",
+      "source": "mgcv::vis.gam"
+    },
+    {
+      "id": "mgcv_0184",
+      "kind": "mgcv",
+      "status": "no_dataset",
+      "need_vars": ["y", "fac", "x", "z"],
+      "formula": "y ~ fac + s(x, by = z)",
+      "source": "mgcv::vis.gam"
+    },
+    {
+      "id": "cur_0001",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0002",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0003",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0004",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0005",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0006",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/Orange",
+      "rows": 35,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0007",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0008",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0009",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/warpbreaks",
+      "rows": 54,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0010",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0011",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0012",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0013",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0014",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0015",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0016",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0017",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0018",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0019",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0020",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.matrix_column", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0021",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 4,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.matrix_column", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0022",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.matrix_column", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0023",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0024",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0025",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.logical", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0026",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0027",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 9,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0028",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 9,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0029",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/iris",
+      "rows": 150,
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.aliased_cols", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "cur_0030",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0031",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0032",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0033",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0034",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/mtcars",
+      "rows": 32,
+      "cols_X": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0035",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/warpbreaks",
+      "rows": 54,
+      "cols_X": 7,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.aliased_cols"]
+    },
+    {
+      "id": "cur_0036",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 36,
+      "n_theta": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0037",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 54,
+      "n_theta": 6,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0038",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 54,
+      "n_theta": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0039",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cake",
+      "rows": 270,
+      "cols_X": 3,
+      "q": 45,
+      "n_theta": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0040",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cake",
+      "rows": 270,
+      "cols_X": 3,
+      "q": 60,
+      "n_theta": 7,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0041",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 18,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0042",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 1,
+      "q": 40,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0043",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "nlme/Oats",
+      "rows": 72,
+      "cols_X": 2,
+      "q": 48,
+      "n_theta": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0044",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 1,
+      "q": 40,
+      "n_theta": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "cur_0045",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 1,
+      "q": 36,
+      "n_theta": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0046",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Pastes",
+      "rows": 60,
+      "cols_X": 10,
+      "q": 10,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0048",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/cake",
+      "rows": 270,
+      "cols_X": 3,
+      "q": 45,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0049",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/Dyestuff",
+      "rows": 30,
+      "cols_X": 1,
+      "q": 6,
+      "n_theta": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0051",
+      "kind": "lme4",
+      "status": "ok",
+      "dataset": "lme4/sleepstudy",
+      "rows": 180,
+      "cols_X": 2,
+      "q": 46,
+      "n_theta": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0052",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0053",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0054",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0055",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "nlme/Oats",
+      "rows": 72,
+      "cols_X": 3,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.numeric", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0056",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0057",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 3,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0058",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0059",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0060",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "gamair/cairo",
+      "rows": 3780,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0061",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "nlme/Orthodont",
+      "rows": 108,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0062",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0063",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "R/CO2",
+      "rows": 84,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0064",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 2,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0065",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0066",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0067",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/women",
+      "rows": 15,
+      "cols_X": 15,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.rank.aliased_cols", "shared.rank.perfect_fit"]
+    },
+    {
+      "id": "cur_0068",
+      "kind": "mgcv",
+      "status": "ok",
+      "dataset": "mgcv/gamSim_eg5",
+      "rows": 400,
+      "cols_X": 1,
+      "n_smooths": 1,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+    },
+    {
+      "id": "cur_0069",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "synthetic/seed_synth_empty_cell",
+      "rows": 120,
+      "cols_X": 9,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.aliased_cols", "shared.rank.empty_cells"]
+    },
+    {
+      "id": "cur_0070",
+      "kind": "wr",
+      "status": "ok",
+      "dataset": "R/warpbreaks",
+      "rows": 54,
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+    }
+  ]
+}

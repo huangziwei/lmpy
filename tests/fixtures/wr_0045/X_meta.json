@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "trtdrug+", "trtplacebo", "week"],
+  "assign": [0, 1, 1, 2],
+  "contrasts": {
+    "trt": "contr.treatment"
+  },
+  "term_labels": ["trt", "week"],
+  "intercept": true,
+  "response": 1
+}

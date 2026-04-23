@@ -1,0 +1,17 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "t2.smooth.spec",
+      "label": "t2(x,z)",
+      "term": ["x", "z"],
+      "dim": 2,
+      "bs": null,
+      "bs_dim": null,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 3
+    }
+  ],
+  "parametric_rhs": "1"
+}

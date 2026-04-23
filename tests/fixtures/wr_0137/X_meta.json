@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "log(climb)", "log(dist)"],
+  "assign": [0, 1, 2],
+  "contrasts": null,
+  "term_labels": ["log(climb)", "log(dist)"],
+  "intercept": true,
+  "response": 1
+}

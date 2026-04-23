@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0121",
+  "kind": "mgcv",
+  "formula": "y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "predict.gam",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.scale", "shared.response_shape.univariate", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.mixing.parametric_plus", "mgcv.mixing.two_smooths"],
+  "need_vars": ["y", "x0", "x1", "x2", "x3"]
+}

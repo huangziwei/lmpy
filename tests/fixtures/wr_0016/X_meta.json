@@ -1,0 +1,11 @@
+{
+  "colnames": ["(Intercept)", "woolB", "tensionL", "tensionM", "woolB:tensionL", "woolB:tensionM"],
+  "assign": [0, 1, 2, 2, 3, 3],
+  "contrasts": {
+    "wool": "contr.treatment",
+    "tension": "contr.treatment"
+  },
+  "term_labels": ["wool", "tension", "wool:tension"],
+  "intercept": true,
+  "response": 1
+}

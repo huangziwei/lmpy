@@ -1,0 +1,14 @@
+{
+  "id": "wr_0010",
+  "kind": "wr",
+  "formula": "count ~ m.vol",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "sperm.comp2"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["count", "m.vol"]
+}

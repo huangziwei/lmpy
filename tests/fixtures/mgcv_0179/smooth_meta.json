@@ -1,0 +1,29 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "tensor.smooth.spec",
+      "label": "ti(x)",
+      "term": "x",
+      "dim": 1,
+      "bs": null,
+      "bs_dim": null,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    },
+    {
+      "index": 2,
+      "class": "tensor.smooth.spec",
+      "label": "ti(x,z)",
+      "term": ["x", "z"],
+      "dim": 2,
+      "bs": null,
+      "bs_dim": null,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 2
+    }
+  ],
+  "parametric_rhs": "1"
+}

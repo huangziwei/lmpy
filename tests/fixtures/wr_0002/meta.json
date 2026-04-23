@@ -1,0 +1,14 @@
+{
+  "id": "wr_0002",
+  "kind": "wr",
+  "formula": "y ~ x - 1",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "hubble"
+  },
+  "features": ["wr.intercept.minus_one", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x"]
+}

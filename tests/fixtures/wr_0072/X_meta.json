@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "Time", "Diet", "Time:Diet"],
+  "assign": [0, 1, 2, 3],
+  "contrasts": null,
+  "term_labels": ["Time", "Diet", "Time:Diet"],
+  "intercept": true,
+  "response": 1
+}

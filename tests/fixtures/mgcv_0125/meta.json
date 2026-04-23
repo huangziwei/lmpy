@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0125",
+  "kind": "mgcv",
+  "formula": "y ~ fac + s(x1, by = fac) + x2",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "s",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg4"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.modifier.by_factor", "mgcv.mixing.parametric_plus"],
+  "need_vars": ["y", "fac", "x1", "x2"]
+}

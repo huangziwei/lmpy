@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0172",
+  "kind": "mgcv",
+  "formula": "y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = \"re\")",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "summary.gam",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg6"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.modifier.m_penalty", "mgcv.bs.re", "mgcv.mixing.smooth_only", "mgcv.mixing.smooth_and_re"],
+  "need_vars": ["y", "x0", "x1", "x2", "x3", "fac"]
+}

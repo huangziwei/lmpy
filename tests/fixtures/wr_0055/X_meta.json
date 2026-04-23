@@ -1,0 +1,13 @@
+{
+  "colnames": ["(Intercept)", "AgeF1", "AgeF2", "AgeF3", "EthN", "SexM", "LrnSL", "AgeF1:EthN", "AgeF2:EthN", "AgeF3:EthN", "AgeF1:SexM", "AgeF2:SexM", "AgeF3:SexM", "EthN:SexM", "AgeF1:LrnSL", "AgeF2:LrnSL", "AgeF3:LrnSL", "EthN:LrnSL", "SexM:LrnSL", "AgeF1:EthN:SexM", "AgeF2:EthN:SexM", "AgeF3:EthN:SexM", "AgeF1:EthN:LrnSL", "AgeF2:EthN:LrnSL", "AgeF3:EthN:LrnSL", "AgeF1:SexM:LrnSL", "AgeF2:SexM:LrnSL", "AgeF3:SexM:LrnSL", "EthN:SexM:LrnSL", "AgeF1:EthN:SexM:LrnSL", "AgeF2:EthN:SexM:LrnSL", "AgeF3:EthN:SexM:LrnSL"],
+  "assign": [0, 1, 1, 1, 2, 3, 4, 5, 5, 5, 6, 6, 6, 7, 8, 8, 8, 9, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 15, 15, 15],
+  "contrasts": {
+    "Age": "contr.treatment",
+    "Eth": "contr.treatment",
+    "Sex": "contr.treatment",
+    "Lrn": "contr.treatment"
+  },
+  "term_labels": ["Age", "Eth", "Sex", "Lrn", "Age:Eth", "Age:Sex", "Eth:Sex", "Age:Lrn", "Eth:Lrn", "Sex:Lrn", "Age:Eth:Sex", "Age:Eth:Lrn", "Age:Sex:Lrn", "Eth:Sex:Lrn", "Age:Eth:Sex:Lrn"],
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0110",
+  "kind": "wr",
+  "formula": "weight ~ group - 1",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "lm",
+  "dataset": {
+    "pkg": "R",
+    "name": "PlantGrowth"
+  },
+  "features": ["wr.intercept.minus_one", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["weight", "group"]
+}

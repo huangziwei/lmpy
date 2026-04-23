@@ -1,0 +1,11 @@
+{
+  "colnames": ["(Intercept)", "grouptrt1", "grouptrt2", "I(group != \"Ctl\")TRUE"],
+  "assign": [0, 1, 1, 2],
+  "contrasts": {
+    "group": "contr.treatment",
+    "I(group != \"Ctl\")": "contr.treatment"
+  },
+  "term_labels": ["group", "I(group != \"Ctl\")"],
+  "intercept": true,
+  "response": 1
+}

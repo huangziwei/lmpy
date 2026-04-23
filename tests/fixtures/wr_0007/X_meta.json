@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "f.age", "f.height", "f.weight", "m.age", "m.height", "m.weight", "m.vol"],
+  "assign": [0, 1, 2, 3, 4, 5, 6, 7],
+  "contrasts": null,
+  "term_labels": ["f.age", "f.height", "f.weight", "m.age", "m.height", "m.weight", "m.vol"],
+  "intercept": true,
+  "response": 1
+}

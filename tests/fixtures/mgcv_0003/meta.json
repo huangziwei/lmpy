@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0003",
+  "kind": "mgcv",
+  "formula": "score ~ Machine + s(Worker, bs = \"re\") + s(Machine, Worker, bs = \"re\")",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch2",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Machines"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate", "mgcv.bs.re", "mgcv.constructor.s_1d", "mgcv.constructor.s_iso_2d", "mgcv.mixing.smooth_and_re", "mgcv.mixing.parametric_smooth_re"],
+  "need_vars": ["score", "Machine", "Worker"]
+}

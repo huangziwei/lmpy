@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "bs(wt, degree = 2)1", "bs(wt, degree = 2)2"],
+  "assign": [0, 1, 1],
+  "contrasts": null,
+  "term_labels": "bs(wt, degree = 2)",
+  "intercept": true,
+  "response": 1
+}

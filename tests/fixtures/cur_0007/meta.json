@@ -1,0 +1,14 @@
+{
+  "id": "cur_0007",
+  "kind": "wr",
+  "formula": "mpg ~ wt + hp - hp",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.minus", "wr.transform.identity", "wr.edge.subtract_main", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "wt", "hp"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0009",
+  "kind": "mgcv",
+  "formula": "Volume ~ te(Height, Girth, k = 5)",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch4",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "trees"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.constructor.te", "mgcv.mixing.smooth_only"],
+  "need_vars": ["Volume", "Height", "Girth"]
+}

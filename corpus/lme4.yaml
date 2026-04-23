@@ -1,0 +1,697 @@
+meta:
+  generated_by: scripts/tag_corpus.R
+  generated_at: 2026-04-23 17:52:50 CEST
+  kind: lme4
+  count: 44
+cases:
+- id: lme4_0001
+  formula: Reaction ~ Days + us(Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Covariance-class
+  dataset_hint: Covariance-class
+  executable: no
+  features: []
+  notes: covariance-class proposal, not implemented
+- id: lme4_0002
+  formula: Reaction ~ Days + diag(Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Covariance-class
+  dataset_hint: Covariance-class
+  executable: no
+  features: []
+  notes: covariance-class proposal, not implemented
+- id: lme4_0003
+  formula: Reaction ~ Days + diag(Days | Subject, hom = TRUE)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Covariance-class
+  dataset_hint: Covariance-class
+  executable: no
+  features: []
+  notes: covariance-class proposal, not implemented
+- id: lme4_0004
+  formula: Reaction ~ Days + cs(Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Covariance-class
+  dataset_hint: Covariance-class
+  executable: no
+  features: []
+  notes: covariance-class proposal, not implemented
+- id: lme4_0005
+  formula: Reaction ~ Days + cs(Days | Subject, hom = TRUE)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Covariance-class
+  dataset_hint: Covariance-class
+  executable: no
+  features: []
+  notes: covariance-class proposal, not implemented
+- id: lme4_0006
+  formula: Reaction ~ Daysf + ar1(0 + Daysf | Subject, hom = TRUE)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Covariance-class
+  dataset_hint: Covariance-class
+  executable: no
+  features: []
+  notes: covariance-class proposal, not implemented
+- id: lme4_0007
+  formula: Yield ~ 1 | Batch
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Dyestuff
+  dataset_hint: Dyestuff
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0008
+  formula: strength ~ (1 | batch) + (1 | sample)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Pastes
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0009
+  formula: strength ~ (1 | batch/cask)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Pastes
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.interaction_col
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0010
+  formula: strength ~ (1 | batch) + (1 | batch:cask)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Pastes
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.grouping.interaction_col
+  - lme4.grouping.crossed
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0011
+  formula: strength ~ (1 | batch/sample)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Pastes
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.interaction_col
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0012
+  formula: strength ~ (1 | batch) + (1 | cask)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Pastes
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0013
+  formula: diameter ~ (1 | plate) + (1 | sample)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: Penicillin
+  dataset_hint: Penicillin
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0014
+  formula: distance ~ age + (age | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: VarCorr
+  dataset_hint: VarCorr
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0015
+  formula: r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: VerbAgg
+  dataset_hint: VerbAgg
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.power
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.crossed_expand
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0016
+  formula: cbind(incidence, size - incidence) ~ period + (1 | herd)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: allFit
+  dataset_hint: allFit
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0017
+  formula: angle ~ recipe * temperature + (1 | recipe:replicate)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: cake
+  dataset_hint: cake
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.interaction_col
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0018
+  formula: angle ~ recipe + temperature + (1 | recipe:replicate)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: cake
+  dataset_hint: cake
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.interaction_col
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0019
+  formula: angle ~ recipe + temp + (1 | recipe:replicate)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: cake
+  dataset_hint: cake
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.interaction_col
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0020
+  formula: incidence/size ~ period + (1 | herd)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: cbpp
+  dataset_hint: cbpp
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0021
+  formula: cbind(incidence, size - incidence) ~ period + (1 | herd) + (1 | obs)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: cbpp
+  dataset_hint: cbpp
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0022
+  formula: incidence/size ~ period + treatment + avg_size + (1 | herd)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: cbpp
+  dataset_hint: cbpp
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0023
+  formula: Reaction ~ Days + (Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: confint.merMod
+  dataset_hint: confint.merMod
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0024
+  formula: Reaction ~ Days + (Days || Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: confint.merMod
+  dataset_hint: confint.merMod
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.uncorr_slope
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.re_spec.slope_only
+  - lme4.grouping.two_groups_same
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0025
+  formula: predation ~ ttt2 + (1 | block)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: culcitalogreg
+  dataset_hint: culcitalogreg
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0026
+  formula: tvol ~ ttt2 + (1 | block)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: culcitalvolume
+  dataset_hint: culcitalvolume
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0027
+  formula: propeaten ~ ttt2 + (1 | block)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: culcitalvolume
+  dataset_hint: culcitalvolume
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0028
+  formula: tvol ~ crab * shrimp + (1 | block)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: culcitalvolume
+  dataset_hint: culcitalvolume
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0029
+  formula: propeaten ~ crab * shrimp + (1 | block)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: culcitalvolume
+  dataset_hint: culcitalvolume
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0030
+  formula: distance ~ age + (age | Subject) + (0 + dummy(Sex, "Female") | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: dummy
+  dataset_hint: dummy
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.single
+  - lme4.re_spec.slope_only
+  - lme4.grouping.two_groups_same
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0031
+  formula: Reaction ~ Days + (1 | Subject) + (0 + Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: fixef
+  dataset_hint: fixef
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.re_spec.slope_only
+  - lme4.grouping.two_groups_same
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0032
+  formula: Reaction ~ Days + Days2 + (1 | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: fixef
+  dataset_hint: fixef
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0033
+  formula: Reaction ~ Days + (1 | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: fortify
+  dataset_hint: fortify
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0034
+  formula: shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: gopherdat2
+  dataset_hint: gopherdat2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.asis_factor
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0035
+  formula: circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym | Tree
+  source_pkg: lme4
+  source_fn: nlmer
+  source_rd: isREML
+  dataset_hint: isREML
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - shared.response_shape.univariate
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0036
+  formula: distance ~ age + (age | Subject) + (0 + nsex | Subject) + (0 + nsexage
+    | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: lmer
+  dataset_hint: lmer
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.single
+  - lme4.re_spec.slope_only
+  - lme4.grouping.two_groups_same
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0037
+  formula: Reaction ~ Days + (Days | Subject)
+  source_pkg: lme4
+  source_fn: lFormula
+  source_rd: modular
+  dataset_hint: modular
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0038
+  formula: cbind(incidence, size - incidence) ~ period + (1 | herd)
+  source_pkg: lme4
+  source_fn: glFormula
+  source_rd: modular
+  dataset_hint: modular
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0039
+  formula: Reaction ~ 1 | Subject
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: ngrps
+  dataset_hint: ngrps
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0040
+  formula: y ~ 1 + (1 | `Animal ID`)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: predict.merMod
+  dataset_hint: predict.merMod
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.re_only
+  notes: ''
+- id: lme4_0041
+  formula: y ~ x + (1 | f)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: refit
+  dataset_hint: refit
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0042
+  formula: Mate ~ (1 | Female) + (1 | Male) + Cross
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: salamander
+  dataset_hint: salamander
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.grouping.crossed
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0043
+  formula: imps79 ~ TxDrug * Week + (1 | id)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: schizophrenia
+  dataset_hint: schizophrenia
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''
+- id: lme4_0044
+  formula: outcome ~ time * treatment + (1 | patientID)
+  source_pkg: lme4
+  source_fn: glmer
+  source_rd: toenail
+  dataset_hint: toenail
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.num_factor
+  - shared.response_shape.univariate
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  notes: ''

@@ -1,0 +1,9 @@
+{
+  "colnames": ["(Intercept)", "Anger", "GenderM", "btypescold", "btypeshout", "situself", "Anger:GenderM", "Anger:btypescold", "Anger:btypeshout", "Anger:situself", "GenderM:btypescold", "GenderM:btypeshout", "GenderM:situself", "btypescold:situself", "btypeshout:situself"],
+  "assign": [0, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10],
+  "contrasts": {
+    "Gender": "contr.treatment",
+    "btype": "contr.treatment",
+    "situ": "contr.treatment"
+  }
+}

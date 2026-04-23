@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0013",
+  "kind": "mgcv",
+  "formula": "y ~ s(x)",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch7.solutions",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "hubble"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.mixing.smooth_only"],
+  "need_vars": ["y", "x"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0105",
+  "kind": "wr",
+  "formula": "sr ~ pop15 + pop75 + dpi + ddpi",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "influence.measures",
+  "dataset": {
+    "pkg": "faraway",
+    "name": "savings"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["sr", "pop15", "pop75", "dpi", "ddpi"]
+}

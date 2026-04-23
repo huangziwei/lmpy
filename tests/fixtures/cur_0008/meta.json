@@ -1,0 +1,14 @@
+{
+  "id": "cur_0008",
+  "kind": "wr",
+  "formula": "mpg ~ cyl:disp",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.op.colon", "wr.transform.identity", "wr.interaction.num_num", "wr.edge.interaction_only", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "cyl", "disp"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0114",
+  "kind": "wr",
+  "formula": "distance ~ Sex * age",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "logLik",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Orthodont"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.num_factor", "shared.response_shape.univariate"],
+  "need_vars": ["distance", "Sex", "age"]
+}

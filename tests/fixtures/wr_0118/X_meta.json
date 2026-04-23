@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "agegp35-44", "agegp45-54", "agegp55-64", "agegp65-74", "agegp75+"],
+  "assign": [0, 1, 1, 1, 1, 1],
+  "contrasts": {
+    "agegp": "contr.treatment"
+  },
+  "term_labels": "agegp",
+  "intercept": true,
+  "response": 1
+}

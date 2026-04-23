@@ -1,0 +1,14 @@
+{
+  "id": "wr_0048",
+  "kind": "wr",
+  "formula": "low ~ .",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "birthwt",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "birthwt"
+  },
+  "features": ["wr.op.dot", "shared.response_shape.univariate", "wr.intercept.default"],
+  "need_vars": ["low", "."]
+}

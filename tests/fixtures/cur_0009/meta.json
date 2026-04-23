@@ -1,0 +1,14 @@
+{
+  "id": "cur_0009",
+  "kind": "wr",
+  "formula": "breaks ~ wool + tension + wool %in% tension",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "warpbreaks"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.in_op", "wr.transform.identity", "wr.interaction.factor_factor", "shared.response_shape.univariate"],
+  "need_vars": ["breaks", "wool", "tension"]
+}

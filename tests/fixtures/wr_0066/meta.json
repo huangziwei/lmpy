@@ -1,0 +1,14 @@
+{
+  "id": "wr_0066",
+  "kind": "wr",
+  "formula": "follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time)",
+  "source_pkg": "nlme",
+  "source_fn": "gls",
+  "source_rd": "ACF.gls",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Ovary"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.sin_cos", "wr.interaction.num_factor", "shared.response_shape.univariate"],
+  "need_vars": ["follicles", "Time"]
+}

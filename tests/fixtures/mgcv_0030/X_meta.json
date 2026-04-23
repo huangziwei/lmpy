@@ -1,0 +1,6 @@
+{
+  "colnames": ["(Intercept)", "x0"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "parametric_rhs": "x0"
+}

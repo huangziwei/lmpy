@@ -1,0 +1,13 @@
+{
+  "flist_names": "Site",
+  "flist_levels": {
+    "Site": ["BS", "CB", "Cent", "CF", "FC", "FE", "GH", "Old", "Ord", "TE"]
+  },
+  "cnms": {
+    "Site": "(Intercept)"
+  },
+  "Gp": [0, 10],
+  "nl": 10,
+  "n": 30,
+  "q": 10
+}

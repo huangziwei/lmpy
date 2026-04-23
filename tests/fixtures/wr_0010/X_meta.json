@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "m.vol"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "m.vol",
+  "intercept": true,
+  "response": 1
+}

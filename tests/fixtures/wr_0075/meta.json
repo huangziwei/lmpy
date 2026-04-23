@@ -1,0 +1,14 @@
+{
+  "id": "wr_0075",
+  "kind": "wr",
+  "formula": "yield ~ variety - 1",
+  "source_pkg": "nlme",
+  "source_fn": "gls",
+  "source_rd": "anova.gls",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Wheat2"
+  },
+  "features": ["wr.intercept.minus_one", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["yield", "variety"]
+}

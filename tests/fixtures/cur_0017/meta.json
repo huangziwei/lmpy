@@ -1,0 +1,14 @@
+{
+  "id": "cur_0017",
+  "kind": "wr",
+  "formula": "mpg ~ log1p(hp)",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.transform.log1p", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "hp"]
+}

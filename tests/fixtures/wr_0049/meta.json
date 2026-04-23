@@ -1,0 +1,14 @@
+{
+  "id": "wr_0049",
+  "kind": "wr",
+  "formula": "y ~ x1 + x2 + x3 + x4",
+  "source_pkg": "MASS",
+  "source_fn": "lm",
+  "source_rd": "cement",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "cement"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x1", "x2", "x3", "x4"]
+}

@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "hard", "tens", "I(hard * tens)", "I(hard^2)", "I(tens^2)", "I(hard^2 * tens)", "I(tens^2 * hard)", "I(tens^3)", "I(hard^3)"],
+  "assign": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  "contrasts": null,
+  "term_labels": ["hard", "tens", "I(hard * tens)", "I(hard^2)", "I(tens^2)", "I(hard^2 * tens)", "I(tens^2 * hard)", "I(tens^3)", "I(hard^3)"],
+  "intercept": true,
+  "response": 1
+}

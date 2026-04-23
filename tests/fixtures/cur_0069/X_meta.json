@@ -1,0 +1,11 @@
+{
+  "colnames": ["(Intercept)", "fb", "fc", "gb", "gc", "fb:gb", "fc:gb", "fb:gc", "fc:gc"],
+  "assign": [0, 1, 1, 2, 2, 3, 3, 3, 3],
+  "contrasts": {
+    "f": "contr.treatment",
+    "g": "contr.treatment"
+  },
+  "term_labels": ["f", "g", "f:g"],
+  "intercept": true,
+  "response": 1
+}

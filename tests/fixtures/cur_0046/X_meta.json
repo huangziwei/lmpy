@@ -1,0 +1,7 @@
+{
+  "colnames": ["(Intercept)", "batchB", "batchC", "batchD", "batchE", "batchF", "batchG", "batchH", "batchI", "batchJ"],
+  "assign": [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  "contrasts": {
+    "batch": "contr.treatment"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0056",
+  "kind": "mgcv",
+  "formula": "t ~ s(x0) + s(x1) + s(x2, k = 15) + s(x3)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "coxph",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.modifier.k", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths"],
+  "need_vars": ["x0", "x1", "x2", "x3"]
+}

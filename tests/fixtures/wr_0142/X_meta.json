@@ -1,0 +1,22 @@
+{
+  "colnames": ["(Intercept)", "agegp35-44", "agegp45-54", "agegp55-64", "agegp65-74", "agegp75+", "C(tobgp, , 1)10-19", "C(alcgp, , 1)120+"],
+  "assign": [0, 1, 1, 1, 1, 1, 2, 3],
+  "contrasts": {
+    "agegp": "contr.treatment",
+    "C(tobgp, , 1)": [
+      [0],
+      [1],
+      [0],
+      [0]
+    ],
+    "C(alcgp, , 1)": [
+      [0],
+      [1],
+      [0],
+      [0]
+    ]
+  },
+  "term_labels": ["agegp", "C(tobgp, , 1)", "C(alcgp, , 1)"],
+  "intercept": true,
+  "response": 1
+}

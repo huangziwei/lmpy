@@ -1,0 +1,14 @@
+{
+  "id": "wr_0046",
+  "kind": "wr",
+  "formula": "y ~ trt + I(week > 2)",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "bacteria",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "bacteria"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.I_square", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["y", "trt", "week"]
+}

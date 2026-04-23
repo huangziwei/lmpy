@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "TypeT2", "TypeT3", "TypeT4"],
+  "assign": [0, 1, 1, 1],
+  "contrasts": {
+    "Type": "contr.treatment"
+  },
+  "term_labels": "Type",
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0023",
+  "kind": "lme4",
+  "formula": "Reaction ~ Days + (Days | Subject)",
+  "source_pkg": "lme4",
+  "source_fn": "lmer",
+  "source_rd": "confint.merMod",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "sleepstudy"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate", "lme4.re_spec.corr_slope", "lme4.grouping.single", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["Reaction", "Days", "Subject"]
+}

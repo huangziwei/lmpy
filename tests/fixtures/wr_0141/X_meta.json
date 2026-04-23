@@ -1,0 +1,15 @@
+{
+  "colnames": ["(Intercept)", "woolB", "C(tension, base = 2)H", "C(tension, base = 2)M"],
+  "assign": [0, 1, 2, 2],
+  "contrasts": {
+    "wool": "contr.treatment",
+    "C(tension, base = 2)": [
+      [1, 0],
+      [0, 0],
+      [0, 1]
+    ]
+  },
+  "term_labels": ["wool", "C(tension, base = 2)"],
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,15 @@
+{
+  "flist_names": ["plate", "sample"],
+  "flist_levels": {
+    "plate": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x"],
+    "sample": ["A", "B", "C", "D", "E", "F"]
+  },
+  "cnms": {
+    "plate": "(Intercept)",
+    "sample": "(Intercept)"
+  },
+  "Gp": [0, 24, 30],
+  "nl": [24, 6],
+  "n": 144,
+  "q": 30
+}

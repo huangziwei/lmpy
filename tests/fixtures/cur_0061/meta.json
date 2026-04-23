@@ -1,0 +1,14 @@
+{
+  "id": "cur_0061",
+  "kind": "mgcv",
+  "formula": "distance ~ s(age, Subject, bs = \"fs\")",
+  "source_pkg": "nlme",
+  "source_fn": "gam",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Orthodont"
+  },
+  "features": ["mgcv.constructor.s_iso_2d", "mgcv.bs.fs", "mgcv.mixing.smooth_only", "mgcv.edge_mgcv.fs_many_levels", "shared.response_shape.univariate"],
+  "need_vars": ["distance", "age", "Subject"]
+}

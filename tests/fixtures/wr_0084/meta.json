@@ -1,0 +1,14 @@
+{
+  "id": "wr_0084",
+  "kind": "wr",
+  "formula": "Fertility ~ .",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "add1",
+  "dataset": {
+    "pkg": "R",
+    "name": "swiss"
+  },
+  "features": ["wr.op.dot", "shared.response_shape.univariate", "wr.intercept.default"],
+  "need_vars": ["Fertility", "."]
+}

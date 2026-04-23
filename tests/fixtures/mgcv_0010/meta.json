@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0010",
+  "kind": "mgcv",
+  "formula": "Volume ~ Height + s(Girth)",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch4",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "trees"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.mixing.parametric_plus"],
+  "need_vars": ["Volume", "Height", "Girth"]
+}

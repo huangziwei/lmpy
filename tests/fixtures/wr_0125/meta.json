@@ -1,0 +1,14 @@
+{
+  "id": "wr_0125",
+  "kind": "wr",
+  "formula": "breaks ~ wool + tension",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "relevel",
+  "dataset": {
+    "pkg": "R",
+    "name": "warpbreaks"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["breaks", "wool", "tension"]
+}

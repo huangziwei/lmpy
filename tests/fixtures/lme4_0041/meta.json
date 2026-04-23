@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0041",
+  "kind": "lme4",
+  "formula": "y ~ x + (1 | f)",
+  "source_pkg": "lme4",
+  "source_fn": "lmer",
+  "source_rd": "refit",
+  "dataset": {
+    "pkg": "synthetic",
+    "name": "seed_synth_singleton"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["y", "x", "f"]
+}

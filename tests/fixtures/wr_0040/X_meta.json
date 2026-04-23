@@ -1,0 +1,11 @@
+{
+  "colnames": ["(Intercept)", "District", "Group>2l", "Group1-1.5l", "Group1.5-2l", "Age>35", "Age25-29", "Age30-35"],
+  "assign": [0, 1, 2, 2, 2, 3, 3, 3],
+  "contrasts": {
+    "Group": "contr.treatment",
+    "Age": "contr.treatment"
+  },
+  "term_labels": ["District", "Group", "Age"],
+  "intercept": true,
+  "response": 1
+}

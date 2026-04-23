@@ -1,0 +1,14 @@
+{
+  "id": "wr_0081",
+  "kind": "wr",
+  "formula": "pixel ~ day + day^2",
+  "source_pkg": "nlme",
+  "source_fn": "lme",
+  "source_rd": "getGroups.lme",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Pixel"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["pixel", "day"]
+}

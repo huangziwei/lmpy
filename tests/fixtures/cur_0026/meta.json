@@ -1,0 +1,14 @@
+{
+  "id": "cur_0026",
+  "kind": "wr",
+  "formula": "Sepal.Length ~ relevel(Species, ref = \"virginica\")",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "iris"
+  },
+  "features": ["wr.intercept.default", "wr.transform.reorder_factor", "wr.transform.asis_factor", "shared.response_shape.univariate"],
+  "need_vars": ["Sepal.Length", "Species"]
+}

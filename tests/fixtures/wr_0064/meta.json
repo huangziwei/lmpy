@@ -1,0 +1,14 @@
+{
+  "id": "wr_0064",
+  "kind": "wr",
+  "formula": "Gas ~ Insul + Temp",
+  "source_pkg": "MASS",
+  "source_fn": "lm",
+  "source_rd": "whiteside",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "whiteside"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["Gas", "Insul", "Temp"]
+}

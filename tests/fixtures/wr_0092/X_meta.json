@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "Sepal.Length"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "Sepal.Length",
+  "intercept": true,
+  "response": 1
+}

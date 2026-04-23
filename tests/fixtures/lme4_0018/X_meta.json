@@ -1,0 +1,7 @@
+{
+  "colnames": ["(Intercept)", "recipeB", "recipeC", "temperature"],
+  "assign": [0, 1, 1, 2],
+  "contrasts": {
+    "recipe": "contr.treatment"
+  }
+}

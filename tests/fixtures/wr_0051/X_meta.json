@@ -1,0 +1,12 @@
+{
+  "colnames": ["(Intercept)", "PS", "AI", "VS", "PS:AI"],
+  "assign": [0, 1, 2, 3, 4],
+  "contrasts": {
+    "P": "contr.treatment",
+    "A": "contr.treatment",
+    "V": "contr.treatment"
+  },
+  "term_labels": ["P", "A", "V", "P:A"],
+  "intercept": true,
+  "response": 1
+}

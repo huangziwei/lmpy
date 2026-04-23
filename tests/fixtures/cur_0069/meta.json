@@ -1,0 +1,14 @@
+{
+  "id": "cur_0069",
+  "kind": "wr",
+  "formula": "y ~ f * g",
+  "source_pkg": "synthetic",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "synthetic",
+    "name": "seed_synth_empty_cell"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.factor_factor", "shared.response_shape.univariate"],
+  "need_vars": ["y", "f", "g"]
+}

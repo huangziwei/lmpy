@@ -1,0 +1,14 @@
+{
+  "id": "wr_0086",
+  "kind": "wr",
+  "formula": "sr ~ .",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "anova.lm",
+  "dataset": {
+    "pkg": "faraway",
+    "name": "savings"
+  },
+  "features": ["wr.op.dot", "shared.response_shape.univariate", "wr.intercept.default"],
+  "need_vars": ["sr", "."]
+}

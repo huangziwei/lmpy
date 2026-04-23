@@ -1,0 +1,14 @@
+{
+  "id": "wr_0023",
+  "kind": "wr",
+  "formula": "area ~ CO2",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch2",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "stomata"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": "CO2"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0001",
+  "kind": "wr",
+  "formula": "stack.loss ~ .",
+  "source_pkg": "faraway",
+  "source_fn": "lm",
+  "source_rd": "prplot",
+  "dataset": {
+    "pkg": "R",
+    "name": "stackloss"
+  },
+  "features": ["wr.op.dot", "shared.response_shape.univariate", "wr.intercept.default"],
+  "need_vars": ["stack.loss", "."]
+}

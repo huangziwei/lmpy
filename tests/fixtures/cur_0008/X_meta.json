@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "cyl:disp"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "cyl:disp",
+  "intercept": true,
+  "response": 1
+}

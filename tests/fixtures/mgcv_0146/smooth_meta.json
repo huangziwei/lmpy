@@ -1,0 +1,17 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "gp.smooth.spec",
+      "label": "s(x,z)",
+      "term": ["x", "z"],
+      "dim": 2,
+      "bs": 50,
+      "bs_dim": 50,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0014",
+  "kind": "mgcv",
+  "formula": "y ~ x",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch7.solutions",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "hubble"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x"]
+}

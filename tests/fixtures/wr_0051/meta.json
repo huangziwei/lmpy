@@ -1,0 +1,14 @@
+{
+  "id": "wr_0051",
+  "kind": "wr",
+  "formula": "cbind(y, n - y) ~ P * A + V",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "eagles",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "eagles"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.num_factor", "shared.response_shape.cbind"],
+  "need_vars": ["y", "n", "P", "A", "V"]
+}

@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "x", "I(x^2)", "I(x^3)", "I((x - 10)^2)"],
+  "assign": [0, 1, 2, 3, 4],
+  "contrasts": null,
+  "term_labels": ["x", "I(x^2)", "I(x^3)", "I((x - 10)^2)"],
+  "intercept": true,
+  "response": 1
+}

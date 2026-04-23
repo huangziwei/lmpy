@@ -1,0 +1,14 @@
+{
+  "id": "wr_0013",
+  "kind": "wr",
+  "formula": "weight ~ group",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1",
+  "dataset": {
+    "pkg": "R",
+    "name": "PlantGrowth"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["weight", "group"]
+}

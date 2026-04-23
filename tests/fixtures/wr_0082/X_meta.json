@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "SexMale", "age", "SexMale:age"],
+  "assign": [0, 1, 2, 3],
+  "contrasts": {
+    "Sex": "contr.treatment"
+  },
+  "term_labels": ["Sex", "age", "Sex:age"],
+  "intercept": true,
+  "response": 1
+}

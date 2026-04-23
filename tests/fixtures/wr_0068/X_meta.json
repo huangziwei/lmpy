@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "sin(2 * pi * Time)", "cos(2 * pi * Time)"],
+  "assign": [0, 1, 2],
+  "contrasts": null,
+  "term_labels": ["sin(2 * pi * Time)", "cos(2 * pi * Time)"],
+  "intercept": true,
+  "response": 1
+}

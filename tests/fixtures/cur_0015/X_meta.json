@@ -1,0 +1,14 @@
+{
+  "colnames": ["C(Species, contr.treatment)setosa", "C(Species, contr.treatment)versicolor", "C(Species, contr.treatment)virginica"],
+  "assign": [1, 1, 1],
+  "contrasts": {
+    "C(Species, contr.treatment)": [
+      [0, 0],
+      [1, 0],
+      [0, 1]
+    ]
+  },
+  "term_labels": "C(Species, contr.treatment)",
+  "intercept": false,
+  "response": 1
+}

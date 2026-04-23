@@ -1,0 +1,14 @@
+{
+  "id": "wr_0130",
+  "kind": "wr",
+  "formula": "x ~ z",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "selfStart",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "topo"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["x", "z"]
+}

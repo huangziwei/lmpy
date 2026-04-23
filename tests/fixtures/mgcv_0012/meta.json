@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0012",
+  "kind": "mgcv",
+  "formula": "y ~ s(x0, bs = \"pl\", m = 2) + s(x1, bs = \"pl\", m = 2) + s(x2, bs = \"pl\", m = 3) + s(x3, bs = \"pl\", m = 2)",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch5.solutions",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.constructor.s_1d", "mgcv.modifier.m_penalty", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths"],
+  "need_vars": ["y", "x0", "x1", "x2", "x3"]
+}

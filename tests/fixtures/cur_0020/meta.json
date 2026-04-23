@@ -1,0 +1,14 @@
+{
+  "id": "cur_0020",
+  "kind": "wr",
+  "formula": "mpg ~ poly(wt, 2, raw = TRUE)",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.transform.poly_raw", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "wt"]
+}

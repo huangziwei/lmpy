@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0025",
+  "kind": "lme4",
+  "formula": "predation ~ ttt2 + (1 | block)",
+  "source_pkg": "lme4",
+  "source_fn": "glmer",
+  "source_rd": "culcitalogreg",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "culcitalogreg"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate", "lme4.re_spec.intercept_only", "lme4.grouping.single", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["predation", "ttt2", "block"]
+}

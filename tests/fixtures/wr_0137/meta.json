@@ -1,0 +1,14 @@
+{
+  "id": "wr_0137",
+  "kind": "wr",
+  "formula": "log(time) ~ log(climb) + log(dist)",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "termplot",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "hills"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.log", "shared.response_shape.transformed"],
+  "need_vars": "climb"
+}

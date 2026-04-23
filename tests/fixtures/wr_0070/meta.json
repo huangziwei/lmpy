@@ -1,0 +1,14 @@
+{
+  "id": "wr_0070",
+  "kind": "wr",
+  "formula": "distance ~ age",
+  "source_pkg": "nlme",
+  "source_fn": "lme",
+  "source_rd": "VarCorr",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Orthodont"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["distance", "age"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0099",
+  "kind": "wr",
+  "formula": "log(Volume) ~ log(Girth) + log(Height)",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "expand.model.frame",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "trees"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.log", "shared.response_shape.transformed"],
+  "need_vars": ["Volume", "Girth", "Height"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0145",
+  "kind": "mgcv",
+  "formula": "y ~ s(x, z, bs = \"gp\", k = 50, m = c(1, 0.5))",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "smooth.construct.gp.smooth.spec",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg2"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.gp", "mgcv.constructor.s_iso_2d", "mgcv.modifier.k", "mgcv.modifier.m_penalty", "mgcv.mixing.smooth_only"],
+  "need_vars": ["y", "x", "z"]
+}

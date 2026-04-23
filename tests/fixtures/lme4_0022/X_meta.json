@@ -1,0 +1,7 @@
+{
+  "colnames": ["(Intercept)", "period", "treatmentPartial/null", "treatmentUnknown", "avg_size"],
+  "assign": [0, 1, 2, 2, 3],
+  "contrasts": {
+    "treatment": "contr.treatment"
+  }
+}

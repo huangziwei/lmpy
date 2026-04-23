@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "sqrt(wt)"],
+  "assign": [0, 1],
+  "contrasts": null,
+  "term_labels": "sqrt(wt)",
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,762 @@
+=============================================================================
+  COVERAGE AUDIT  —  2026-04-23 18:32:14 CEST
+=============================================================================
+
+cases total:        440
+  executable:       400
+  unexecutable:     40  (covariance-class / parametric / deferred)
+
+feature values defined:  161
+  tagged (any case):     131
+  fixture-backed:        145
+forced pairs:            15
+  tagged:                15
+  fixture-backed:        14
+fixtures:                302 / 400 executable cases
+
+-----------------------------------------------------------------------------
+  (a) PER-AXIS COVERAGE
+-----------------------------------------------------------------------------
+
+### [shared]
+  axis: var_type                  fx=5/8  tagged=0/8
+      shared.var_type.numeric                             n=0    fx=245
+      shared.var_type.integer                             n=0    fx=191
+      shared.var_type.logical                             n=0    fx=3  
+      shared.var_type.character                           n=0    fx=0    [MISSING]
+      shared.var_type.factor                              n=0    fx=87 
+      shared.var_type.ordered                             n=0    fx=0    [MISSING]
+      shared.var_type.date                                n=0    fx=0    [MISSING]
+      shared.var_type.matrix_column                       n=0    fx=18 
+  axis: factor_cardinality        fx=4/5  tagged=0/5
+      shared.factor_cardinality.two_level                 n=0    fx=29 
+      shared.factor_cardinality.balanced_3_5              n=0    fx=60 
+      shared.factor_cardinality.many_level                n=0    fx=9  
+      shared.factor_cardinality.singleton                 n=0    fx=1  
+      shared.factor_cardinality.unused_level              n=0    fx=0    [MISSING]
+  axis: na_policy                 fx=1/4  tagged=0/4
+      shared.na_policy.omit                               n=0    fx=5  
+      shared.na_policy.exclude                            n=0    fx=0    [MISSING]
+      shared.na_policy.fail                               n=0    fx=0    [MISSING]
+      shared.na_policy.pass                               n=0    fx=0    [MISSING]
+  axis: rank                      fx=4/4  tagged=0/4
+      shared.rank.full                                    n=0    fx=291
+      shared.rank.aliased_cols                            n=0    fx=9  
+      shared.rank.empty_cells                             n=0    fx=9  
+      shared.rank.perfect_fit                             n=0    fx=1  
+  axis: response_shape            fx=3/4  tagged=3/4
+      shared.response_shape.univariate                    n=372  fx=286
+      shared.response_shape.cbind                         n=12   fx=7  
+      shared.response_shape.matrix                        n=0    fx=0    [MISSING]
+      shared.response_shape.transformed                   n=5    fx=3  
+
+### [wr]
+  axis: op                        fx=11/11  tagged=11/11
+      wr.op.plus                                          n=186  fx=139
+      wr.op.minus                                         n=5    fx=5  
+      wr.op.star                                          n=40   fx=31 
+      wr.op.colon                                         n=5    fx=5  
+      wr.op.slash                                         n=5    fx=2  
+      wr.op.power                                         n=4    fx=4  
+      wr.op.power3                                        n=1    fx=1  
+      wr.op.in_op                                         n=1    fx=1  
+      wr.op.dot                                           n=9    fx=8  
+      wr.op.dot_minus                                     n=1    fx=1  
+      wr.op.parens                                        n=1    fx=1  
+  axis: intercept                 fx=6/6  tagged=6/6
+      wr.intercept.default                                n=205  fx=159
+      wr.intercept.minus_one                              n=23   fx=8  
+      wr.intercept.plus_zero                              n=1    fx=1  
+      wr.intercept.leading_zero                           n=2    fx=2  
+      wr.intercept.explicit_one                           n=1    fx=1  
+      wr.intercept.only_intercept                         n=138  fx=101
+  axis: transform                 fx=20/20  tagged=20/20
+      wr.transform.identity                               n=182  fx=130
+      wr.transform.I_square                               n=15   fx=15 
+      wr.transform.I_combine                              n=1    fx=1  
+      wr.transform.I_product                              n=2    fx=2  
+      wr.transform.log                                    n=6    fx=2  
+      wr.transform.log1p                                  n=1    fx=1  
+      wr.transform.exp                                    n=1    fx=1  
+      wr.transform.sqrt                                   n=1    fx=1  
+      wr.transform.sin_cos                                n=2    fx=2  
+      wr.transform.poly_orth                              n=5    fx=5  
+      wr.transform.poly_raw                               n=2    fx=2  
+      wr.transform.bs                                     n=2    fx=2  
+      wr.transform.bs_degree                              n=1    fx=1  
+      wr.transform.ns                                     n=1    fx=1  
+      wr.transform.scale                                  n=2    fx=2  
+      wr.transform.cut                                    n=2    fx=2  
+      wr.transform.offset                                 n=1    fx=1  
+      wr.transform.inline_logical                         n=1    fx=1  
+      wr.transform.asis_factor                            n=14   fx=13 
+      wr.transform.reorder_factor                         n=1    fx=1  
+  axis: contrast                  fx=6/7  tagged=6/7
+      wr.contrast.treatment                               n=2    fx=2  
+      wr.contrast.sum                                     n=2    fx=2  
+      wr.contrast.helmert                                 n=1    fx=1  
+      wr.contrast.poly                                    n=2    fx=2  
+      wr.contrast.sas                                     n=1    fx=1  
+      wr.contrast.user_per_factor                         n=0    fx=0    [MISSING]
+      wr.contrast.C_wrapper                               n=2    fx=2  
+  axis: interaction               fx=9/9  tagged=9/9
+      wr.interaction.num_num                              n=40   fx=29 
+      wr.interaction.num_factor                           n=37   fx=28 
+      wr.interaction.factor_factor                        n=5    fx=5  
+      wr.interaction.three_way                            n=6    fx=4  
+      wr.interaction.four_way                             n=1    fx=1  
+      wr.interaction.crossed_expand                       n=4    fx=4  
+      wr.interaction.nested                               n=5    fx=2  
+      wr.interaction.transform_in_int                     n=8    fx=8  
+      wr.interaction.I_in_int                             n=1    fx=1  
+  axis: edge                      fx=7/10  tagged=7/10
+      wr.edge.dup_term                                    n=1    fx=1  
+      wr.edge.subtract_absent                             n=1    fx=1  
+      wr.edge.subtract_main                               n=1    fx=1  
+      wr.edge.subtract_inter                              n=1    fx=1  
+      wr.edge.subtract_all                                n=1    fx=1  
+      wr.edge.single_row                                  n=0    fx=0    [MISSING]
+      wr.edge.single_col_X                                n=140  fx=102
+      wr.edge.factor_as_y                                 n=0    fx=0    [MISSING]
+      wr.edge.interaction_only                            n=3    fx=3  
+      wr.edge.tilde_in_arg                                n=0    fx=0    [MISSING]
+
+### [lme4]
+  axis: re_spec                   fx=11/11  tagged=11/11
+      lme4.re_spec.intercept_only                         n=38   fx=31 
+      lme4.re_spec.slope_only                             n=5    fx=4  
+      lme4.re_spec.corr_slope                             n=8    fx=6  
+      lme4.re_spec.corr_slope_expl                        n=1    fx=1  
+      lme4.re_spec.uncorr_slope                           n=2    fx=2  
+      lme4.re_spec.multi_corr                             n=1    fx=1  
+      lme4.re_spec.multi_uncorr                           n=1    fx=1  
+      lme4.re_spec.factor_slope                           n=1    fx=1  
+      lme4.re_spec.factor_uncorr                          n=1    fx=1  
+      lme4.re_spec.transform_slope                        n=2    fx=2  
+      lme4.re_spec.no_intercept                           n=1    fx=1  
+  axis: grouping                  fx=6/6  tagged=6/6
+      lme4.grouping.single                                n=44   fx=35 
+      lme4.grouping.crossed                               n=10   fx=9  
+      lme4.grouping.nested_slash                          n=2    fx=2  
+      lme4.grouping.interaction_col                       n=7    fx=7  
+      lme4.grouping.partial_crossed                       n=1    fx=1  
+      lme4.grouping.two_groups_same                       n=4    fx=3  
+  axis: mixing                    fx=5/6  tagged=5/6
+      lme4.mixing.fe_only                                 n=0    fx=0    [MISSING]
+      lme4.mixing.re_only                                 n=12   fx=11 
+      lme4.mixing.fe_plus_re                              n=39   fx=31 
+      lme4.mixing.slope_also_fe                           n=4    fx=4  
+      lme4.mixing.slope_not_fe                            n=1    fx=1  
+      lme4.mixing.nested_fixed                            n=1    fx=1  
+  axis: edge_lme4                 fx=6/8  tagged=6/8
+      lme4.edge_lme4.double_bar_factor                    n=1    fx=1  
+      lme4.edge_lme4.double_bar_multi                     n=1    fx=1  
+      lme4.edge_lme4.slash_with_slope                     n=1    fx=1  
+      lme4.edge_lme4.re_on_coerced                        n=0    fx=0    [MISSING]
+      lme4.edge_lme4.singular_fit                         n=1    fx=1  
+      lme4.edge_lme4.interaction_in_re                    n=1    fx=1  
+      lme4.edge_lme4.transform_group                      n=0    fx=0    [MISSING]
+      lme4.edge_lme4.complex_re                           n=1    fx=1  
+
+### [mgcv]
+  axis: bs                        fx=12/12  tagged=12/12
+      mgcv.bs.tp                                          n=113  fx=80 
+      mgcv.bs.ts                                          n=3    fx=1  
+      mgcv.bs.cr                                          n=13   fx=10 
+      mgcv.bs.cs                                          n=5    fx=1  
+      mgcv.bs.cc                                          n=5    fx=5  
+      mgcv.bs.ps                                          n=4    fx=4  
+      mgcv.bs.cp                                          n=2    fx=2  
+      mgcv.bs.re                                          n=10   fx=6  
+      mgcv.bs.fs                                          n=4    fx=3  
+      mgcv.bs.gp                                          n=3    fx=3  
+      mgcv.bs.ad                                          n=3    fx=3  
+      mgcv.bs.sz                                          n=3    fx=2  
+  axis: constructor               fx=8/8  tagged=8/8
+      mgcv.constructor.s_1d                               n=132  fx=92 
+      mgcv.constructor.s_iso_2d                           n=30   fx=23 
+      mgcv.constructor.s_iso_3d                           n=2    fx=1  
+      mgcv.constructor.te                                 n=18   fx=15 
+      mgcv.constructor.te_mixed_bs                        n=1    fx=1  
+      mgcv.constructor.te_different_k                     n=1    fx=1  
+      mgcv.constructor.ti_decomp                          n=5    fx=5  
+      mgcv.constructor.t2                                 n=5    fx=4  
+  axis: modifier                  fx=8/8  tagged=8/8
+      mgcv.modifier.k                                     n=66   fx=51 
+      mgcv.modifier.m_penalty                             n=14   fx=13 
+      mgcv.modifier.by_factor                             n=23   fx=8  
+      mgcv.modifier.by_factor_id                          n=1    fx=1  
+      mgcv.modifier.by_numeric                            n=1    fx=1  
+      mgcv.modifier.sp_fixed                              n=1    fx=1  
+      mgcv.modifier.xt_extras                             n=1    fx=1  
+      mgcv.modifier.pc_point                              n=2    fx=1  
+  axis: mixing                    fx=7/7  tagged=7/7
+      mgcv.mixing.smooth_only                             n=134  fx=102
+      mgcv.mixing.parametric_plus                         n=30   fx=15 
+      mgcv.mixing.two_smooths                             n=84   fx=59 
+      mgcv.mixing.smooth_and_re                           n=9    fx=5  
+      mgcv.mixing.by_with_main                            n=1    fx=1  
+      mgcv.mixing.parametric_smooth_re                    n=2    fx=2  
+      mgcv.mixing.tensor_plus_margins                     n=2    fx=2  
+  axis: edge_mgcv                 fx=6/7  tagged=6/7
+      mgcv.edge_mgcv.high_k                               n=1    fx=1  
+      mgcv.edge_mgcv.low_k                                n=1    fx=1  
+      mgcv.edge_mgcv.cc_wrap                              n=1    fx=1  
+      mgcv.edge_mgcv.fs_many_levels                       n=1    fx=1  
+      mgcv.edge_mgcv.te_one_var                           n=1    fx=1  
+      mgcv.edge_mgcv.smooth_of_ordered                    n=1    fx=1  
+      mgcv.edge_mgcv.by_missing_level                     n=0    fx=0    [MISSING]
+
+-----------------------------------------------------------------------------
+  (b) FORCED PAIRS
+-----------------------------------------------------------------------------
+  wr.op.star  +  wr.interaction.num_factor   OK  (n=37, ex=wr_0004)
+  wr.op.power  +  wr.contrast.sum   OK  (n=1, ex=cur_0070)
+  wr.transform.poly_orth  +  wr.interaction.num_factor   OK  (n=1, ex=cur_0027)
+  wr.transform.poly_raw  +  wr.interaction.num_factor   OK  (n=1, ex=cur_0028)
+  wr.intercept.leading_zero  +  wr.contrast.treatment   OK  (n=1, ex=cur_0015)
+  wr.edge.subtract_inter  +  wr.op.star   OK  (n=1, ex=cur_0032)
+  lme4.re_spec.uncorr_slope  +  lme4.grouping.crossed   OK  (n=1, ex=cur_0051)
+  lme4.re_spec.factor_uncorr  +  lme4.grouping.single   OK  (n=1, ex=cur_0040)
+  lme4.re_spec.corr_slope  +  lme4.grouping.nested_slash   OK  (n=1, ex=cur_0043)
+  lme4.mixing.slope_also_fe  +  lme4.grouping.single   OK  (n=2, ex=cur_0036)
+  mgcv.bs.cc  +  mgcv.modifier.k   OK  (n=5, ex=mgcv_0110)
+  mgcv.bs.fs  +  mgcv.edge_mgcv.fs_many_levels   OK  (n=1, ex=cur_0061)
+  mgcv.constructor.ti_decomp  +  mgcv.modifier.k   OK  (n=1, ex=cur_0057)
+  mgcv.constructor.te  +  mgcv.modifier.by_factor   OK  (n=1, ex=mgcv_0104)
+  mgcv.mixing.smooth_and_re  +  mgcv.bs.re   OK  (n=9, ex=mgcv_0003)
+
+-----------------------------------------------------------------------------
+  (c) DATASET RESOLUTION
+-----------------------------------------------------------------------------
+resolved:    45 / 400 executable
+unresolved:  355
+
+cases needing a dataset assignment (source_rd has no matching csv):
+  R::curated                                n=37
+  lme4::curated                             n=14
+  mgcv::choose.k                            n=14
+  gamair::ch1                               n=13
+  mgcv::curated                             n=12
+  mgcv::gam                                 n=11
+  gamair::ch2                               n=10
+  gamair::ch4                               n=10
+  gamair::ch7.solutions                     n=10
+  mgcv::gam.models                          n=9
+  mgcv::gamm                                n=8
+  gamair::ch1.solutions                     n=7
+  mgcv::coxph                               n=5
+  mgcv::linear.functional.terms             n=5
+  mgcv::predict.gam                         n=4
+  mgcv::smooth.construct.ad.smooth.spec     n=4
+  stats::glm                                n=4
+  stats::se.contrast                        n=4
+  mgcv::gam.side                            n=3
+  mgcv::pcls                                n=3
+  mgcv::smooth.construct                    n=3
+  mgcv::smooth.construct.gp.smooth.spec     n=3
+  mgcv::smooth.construct.tp.smooth.spec     n=3
+  mgcv::t2                                  n=3
+  mgcv::vis.gam                             n=3
+  nlme::anova.gls                           n=3
+  nlme::curated                             n=3
+  stats::influence.measures                 n=3
+  stats::logLik                             n=3
+  stats::model.extract                      n=3
+  stats::zC                                 n=3
+  gamair::ch4.solutions                     n=2
+  gamair::ch5.solutions                     n=2
+  lme4::confint.merMod                      n=2
+  lme4::fixef                               n=2
+  lme4::modular                             n=2
+  MASS::gamma.shape.glm                     n=2
+  mgcv::anova.gam                           n=2
+  mgcv::cnorm                               n=2
+  mgcv::coxpht                              n=2
+  mgcv::factor.smooth                       n=2
+  mgcv::pen.edf                             n=2
+  mgcv::plot.gam                            n=2
+  mgcv::qq.gam                              n=2
+  mgcv::smooth.construct.bs.smooth.spec     n=2
+  mgcv::smooth.construct.ps.smooth.spec     n=2
+  mgcv::smooth.construct.sz.smooth.spec     n=2
+  mgcv::step.gam                            n=2
+  mgcv::summary.gam                         n=2
+  mgcv::te                                  n=2
+  nlme::ACF.gls                             n=2
+  stats::anova.lm                           n=2
+  stats::aov                                n=2
+  stats::checkMFClasses                     n=2
+  stats::confint                            n=2
+  stats::effects                            n=2
+  stats::expand.model.frame                 n=2
+  stats::lm                                 n=2
+  stats::simulate                           n=2
+  stats::termplot                           n=2
+  faraway::prplot                           n=1
+  gamair::canWeather                        n=1
+  gamair::ch3                               n=1
+  gamair::ch3.solutions                     n=1
+  gamair::ch7                               n=1
+  gamair::curated                           n=1
+  lme4::allFit                              n=1
+  lme4::dummy                               n=1
+  lme4::fortify                             n=1
+  lme4::isREML                              n=1
+  lme4::lmer                                n=1
+  lme4::ngrps                               n=1
+  lme4::predict.merMod                      n=1
+  lme4::refit                               n=1
+  lme4::VarCorr                             n=1
+  MASS::addterm                             n=1
+  MASS::dose.p                              n=1
+  MASS::glm.nb                              n=1
+  MASS::loglm                               n=1
+  MASS::negative.binomial                   n=1
+  MASS::stepAIC                             n=1
+  mgcv::bcg                                 n=1
+  mgcv::Beta                                n=1
+  mgcv::clog                                n=1
+  mgcv::concurvity                          n=1
+  mgcv::cpois                               n=1
+  mgcv::gam.mh                              n=1
+  mgcv::gam.selection                       n=1
+  mgcv::gam.vcomp                           n=1
+  mgcv::gfam                                n=1
+  mgcv::identifiability                     n=1
+  mgcv::missing.data                        n=1
+  mgcv::model.matrix.gam                    n=1
+  mgcv::NCV                                 n=1
+  mgcv::Predict.matrix.soap.film            n=1
+  mgcv::random.effects                      n=1
+  mgcv::s                                   n=1
+  mgcv::smooth.construct.cr.smooth.spec     n=1
+  mgcv::smooth.construct.fs.smooth.spec     n=1
+  mgcv::smooth.construct.re.smooth.spec     n=1
+  mgcv::smooth.construct.sos.smooth.spec    n=1
+  mgcv::sp.vcov                             n=1
+  mgcv::vcov.gam                            n=1
+  mgcv::XWXd                                n=1
+  nlme::ACF.lme                             n=1
+  nlme::anova.lme                           n=1
+  nlme::comparePred                         n=1
+  nlme::corAR1                              n=1
+  nlme::fitted.lme                          n=1
+  nlme::getGroups.lme                       n=1
+  nlme::logLik.lme                          n=1
+  nlme::nlme                                n=1
+  nlme::VarCorr                             n=1
+  nlme::Variogram.gls                       n=1
+  nlme::Variogram.lme                       n=1
+  stats::add1                               n=1
+  stats::alias                              n=1
+  stats::case.names                         n=1
+  stats::coef                               n=1
+  stats::eff.aovlist                        n=1
+  stats::is.empty                           n=1
+  stats::lmfit                              n=1
+  stats::makepredictcall                    n=1
+  stats::model.frame                        n=1
+  stats::model.matrix                       n=1
+  stats::oneway.test                        n=1
+  stats::plot.lm                            n=1
+  stats::plot.profile                       n=1
+  stats::predict.glm                        n=1
+  stats::relevel                            n=1
+  stats::selfStart                          n=1
+  stats::SSD                                n=1
+  stats::summary.aov                        n=1
+  stats::summary.lm                         n=1
+  stats::TukeyHSD                           n=1
+  stats::var.test                           n=1
+  synthetic::curated                        n=1
+
+-----------------------------------------------------------------------------
+  (d) AVAILABLE DATASETS (datasets/<pkg>/<name>.csv)
+-----------------------------------------------------------------------------
+  faraway  (142):
+    aatemp
+    abrasion
+    aflatoxin
+    africa
+    airpass
+    alfalfa
+    amlxray
+    anaesthetic
+    babyfood
+    beetle
+    bliss
+    breaking
+    broccoli
+    butterfat
+    cathedral
+    cheddar
+    chicago
+    chmiss
+    choccake
+    chredlin
+    clot
+    cmob
+    cns
+    coagulation
+    composite
+    cornnit
+    corrosion
+    cpd
+    crawl
+    ctsib
+    death
+    debt
+    denim
+    diabetes
+    dicentric
+    divusa
+    drugpsy
+    dvisits
+    eco
+    eggprod
+    eggs
+    epilepsy
+    esdcomp
+    exa
+    eyegrade
+    fat
+    femsmoke
+    fortune
+    fpe
+    fruitfly
+    gala
+    galamiss
+    gammaray
+    gavote
+    globwarm
+    haireye
+    happy
+    hemoglobin
+    hips
+    hormone
+    hprice
+    hsb
+    infmort
+    insulgas
+    irrigation
+    jsp
+    kanga
+    lawn
+    leafblotch
+    leafburn
+    mammalsleep
+    manilius
+    mba
+    meatspec
+    melanoma
+    motorins
+    neighbor
+    nels88
+    nepali
+    nes96
+    newhamp
+    oatvar
+    odor
+    ohio
+    orings
+    ozone
+    parstum
+    peanut
+    penicillin
+    phbirths
+    pima
+    pipeline
+    pneumo
+    potuse
+    prostate
+    psid
+    pulp
+    punting
+    pvc
+    pyrimidines
+    rabbit
+    ratdrink
+    rats
+    resceram
+    salmonella
+    sat
+    savings
+    seatpos
+    seeds
+    semicond
+    sexab
+    sexfun
+    snail
+    solder
+    solv
+    sono
+    soybean
+    spector
+    speedo
+    star
+    stat500
+    stepping
+    strongx
+    suicide
+    teengamb
+    toenail
+    troutegg
+    truck
+    turtle
+    tvdoctor
+    twins
+    uncviet
+    uswages
+    vision
+    wafer
+    wavesolder
+    wbca
+    wcgs
+    weldstrength
+    wfat
+    wheat
+    worldcup
+  gamair  (28):
+    aral
+    bird
+    blowfly
+    bone
+    brain
+    cairo
+    chicago
+    chl
+    co2s
+    coast
+    engine
+    gas
+    harrier
+    hubble
+    ipo
+    mack
+    mackp
+    med
+    meh
+    mpg
+    sitka
+    sole
+    sperm.comp1
+    sperm.comp2
+    stomata
+    swer
+    wesdr
+    wine
+  lme4  (20):
+    Arabidopsis
+    cake
+    cbpp
+    cbpp2
+    culcitalogreg
+    culcitalvolume
+    Dyestuff
+    Dyestuff2
+    ergoStool
+    gopherdat2
+    grouseticks
+    InstEval
+    InstEval_sample
+    Pastes
+    Penicillin
+    salamander
+    schizophrenia
+    sleepstudy
+    toenail
+    VerbAgg
+  m-clark  (1):
+    pisa
+  MASS  (75):
+    Aids2
+    Animals
+    anorexia
+    bacteria
+    beav1
+    beav2
+    biopsy
+    birthwt
+    Boston
+    cabbages
+    caith
+    Cars93
+    cats
+    cement
+    coop
+    cpus
+    crabs
+    Cushings
+    eagles
+    epil
+    farms
+    fgl
+    forbes
+    GAGurine
+    gehan
+    genotype
+    geyser
+    gilgais
+    hills
+    housing
+    immer
+    Insurance
+    leuk
+    mammals
+    mcycle
+    Melanoma
+    menarche
+    michelson
+    minn38
+    motors
+    muscle
+    nlschools
+    npk
+    npr1
+    oats
+    OME
+    painters
+    petrol
+    Pima.te
+    Pima.tr
+    Pima.tr2
+    quine
+    Rabbit
+    road
+    rotifer
+    Rubber
+    ships
+    shuttle
+    Sitka
+    Sitka89
+    Skye
+    snails
+    steam
+    stormer
+    survey
+    synth.te
+    synth.tr
+    topo
+    Traffic
+    UScereal
+    UScrime
+    VA
+    waders
+    whiteside
+    wtloss
+  mgcv  (7):
+    columb
+    gamSim_eg1
+    gamSim_eg2
+    gamSim_eg4
+    gamSim_eg5
+    gamSim_eg6
+    trees
+  nlme  (41):
+    Alfalfa
+    Assay
+    bdf
+    BodyWeight
+    Cefamandole
+    Dialyzer
+    Earthquake
+    ergoStool
+    Fatigue
+    Gasoline
+    Glucose
+    Glucose2
+    Gun
+    IGF
+    Machines
+    MathAchieve
+    MathAchSchool
+    Meat
+    Milk
+    Muscle
+    Nitrendipene
+    Oats
+    Orthodont
+    Ovary
+    Oxboys
+    Oxide
+    PBG
+    Phenobarb
+    Pixel
+    Quinidine
+    Rail
+    RatPupWeight
+    Relaxin
+    Remifentanil
+    Soybean
+    Spruce
+    Tetracycline1
+    Tetracycline2
+    Wafer
+    Wheat
+    Wheat2
+  R  (51):
+    airquality
+    anscombe
+    attenu
+    attitude
+    BOD
+    cars
+    ChickWeight
+    chickwts
+    CO2
+    crimtab
+    DNase
+    esoph
+    EuStockMarkets
+    faithful
+    Formaldehyde
+    freeny
+    Indometh
+    infert
+    InsectSprays
+    iris
+    LifeCycleSavings
+    Loblolly
+    longley
+    morley
+    mtcars
+    npk
+    occupationalStatus
+    Orange
+    OrchardSprays
+    penguins
+    PlantGrowth
+    pressure
+    Puromycin
+    quakes
+    randu
+    rock
+    Seatbelts
+    sleep
+    stackloss
+    swiss
+    Theoph
+    ToothGrowth
+    trees
+    USArrests
+    USJudgeRatings
+    USPersonalExpenditure
+    VADeaths
+    volcano
+    warpbreaks
+    women
+    WorldPhones
+  rstanarm  (1):
+    kidiq
+  synthetic  (10):
+    seed_synth_2d_smooth
+    seed_synth_aliased
+    seed_synth_basic
+    seed_synth_big_factor
+    seed_synth_crossed_re
+    seed_synth_empty_cell
+    seed_synth_longitudinal
+    seed_synth_na_mixed
+    seed_synth_nested_group
+    seed_synth_singleton

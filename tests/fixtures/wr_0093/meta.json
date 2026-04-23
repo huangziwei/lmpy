@@ -1,0 +1,14 @@
+{
+  "id": "wr_0093",
+  "kind": "wr",
+  "formula": "c(1:3, 7, 6) ~ x",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "coef",
+  "dataset": {
+    "pkg": "faraway",
+    "name": "cathedral"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.transformed"],
+  "need_vars": "x"
+}

@@ -1,0 +1,13 @@
+{
+  "flist_names": "Batch",
+  "flist_levels": {
+    "Batch": ["A", "B", "C", "D", "E", "F"]
+  },
+  "cnms": {
+    "Batch": "(Intercept)"
+  },
+  "Gp": [0, 6],
+  "nl": 6,
+  "n": 30,
+  "q": 6
+}

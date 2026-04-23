@@ -1,0 +1,14 @@
+{
+  "id": "wr_0113",
+  "kind": "wr",
+  "formula": "rating ~ .",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "logLik",
+  "dataset": {
+    "pkg": "R",
+    "name": "attitude"
+  },
+  "features": ["wr.op.dot", "shared.response_shape.univariate", "wr.intercept.default"],
+  "need_vars": ["rating", "."]
+}

@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "time.ipc", "I(prop.partner * time.ipc)"],
+  "assign": [0, 1, 2],
+  "contrasts": null,
+  "term_labels": ["time.ipc", "I(prop.partner * time.ipc)"],
+  "intercept": true,
+  "response": 1
+}

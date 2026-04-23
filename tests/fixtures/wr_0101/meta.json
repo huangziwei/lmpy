@@ -1,0 +1,14 @@
+{
+  "id": "wr_0101",
+  "kind": "wr",
+  "formula": "Postwt ~ Prewt + Treat + offset(Prewt)",
+  "source_pkg": "stats",
+  "source_fn": "glm",
+  "source_rd": "glm",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "anorexia"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["Postwt", "Prewt", "Treat"]
+}

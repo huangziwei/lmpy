@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0020",
+  "kind": "mgcv",
+  "formula": "price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year)",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "ch7.solutions",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "wine"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths"],
+  "need_vars": ["price", "h.rain", "s.temp", "h.temp", "year"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0114",
+  "kind": "mgcv",
+  "formula": "y ~ t2(x0, x1, bs = \"tp\", m = 1, k = 7) + s(x2) + s(x3)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "pen.edf",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.constructor.t2", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths"],
+  "need_vars": ["y", "x0", "x1", "x2", "x3"]
+}

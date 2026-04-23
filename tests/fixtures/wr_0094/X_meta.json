@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "disp", "hp", "wt", "am"],
+  "assign": [0, 1, 2, 3, 4],
+  "contrasts": null,
+  "term_labels": ["disp", "hp", "wt", "am"],
+  "intercept": true,
+  "response": 1
+}

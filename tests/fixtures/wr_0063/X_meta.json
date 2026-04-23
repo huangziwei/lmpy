@@ -1,0 +1,10 @@
+{
+  "colnames": ["InsulAfter", "InsulBefore", "InsulAfter:Temp", "InsulBefore:Temp", "InsulAfter:I(Temp^2)", "InsulBefore:I(Temp^2)"],
+  "assign": [1, 1, 2, 2, 3, 3],
+  "contrasts": {
+    "Insul": "contr.treatment"
+  },
+  "term_labels": ["Insul", "Insul:Temp", "Insul:I(Temp^2)"],
+  "intercept": false,
+  "response": 1
+}

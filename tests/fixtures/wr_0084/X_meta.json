@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "Agriculture", "Examination", "Education", "Catholic", "Infant.Mortality"],
+  "assign": [0, 1, 2, 3, 4, 5],
+  "contrasts": null,
+  "term_labels": ["Agriculture", "Examination", "Education", "Catholic", "Infant.Mortality"],
+  "intercept": true,
+  "response": 1
+}

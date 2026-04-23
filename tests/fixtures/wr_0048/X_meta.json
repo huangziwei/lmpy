@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "age", "lwt", "race", "smoke", "ptl", "ht", "ui", "ftv", "bwt"],
+  "assign": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  "contrasts": null,
+  "term_labels": ["age", "lwt", "race", "smoke", "ptl", "ht", "ui", "ftv", "bwt"],
+  "intercept": true,
+  "response": 1
+}

@@ -1,0 +1,14 @@
+{
+  "id": "wr_0090",
+  "kind": "wr",
+  "formula": "y ~ x + I(x^2) + I(x^3) + I((x - 10)^2)",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "case.names",
+  "dataset": {
+    "pkg": "faraway",
+    "name": "cathedral"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.power3", "wr.transform.I_square", "wr.transform.identity", "wr.interaction.crossed_expand", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x"]
+}

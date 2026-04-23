@@ -1,0 +1,14 @@
+{
+  "id": "cur_0012",
+  "kind": "wr",
+  "formula": "mpg ~ wt + 0",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.plus_zero", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "wt"]
+}

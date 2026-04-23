@@ -1,0 +1,14 @@
+{
+  "id": "wr_0121",
+  "kind": "wr",
+  "formula": "extra ~ group",
+  "source_pkg": "stats",
+  "source_fn": "lm",
+  "source_rd": "oneway.test",
+  "dataset": {
+    "pkg": "R",
+    "name": "sleep"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["extra", "group"]
+}

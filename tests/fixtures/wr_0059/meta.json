@@ -1,0 +1,14 @@
+{
+  "id": "wr_0059",
+  "kind": "wr",
+  "formula": "Days ~ .^4",
+  "source_pkg": "MASS",
+  "source_fn": "glm",
+  "source_rd": "negative.binomial",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "quine"
+  },
+  "features": ["wr.op.dot", "wr.op.power", "wr.interaction.crossed_expand", "shared.response_shape.univariate", "wr.intercept.default"],
+  "need_vars": ["Days", "."]
+}

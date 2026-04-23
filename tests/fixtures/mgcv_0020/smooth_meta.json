@@ -1,0 +1,53 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "tp.smooth.spec",
+      "label": "s(h.rain)",
+      "term": "h.rain",
+      "dim": 1,
+      "bs": -1,
+      "bs_dim": -1,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    },
+    {
+      "index": 2,
+      "class": "tp.smooth.spec",
+      "label": "s(s.temp)",
+      "term": "s.temp",
+      "dim": 1,
+      "bs": -1,
+      "bs_dim": -1,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    },
+    {
+      "index": 3,
+      "class": "tp.smooth.spec",
+      "label": "s(h.temp)",
+      "term": "h.temp",
+      "dim": 1,
+      "bs": -1,
+      "bs_dim": -1,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    },
+    {
+      "index": 4,
+      "class": "tp.smooth.spec",
+      "label": "s(year)",
+      "term": "year",
+      "dim": 1,
+      "bs": -1,
+      "bs_dim": -1,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

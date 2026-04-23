@@ -1,0 +1,14 @@
+{
+  "id": "cur_0043",
+  "kind": "lme4",
+  "formula": "yield ~ nitro + (nitro | Block/Variety)",
+  "source_pkg": "nlme",
+  "source_fn": "lmer",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Oats"
+  },
+  "features": ["lme4.re_spec.corr_slope", "lme4.grouping.nested_slash", "lme4.mixing.fe_plus_re", "lme4.mixing.slope_also_fe", "lme4.edge_lme4.slash_with_slope", "shared.response_shape.univariate"],
+  "need_vars": ["yield", "nitro", "Block", "Variety"]
+}

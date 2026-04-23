@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "pop15", "pop75", "dpi", "ddpi"],
+  "assign": [0, 1, 2, 3, 4],
+  "contrasts": null,
+  "term_labels": ["pop15", "pop75", "dpi", "ddpi"],
+  "intercept": true,
+  "response": 1
+}

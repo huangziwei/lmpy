@@ -1,0 +1,14 @@
+{
+  "id": "cur_0011",
+  "kind": "wr",
+  "formula": "mpg ~ (wt + hp) * cyl",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.op.parens", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.three_way", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "wt", "hp", "cyl"]
+}

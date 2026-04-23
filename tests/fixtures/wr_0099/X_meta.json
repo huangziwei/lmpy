@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "log(Girth)", "log(Height)"],
+  "assign": [0, 1, 2],
+  "contrasts": null,
+  "term_labels": ["log(Girth)", "log(Height)"],
+  "intercept": true,
+  "response": 1
+}

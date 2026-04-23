@@ -1,0 +1,1114 @@
+meta:
+  generated_by: hand-authored
+  kind: curated
+  purpose: >
+    Targeted cases for feature values that don't show up in any R help file
+    formula — contrasts, intercept variants, subtract-edges, transforms,
+    uncommon RE patterns, mgcv edge modifiers. Each case is paired with a
+    dataset we actually export under datasets/<pkg>/.
+cases:
+
+# ----------------------------------------------------------------------------
+# wr.contrast.*  — stats::C() wrapper around a factor
+# ----------------------------------------------------------------------------
+- id: cur_0001
+  formula: Sepal.Length ~ C(Species, contr.treatment)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.contrast.treatment
+  - wr.transform.asis_factor
+  - shared.response_shape.univariate
+  notes: 'explicit treatment contrast via C()'
+
+- id: cur_0002
+  formula: Sepal.Length ~ C(Species, contr.sum)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.contrast.sum
+  - wr.transform.asis_factor
+  - shared.response_shape.univariate
+  notes: 'sum-to-zero contrast'
+
+- id: cur_0003
+  formula: Sepal.Length ~ C(Species, contr.helmert)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.contrast.helmert
+  - wr.transform.asis_factor
+  - shared.response_shape.univariate
+  notes: 'helmert contrast'
+
+- id: cur_0004
+  formula: Sepal.Length ~ C(Species, contr.poly)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.contrast.poly
+  - wr.transform.asis_factor
+  - shared.response_shape.univariate
+  notes: 'polynomial contrast (appropriate for ordered / equispaced factor)'
+
+- id: cur_0005
+  formula: Sepal.Length ~ C(Species, contr.SAS)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.contrast.sas
+  - wr.transform.asis_factor
+  - shared.response_shape.univariate
+  notes: 'SAS-style contrast (last level as reference)'
+
+- id: cur_0006
+  formula: circumference ~ C(Tree, contr.poly) + age
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: Orange
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.contrast.poly
+  - wr.transform.asis_factor
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: 'poly contrast on an ordered factor + numeric covariate'
+
+# ----------------------------------------------------------------------------
+# wr.op.*  — missing operator variants
+# ----------------------------------------------------------------------------
+- id: cur_0007
+  formula: mpg ~ wt + hp - hp
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.minus
+  - wr.transform.identity
+  - wr.edge.subtract_main
+  - shared.response_shape.univariate
+  notes: 'minus operator removes a main term already added'
+
+- id: cur_0008
+  formula: mpg ~ cyl:disp
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.colon
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.edge.interaction_only
+  - shared.response_shape.univariate
+  notes: 'bare colon — interaction-only, no main effects'
+
+- id: cur_0009
+  formula: breaks ~ wool + tension + wool %in% tension
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: warpbreaks
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.in_op
+  - wr.transform.identity
+  - wr.interaction.factor_factor
+  - shared.response_shape.univariate
+  notes: '%in% is a nesting-style interaction operator'
+
+- id: cur_0010
+  formula: mpg ~ . - carb
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.dot
+  - wr.op.dot_minus
+  - wr.op.minus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: 'dot expansion minus a specific term'
+
+- id: cur_0011
+  formula: mpg ~ (wt + hp) * cyl
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.op.parens
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.interaction.three_way
+  - shared.response_shape.univariate
+  notes: 'parens group terms before applying *'
+
+# ----------------------------------------------------------------------------
+# wr.intercept.*  — missing intercept variants
+# ----------------------------------------------------------------------------
+- id: cur_0012
+  formula: mpg ~ wt + 0
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.plus_zero
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: 'trailing + 0 removes intercept'
+
+- id: cur_0013
+  formula: mpg ~ 0 + wt
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.leading_zero
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: 'leading 0 + removes intercept'
+
+- id: cur_0014
+  formula: mpg ~ 1 + wt
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.explicit_one
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: 'explicit 1 + is a no-op but worth recording'
+
+- id: cur_0015
+  formula: Sepal.Length ~ 0 + C(Species, contr.treatment)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.leading_zero
+  - wr.op.plus
+  - wr.contrast.treatment
+  - wr.transform.asis_factor
+  - shared.response_shape.univariate
+  notes: 'forced pair — leading_zero × contrast.treatment'
+
+# ----------------------------------------------------------------------------
+# wr.transform.*  — missing transforms
+# ----------------------------------------------------------------------------
+- id: cur_0016
+  formula: mpg ~ I(wt + hp)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.I_combine
+  - shared.response_shape.univariate
+  notes: 'I() combines two vars into one derived column'
+
+- id: cur_0017
+  formula: mpg ~ log1p(hp)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.log1p
+  - shared.response_shape.univariate
+  notes: 'log1p transform'
+
+- id: cur_0018
+  formula: mpg ~ exp(qsec/10)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.exp
+  - shared.response_shape.univariate
+  notes: 'exp transform'
+
+- id: cur_0019
+  formula: mpg ~ sqrt(wt)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.sqrt
+  - shared.response_shape.univariate
+  notes: 'sqrt transform'
+
+- id: cur_0020
+  formula: mpg ~ poly(wt, 2, raw = TRUE)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.poly_raw
+  - shared.response_shape.univariate
+  notes: 'raw polynomial basis'
+
+- id: cur_0021
+  formula: mpg ~ bs(wt)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.bs
+  - shared.response_shape.univariate
+  notes: 'B-spline basis, default degree 3'
+
+- id: cur_0022
+  formula: mpg ~ bs(wt, degree = 2)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.bs
+  - wr.transform.bs_degree
+  - shared.response_shape.univariate
+  notes: 'B-spline with custom degree'
+
+- id: cur_0023
+  formula: mpg ~ cut(wt, breaks = c(0, 3, 4, 6))
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.cut
+  - shared.response_shape.univariate
+  notes: 'cut() discretises a numeric into a factor'
+
+- id: cur_0024
+  formula: Reaction ~ Days + offset(Days)
+  source_pkg: lme4
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - wr.transform.offset
+  - shared.response_shape.univariate
+  notes: 'offset() adds a fixed-coefficient term'
+
+- id: cur_0025
+  formula: mpg ~ I(wt > 3)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.inline_logical
+  - shared.response_shape.univariate
+  notes: 'I() with a logical predicate'
+
+- id: cur_0026
+  formula: Sepal.Length ~ relevel(Species, ref = "virginica")
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.transform.reorder_factor
+  - wr.transform.asis_factor
+  - shared.response_shape.univariate
+  notes: 'relevel() changes the reference level'
+
+- id: cur_0027
+  formula: Sepal.Length ~ poly(Petal.Length, 2) * Species
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.poly_orth
+  - wr.transform.asis_factor
+  - wr.interaction.num_factor
+  - wr.interaction.transform_in_int
+  - shared.response_shape.univariate
+  notes: 'forced pair — poly_orth × num_factor interaction'
+
+- id: cur_0028
+  formula: Sepal.Length ~ poly(Petal.Length, 2, raw = TRUE) * Species
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.poly_raw
+  - wr.transform.asis_factor
+  - wr.interaction.num_factor
+  - wr.interaction.transform_in_int
+  - shared.response_shape.univariate
+  notes: 'forced pair — poly_raw × num_factor interaction'
+
+# ----------------------------------------------------------------------------
+# wr.interaction.*
+# ----------------------------------------------------------------------------
+- id: cur_0029
+  formula: Sepal.Length ~ Species:cut(Petal.Length, 3)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: iris
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.colon
+  - wr.transform.cut
+  - wr.transform.asis_factor
+  - wr.interaction.factor_factor
+  - wr.edge.interaction_only
+  - shared.response_shape.univariate
+  notes: 'factor × factor interaction (second one formed by cut)'
+
+- id: cur_0030
+  formula: mpg ~ wt + hp:I(wt^2)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.colon
+  - wr.transform.identity
+  - wr.transform.I_square
+  - wr.interaction.num_num
+  - wr.interaction.I_in_int
+  - wr.interaction.transform_in_int
+  - shared.response_shape.univariate
+  notes: 'I() inside interaction term'
+
+# ----------------------------------------------------------------------------
+# wr.edge.*
+# ----------------------------------------------------------------------------
+- id: cur_0031
+  formula: mpg ~ wt + wt
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - wr.edge.dup_term
+  - shared.response_shape.univariate
+  notes: 'duplicated term — model.matrix dedupes'
+
+- id: cur_0032
+  formula: mpg ~ wt * hp - wt:hp
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.op.minus
+  - wr.op.colon
+  - wr.transform.identity
+  - wr.interaction.num_num
+  - wr.edge.subtract_inter
+  - shared.response_shape.univariate
+  notes: 'forced pair — subtract_inter × star'
+
+- id: cur_0033
+  formula: mpg ~ wt - cyl
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.minus
+  - wr.transform.identity
+  - wr.edge.subtract_absent
+  - shared.response_shape.univariate
+  notes: 'subtract a term that was never added'
+
+- id: cur_0034
+  formula: mpg ~ wt - wt
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: mtcars
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.minus
+  - wr.transform.identity
+  - wr.edge.subtract_all
+  - shared.response_shape.univariate
+  notes: 'subtract every term — leaves just intercept'
+
+- id: cur_0035
+  formula: breaks ~ wool:tension
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: warpbreaks
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.colon
+  - wr.transform.identity
+  - wr.interaction.factor_factor
+  - wr.edge.interaction_only
+  - shared.response_shape.univariate
+  notes: 'factor × factor interaction only (no main effects)'
+
+# ----------------------------------------------------------------------------
+# lme4 forced pair + missing re_spec / grouping / mixing / edge
+# ----------------------------------------------------------------------------
+- id: cur_0036
+  formula: Reaction ~ Days + (1 + Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: yes
+  features:
+  - lme4.re_spec.corr_slope_expl
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - lme4.mixing.slope_also_fe
+  - shared.response_shape.univariate
+  notes: 'explicit (1 + Days | g) form; forced pair slope_also_fe × single'
+
+- id: cur_0037
+  formula: Reaction ~ Days + (1 + Days + I(Days^2) | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: yes
+  features:
+  - lme4.re_spec.multi_corr
+  - lme4.re_spec.transform_slope
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - lme4.edge_lme4.complex_re
+  - shared.response_shape.univariate
+  notes: 'three correlated REs including a transform'
+
+- id: cur_0038
+  formula: Reaction ~ Days + (1 + Days + I(Days^2) || Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: yes
+  features:
+  - lme4.re_spec.multi_uncorr
+  - lme4.re_spec.transform_slope
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - lme4.edge_lme4.double_bar_multi
+  - shared.response_shape.univariate
+  notes: 'double-bar separates multiple uncorrelated slopes'
+
+- id: cur_0039
+  formula: angle ~ recipe + (recipe | replicate)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: cake
+  executable: yes
+  features:
+  - lme4.re_spec.factor_slope
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - shared.response_shape.univariate
+  notes: 'factor as RE slope (expanded to one slope per level)'
+
+- id: cur_0040
+  formula: angle ~ recipe + (recipe || replicate)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: cake
+  executable: yes
+  features:
+  - lme4.re_spec.factor_uncorr
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - lme4.edge_lme4.double_bar_factor
+  - shared.response_shape.univariate
+  notes: 'forced pair — factor_uncorr × single'
+
+- id: cur_0041
+  formula: Reaction ~ Days + (0 + Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: yes
+  features:
+  - lme4.re_spec.no_intercept
+  - lme4.re_spec.slope_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - lme4.mixing.slope_also_fe
+  - shared.response_shape.univariate
+  notes: 'RE slope without RE intercept'
+
+- id: cur_0042
+  formula: strength ~ (1 | batch/cask)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.nested_slash
+  - lme4.mixing.re_only
+  - shared.response_shape.univariate
+  notes: 'slash-nested grouping, intercept only'
+
+- id: cur_0043
+  formula: yield ~ nitro + (nitro | Block/Variety)
+  source_pkg: nlme
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: Oats
+  executable: yes
+  features:
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.nested_slash
+  - lme4.mixing.fe_plus_re
+  - lme4.mixing.slope_also_fe
+  - lme4.edge_lme4.slash_with_slope
+  - shared.response_shape.univariate
+  notes: 'forced pair — corr_slope × nested_slash'
+
+- id: cur_0044
+  formula: strength ~ (1 | batch) + (1 | sample)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.partial_crossed
+  - lme4.mixing.re_only
+  - shared.response_shape.univariate
+  notes: 'two grouping terms — sample is nested inside batch via the data'
+
+- id: cur_0045
+  formula: Reaction ~ 1 + (Days | Subject)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: yes
+  features:
+  - lme4.re_spec.corr_slope
+  - lme4.grouping.single
+  - lme4.mixing.slope_not_fe
+  - shared.response_shape.univariate
+  notes: 'Days is a random slope but NOT a fixed effect'
+
+- id: cur_0046
+  formula: strength ~ batch + (1 | batch)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: Pastes
+  executable: yes
+  features:
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - lme4.mixing.nested_fixed
+  - shared.response_shape.univariate
+  notes: 'same factor appears as FE and as RE grouping'
+
+- id: cur_0047
+  formula: Reaction ~ Days + (1 | factor(Subject))
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: no
+  features:
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.fe_plus_re
+  - lme4.edge_lme4.re_on_coerced
+  - shared.response_shape.univariate
+  notes: 'factor() coercion of the grouping var — lFormula rejects call-expr grouping; revisit with per-case preprocessor'
+
+- id: cur_0048
+  formula: angle ~ recipe + (1 | recipe:replicate)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: cake
+  executable: yes
+  features:
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.interaction_col
+  - lme4.mixing.fe_plus_re
+  - lme4.edge_lme4.interaction_in_re
+  - shared.response_shape.univariate
+  notes: 'grouping expression is an interaction'
+
+- id: cur_0049
+  formula: Yield ~ 1 + (1 | Batch)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: Dyestuff2
+  executable: yes
+  features:
+  - lme4.intercept.only_intercept
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.single
+  - lme4.mixing.re_only
+  - lme4.edge_lme4.singular_fit
+  - shared.response_shape.univariate
+  notes: 'Dyestuff2 is the canonical singular-fit example (var ≈ 0)'
+
+- id: cur_0050
+  formula: strength ~ (1 | interaction(batch, cask))
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: Pastes
+  executable: no
+  features:
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.interaction_col
+  - lme4.mixing.re_only
+  - lme4.edge_lme4.transform_group
+  - shared.response_shape.univariate
+  notes: 'grouping expression is a transform — same lFormula call-expr limitation as cur_0047'
+
+- id: cur_0051
+  formula: Reaction ~ Days + (Days || Subject) + (1 | Days)
+  source_pkg: lme4
+  source_fn: lmer
+  source_rd: curated
+  dataset_hint: sleepstudy
+  executable: yes
+  features:
+  - lme4.re_spec.uncorr_slope
+  - lme4.re_spec.intercept_only
+  - lme4.grouping.crossed
+  - lme4.mixing.fe_plus_re
+  - lme4.mixing.slope_also_fe
+  - shared.response_shape.univariate
+  notes: 'forced pair — uncorr_slope × crossed (Days used as second grouping)'
+
+# ----------------------------------------------------------------------------
+# mgcv — te variants, by_numeric, tensor mixing, edges
+# ----------------------------------------------------------------------------
+- id: cur_0052
+  formula: y ~ te(x0, x1, bs = c("tp", "cr"))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.te
+  - mgcv.constructor.te_mixed_bs
+  - mgcv.bs.tp
+  - mgcv.bs.cr
+  - mgcv.mixing.smooth_only
+  - shared.response_shape.univariate
+  notes: 'tensor with mixed marginal bases'
+
+- id: cur_0053
+  formula: y ~ te(x0, x1, k = c(5, 10))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.te
+  - mgcv.constructor.te_different_k
+  - mgcv.bs.tp
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - shared.response_shape.univariate
+  notes: 'tensor with per-margin k'
+
+- id: cur_0054
+  formula: y ~ s(x0, by = x1)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.tp
+  - mgcv.modifier.by_numeric
+  - mgcv.mixing.smooth_only
+  - shared.response_shape.univariate
+  notes: 'by= with a numeric (varying-coefficient) variable'
+
+- id: cur_0055
+  formula: yield ~ Variety + s(nitro, by = Variety)
+  source_pkg: nlme
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: Oats
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.tp
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.by_with_main
+  - shared.response_shape.univariate
+  notes: 'by-factor smooth with main effect of the by-factor present'
+
+- id: cur_0056
+  formula: y ~ s(x0) + s(x1) + ti(x0, x1)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.ti_decomp
+  - mgcv.bs.tp
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  - mgcv.mixing.tensor_plus_margins
+  - shared.response_shape.univariate
+  notes: 'classic ti decomposition — margins + pure interaction'
+
+- id: cur_0057
+  formula: y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.ti_decomp
+  - mgcv.bs.tp
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  - mgcv.mixing.tensor_plus_margins
+  - shared.response_shape.univariate
+  notes: 'forced pair — ti_decomp × k modifier'
+
+- id: cur_0058
+  formula: y ~ s(x0, k = 50)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.tp
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.edge_mgcv.high_k
+  - shared.response_shape.univariate
+  notes: 'high k relative to data richness'
+
+- id: cur_0059
+  formula: y ~ s(x0, k = 3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.tp
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.edge_mgcv.low_k
+  - shared.response_shape.univariate
+  notes: 'k at the low end'
+
+- id: cur_0060
+  formula: temp ~ s(day.of.year, bs = "cc", k = 20)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: cairo
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.cc
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.edge_mgcv.cc_wrap
+  - shared.response_shape.univariate
+  notes: 'cyclic cubic on a true wrap variable (day-of-year)'
+
+- id: cur_0061
+  formula: distance ~ s(age, Subject, bs = "fs")
+  source_pkg: nlme
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: Orthodont
+  executable: yes
+  features:
+  - mgcv.constructor.s_iso_2d
+  - mgcv.bs.fs
+  - mgcv.mixing.smooth_only
+  - mgcv.edge_mgcv.fs_many_levels
+  - shared.response_shape.univariate
+  notes: 'forced pair — fs basis × many levels (Subject has 27 levels)'
+
+- id: cur_0062
+  formula: y ~ te(x0)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.te
+  - mgcv.bs.tp
+  - mgcv.mixing.smooth_only
+  - mgcv.edge_mgcv.te_one_var
+  - shared.response_shape.univariate
+  notes: 'degenerate tensor with only one argument'
+
+- id: cur_0063
+  formula: uptake ~ s(Plant, bs = "re")
+  source_pkg: R
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: CO2
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.re
+  - mgcv.mixing.smooth_only
+  - mgcv.edge_mgcv.smooth_of_ordered
+  - shared.response_shape.univariate
+  notes: 'bs=re applied to an ordered factor (CO2$Plant)'
+
+- id: cur_0064
+  formula: y ~ s(x0, bs = "ts") + s(x1, bs = "ts")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.ts
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  - shared.response_shape.univariate
+  notes: 'thin-plate shrinkage basis — fixture for bs.ts'
+
+- id: cur_0065
+  formula: y ~ s(x0, bs = "cs", k = 10)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.cs
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - shared.response_shape.univariate
+  notes: 'cubic shrinkage basis — fixture for bs.cs'
+
+- id: cur_0066
+  formula: y ~ s(x0, pc = 0.5)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.tp
+  - mgcv.modifier.pc_point
+  - mgcv.mixing.smooth_only
+  - shared.response_shape.univariate
+  notes: 'pc= anchors the smooth at a specific point'
+
+# ----------------------------------------------------------------------------
+# shared.rank.perfect_fit  — params == n obs
+# ----------------------------------------------------------------------------
+- id: cur_0067
+  formula: height ~ weight + I(weight^2) + I(weight^3) + I(weight^4) + I(weight^5) + I(weight^6) + I(weight^7) + I(weight^8) + I(weight^9) + I(weight^10) + I(weight^11) + I(weight^12) + I(weight^13) + I(weight^14)
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: women
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - wr.transform.I_square
+  - shared.response_shape.univariate
+  notes: 'women has 15 rows; intercept + 14 terms = 15 params → perfect fit'
+
+# ----------------------------------------------------------------------------
+# mgcv.modifier.xt_extras  — passing xt=list(...) to s()
+# ----------------------------------------------------------------------------
+- id: cur_0068
+  formula: y ~ s(x0, bs = "cr", xt = list(border = 2))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: curated
+  dataset_hint: gamSim_eg1
+  executable: yes
+  features:
+  - mgcv.constructor.s_1d
+  - mgcv.bs.cr
+  - mgcv.modifier.xt_extras
+  - mgcv.mixing.smooth_only
+  - shared.response_shape.univariate
+  notes: 'xt= passes extra basis-specific args (ignored by cr, but exercises the slot)'
+
+# ----------------------------------------------------------------------------
+# shared.rank.empty_cells  — factor × factor with a design cell that has 0 obs
+# ----------------------------------------------------------------------------
+- id: cur_0069
+  formula: y ~ f * g
+  source_pkg: synthetic
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: seed_synth_empty_cell
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.star
+  - wr.transform.identity
+  - wr.interaction.factor_factor
+  - shared.response_shape.univariate
+  notes: 'seed_synth_empty_cell has at least one (f, g) combo with zero rows'
+
+# ----------------------------------------------------------------------------
+# forced pair: wr.op.power + wr.contrast.sum
+# ----------------------------------------------------------------------------
+- id: cur_0070
+  formula: breaks ~ (C(wool, contr.sum) + tension)^2
+  source_pkg: R
+  source_fn: lm
+  source_rd: curated
+  dataset_hint: warpbreaks
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.op.power
+  - wr.contrast.sum
+  - wr.transform.asis_factor
+  - wr.transform.identity
+  - wr.interaction.factor_factor
+  - shared.response_shape.univariate
+  notes: 'forced pair — power × contrast.sum'

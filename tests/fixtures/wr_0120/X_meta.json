@@ -1,0 +1,11 @@
+{
+  "colnames": ["(Intercept)", "a+", "b+"],
+  "assign": [0, 1, 2],
+  "contrasts": {
+    "a": "contr.treatment",
+    "b": "contr.treatment"
+  },
+  "term_labels": ["a", "b"],
+  "intercept": true,
+  "response": 0
+}

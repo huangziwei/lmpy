@@ -1,0 +1,10 @@
+{
+  "colnames": ["(Intercept)", "I(wt > 3)TRUE"],
+  "assign": [0, 1],
+  "contrasts": {
+    "I(wt > 3)": "contr.treatment"
+  },
+  "term_labels": "I(wt > 3)",
+  "intercept": true,
+  "response": 1
+}

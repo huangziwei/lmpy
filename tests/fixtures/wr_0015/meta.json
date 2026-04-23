@@ -1,0 +1,14 @@
+{
+  "id": "wr_0015",
+  "kind": "wr",
+  "formula": "loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2 * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3)",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1.solutions",
+  "dataset": {
+    "pkg": "MASS",
+    "name": "Rubber"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.I_product", "wr.transform.I_square", "wr.transform.identity", "wr.interaction.num_factor", "shared.response_shape.univariate"],
+  "need_vars": ["loss", "hard", "tens"]
+}

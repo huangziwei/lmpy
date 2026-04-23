@@ -1,0 +1,14 @@
+{
+  "id": "mgcv_0046",
+  "kind": "mgcv",
+  "formula": "y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "choose.k",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X", "mgcv.bs.tp", "mgcv.constructor.s_1d", "mgcv.modifier.k", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths"],
+  "need_vars": ["y", "x0", "x1", "x2", "x3"]
+}

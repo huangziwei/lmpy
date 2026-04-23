@@ -1,0 +1,15 @@
+{
+  "flist_names": ["Variety:Block", "Block"],
+  "flist_levels": {
+    "Variety:Block": ["Golden Rain:I", "Golden Rain:II", "Golden Rain:III", "Golden Rain:IV", "Golden Rain:V", "Golden Rain:VI", "Marvellous:I", "Marvellous:II", "Marvellous:III", "Marvellous:IV", "Marvellous:V", "Marvellous:VI", "Victory:I", "Victory:II", "Victory:III", "Victory:IV", "Victory:V", "Victory:VI"],
+    "Block": ["I", "II", "III", "IV", "V", "VI"]
+  },
+  "cnms": {
+    "Variety:Block": ["(Intercept)", "nitro"],
+    "Block": ["(Intercept)", "nitro"]
+  },
+  "Gp": [0, 36, 48],
+  "nl": [18, 6],
+  "n": 72,
+  "q": 48
+}

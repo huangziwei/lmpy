@@ -1,0 +1,14 @@
+{
+  "id": "wr_0025",
+  "kind": "wr",
+  "formula": "travel ~ Rail",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch2",
+  "dataset": {
+    "pkg": "nlme",
+    "name": "Rail"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.transform.identity", "shared.response_shape.univariate"],
+  "need_vars": ["travel", "Rail"]
+}

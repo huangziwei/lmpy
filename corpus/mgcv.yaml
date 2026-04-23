@@ -1,0 +1,2841 @@
+meta:
+  generated_by: scripts/tag_corpus.R
+  generated_at: 2026-04-23 17:52:50 CEST
+  kind: mgcv
+  count: 184
+cases:
+- id: mgcv_0001
+  formula: chl ~ s(lon, lat, k = 30, bs = "so", xt = list(bnd = list(aral.bnd), nmax
+    = 150))
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: aral
+  dataset_hint: aral
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0002
+  formula: T ~ region + s(time, k = 20, bs = "cr", by = region) + s(time, k = 40,
+    bs = "cr", by = latitude)
+  source_pkg: gamair
+  source_fn: bam
+  source_rd: canWeather
+  dataset_hint: canWeather
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0003
+  formula: score ~ Machine + s(Worker, bs = "re") + s(Machine, Worker, bs = "re")
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.re
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.s_iso_2d
+  - mgcv.mixing.smooth_and_re
+  - mgcv.mixing.parametric_smooth_re
+  notes: ''
+- id: mgcv_0004
+  formula: score ~ Machine + s(Worker, bs = "re") + s(Worker, bs = "re", by = Machine)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch2
+  dataset_hint: ch2
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.re
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.smooth_and_re
+  - mgcv.mixing.parametric_smooth_re
+  notes: ''
+- id: mgcv_0005
+  formula: Volume ~ s(Height) + s(Girth)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0006
+  formula: Volume ~ s(Height, bs = "cr") + s(Girth, bs = "cr")
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0007
+  formula: Volume ~ s(Height) + s(Girth, bs = "cr", k = 20)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.cr
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0008
+  formula: Volume ~ s(Height, Girth, k = 25)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0009
+  formula: Volume ~ te(Height, Girth, k = 5)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0010
+  formula: Volume ~ Height + s(Girth)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  notes: ''
+- id: mgcv_0011
+  formula: Volume ~ Hclass + s(Girth)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch4
+  dataset_hint: ch4
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  notes: ''
+- id: mgcv_0012
+  formula: y ~ s(x0, bs = "pl", m = 2) + s(x1, bs = "pl", m = 2) + s(x2, bs = "pl",
+    m = 3) + s(x3, bs = "pl", m = 2)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch5.solutions
+  dataset_hint: ch5.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0013
+  formula: y ~ s(x)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0014
+  formula: y ~ x
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: mgcv_0015
+  formula: accel ~ s(times, k = 40)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0016
+  formula: accel ~ s(times, k = 11, fx = TRUE)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0017
+  formula: accel ~ s(times, k = 11, fx = TRUE, bs = "cr")
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0018
+  formula: accel ~ s(times, k = 40, m = 3)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0019
+  formula: y ~ s(times, k = 40)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0020
+  formula: price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0021
+  formula: dn ~ n.lag + pop + s(log(n.lag), by = n.lag) + s(log(pop), by = -pop) -
+    1
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: ch7.solutions
+  dataset_hint: ch7.solutions
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0022
+  formula: octane ~ s(nm, by = NIR, k = 50)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: gas
+  dataset_hint: gas
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0023
+  formula: Y ~ s(region, k = 60, bs = "mrf", xt = list(polys = german.polys)) + offset(log(E))
+    + s(x, k = 10)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: larynx
+  dataset_hint: larynx
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0024
+  formula: type ~ s(MZ, by = intensity, k = 100)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: prostate
+  dataset_hint: prostate
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0025
+  formula: ret ~ s(dur, k = k) + s(gly, k = k) + s(bmi, k = k) + ti(dur, gly, k =
+    k) + ti(dur, bmi, k = k) + ti(gly, bmi, k = k)
+  source_pkg: gamair
+  source_fn: gam
+  source_rd: wesdr
+  dataset_hint: wesdr
+  executable: no
+  features: []
+  notes: k= is an unresolved variable, not a constant
+- id: mgcv_0026
+  formula: y ~ s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: Beta
+  dataset_hint: Beta
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0027
+  formula: y ~ s(x, k = 40)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: NCV
+  dataset_hint: NCV
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0028
+  formula: z ~ s(x, y, k = 100)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: Predict.matrix.soap.film
+  dataset_hint: Predict.matrix.soap.film
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0029
+  formula: y ~ te(x0, x2, k = 5, bs = "bs", m = 1) + s(x1) + s(x4) + s(x3, fac, bs
+    = "fs")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: XWXd
+  dataset_hint: XWXd
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.fs
+  - mgcv.constructor.s_iso_2d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0030
+  formula: y ~ x0 + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: anova.gam
+  dataset_hint: anova.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0031
+  formula: y ~ x0 + s(x1) + s(x2)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: anova.gam
+  dataset_hint: anova.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0032
+  formula: y ~ s(x0, bs = bs) + s(x1, bs = bs) + s(x2, bs = bs, k = k) + s(x3, bs
+    = bs)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: bam
+  dataset_hint: bam
+  executable: no
+  features: []
+  notes: bs= is an unresolved variable, not a string literal
+- id: mgcv_0033
+  formula: y ~ s(x0, bs = bs, k = k) + s(x1, bs = bs, k = k) + s(x2, bs = bs, k =
+    k) + s(x3, bs = bs, k = k)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: bam
+  dataset_hint: bam
+  executable: no
+  features: []
+  notes: bs= is an unresolved variable, not a string literal
+- id: mgcv_0034
+  formula: y ~ s(x0, bs = bs) + s(x1, bs = bs) + s(x2, bs = bs, k = k)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: bam
+  dataset_hint: bam
+  executable: no
+  features: []
+  notes: bs= is an unresolved variable, not a string literal
+- id: mgcv_0035
+  formula: yb ~ s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: bcg
+  dataset_hint: bcg
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0036
+  formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0037
+  formula: rsd ~ s(x0, k = 40, bs = "cs")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cs
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0038
+  formula: rsd ~ s(x1, k = 40, bs = "cs")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cs
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0039
+  formula: rsd ~ s(x2, k = 40, bs = "cs")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cs
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0040
+  formula: rsd ~ s(x3, k = 40, bs = "cs")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cs
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0041
+  formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0042
+  formula: y ~ s(x0) + s(x1, x2, k = 15) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0043
+  formula: rsd ~ s(x1, x2, k = 100, bs = "ts")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.ts
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0044
+  formula: y ~ s(x0) + te(x1, x2, k = 4) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0045
+  formula: rsd ~ te(x1, x2, k = 10, bs = "cs")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0046
+  formula: y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0047
+  formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0048
+  formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0049
+  formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: choose.k
+  dataset_hint: choose.k
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0050
+  formula: logt ~ s(age, by = sex) + sex + s(nodes) + perfor + rx + obstruct + adhere
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: clog
+  dataset_hint: clog
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0051
+  formula: yt ~ s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: cnorm
+  dataset_hint: cnorm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0052
+  formula: yi ~ s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: cnorm
+  dataset_hint: cnorm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0053
+  formula: y ~ s(t, k = 15) + s(x, k = 15)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: concurvity
+  dataset_hint: concurvity
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0054
+  formula: time ~ s(age, by = sex) + sex + s(nodes) + perfor + rx + obstruct + adhere
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: coxph
+  dataset_hint: coxph
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0055
+  formula: cbind(time, strata) ~ s(age, by = sex) + sex + s(nodes) + perfor + rx +
+    obstruct + adhere
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: coxph
+  dataset_hint: coxph
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0056
+  formula: t ~ s(x0) + s(x1) + s(x2, k = 15) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: coxph
+  dataset_hint: coxph
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0057
+  formula: t ~ s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: coxph
+  dataset_hint: coxph
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0058
+  formula: cbind(dumt, stratum) ~ spontaneous + induced
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: coxph
+  dataset_hint: coxph
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  notes: ''
+- id: mgcv_0059
+  formula: z ~ tf - 1 + sex + trt + s(sqrt(protime)) + s(platelet) + s(age) + s(bili)
+    + s(albumin)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: coxpht
+  dataset_hint: coxpht
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0060
+  formula: cbind(dumt, tf) ~ sex + trt + s(sqrt(protime)) + s(platelet) + s(age) +
+    s(bili) + s(albumin)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: coxpht
+  dataset_hint: coxpht
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.cbind
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0061
+  formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs =
+    "cr")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: cpois
+  dataset_hint: cpois
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0062
+  formula: y ~ s(x0) + s(x1, fac, bs = "fs", k = 5) + s(x2, k = 20)
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: factor.smooth
+  dataset_hint: factor.smooth
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.fs
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0063
+  formula: y ~ s(x0) + s(x1) + s(x1, fac, bs = "sz", k = 5) + s(x2, k = 20)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: factor.smooth
+  dataset_hint: factor.smooth
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.sz
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0064
+  formula: y ~ te(x0, x1, k = 7) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0065
+  formula: y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0066
+  formula: y ~ s(x0, x1, k = 40) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0067
+  formula: y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.sp_fixed
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0068
+  formula: y ~ s(x0, k = 4, fx = TRUE, bs = "tp") + s(x1, k = 12) + s(x2, k = 15)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0069
+  formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0070
+  formula: y ~ s(x0) + s(x1) + s(x2)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0071
+  formula: y ~ s(x1) + s(x2)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0072
+  formula: y ~ s(x, z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0073
+  formula: y ~ s(x, z, k = 40)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0074
+  formula: y ~ s(x, z, k = 64)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0075
+  formula: y ~ s(x, z, k = 40, xt = list(max.knots = 500, seed = 2))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam
+  dataset_hint: gam
+  executable: no
+  features: []
+  notes: xt=list(...) references variables from vignette scope
+- id: mgcv_0076
+  formula: y ~ s(x, k = 15)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.mh
+  dataset_hint: gam.mh
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0077
+  formula: y ~ s(x2, by = x1)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0078
+  formula: y ~ fac + s(x2, by = fac) + s(x0)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0079
+  formula: y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2))
+    + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0080
+  formula: y ~ fac + s(x2, by = fac, id = 1) + s(x0)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.modifier.by_factor_id
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0081
+  formula: y ~ fac + s(x2) + s(x2, by = fac) + s(x0)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0082
+  formula: y ~ X + s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0083
+  formula: y ~ s(fac, bs = "re") + s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.re
+  - mgcv.constructor.s_1d
+  - mgcv.bs.tp
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.smooth_and_re
+  notes: ''
+- id: mgcv_0084
+  formula: travel ~ Z
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  notes: ''
+- id: mgcv_0085
+  formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs =
+    "cr") + offset(s)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.models
+  dataset_hint: gam.models
+  executable: yes
+  features:
+  - wr.intercept.default
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0086
+  formula: y ~ s(x0) + s(x1) + s(x2) + s(x3) + s(x4) + s(x5)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.selection
+  dataset_hint: gam.selection
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0087
+  formula: y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.side
+  dataset_hint: gam.side
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.s_iso_2d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0088
+  formula: y ~ s(x, bs = "cr", k = 6) + s(z, bs = "cr", k = 6) + te(x, z, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.side
+  dataset_hint: gam.side
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0089
+  formula: y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.side
+  dataset_hint: gam.side
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.ti_decomp
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0090
+  formula: y ~ s(a, bs = "re") + s(b, bs = "re") + s(a, b, bs = "re") + s(x0, id =
+    1) + s(x1, id = 1) + s(x2, k = 15) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gam.vcomp
+  dataset_hint: gam.vcomp
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.re
+  - mgcv.constructor.s_1d
+  - mgcv.constructor.s_iso_2d
+  - mgcv.bs.tp
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.smooth_and_re
+  notes: ''
+- id: mgcv_0091
+  formula: y ~ s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0092
+  formula: y ~ te(x0, x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0093
+  formula: y ~ s(x0) + s(x1) + s(x2)
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0094
+  formula: y ~ s(x, k = 20)
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0095
+  formula: y ~ s(x, k = 20)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0096
+  formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs =
+    "cr")
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0097
+  formula: y ~ s(x, z, k = 50)
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0098
+  formula: y ~ s(x, z, k = 50)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gamm
+  dataset_hint: gamm
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0099
+  formula: y ~ s(x0, by = id1) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: gfam
+  dataset_hint: gfam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0100
+  formula: y ~ s(x, by = fac, pc = 0) + s(z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: identifiability
+  dataset_hint: identifiability
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.modifier.pc_point
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0101
+  formula: y ~ s(X)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: linear.functional.terms
+  dataset_hint: linear.functional.terms
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0102
+  formula: y ~ s(x) + s(fac, by = L, bs = "re")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: linear.functional.terms
+  dataset_hint: linear.functional.terms
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.re
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.smooth_and_re
+  notes: ''
+- id: mgcv_0103
+  formula: y ~ s(X, Z, by = L) + L1 - 1
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: linear.functional.terms
+  dataset_hint: linear.functional.terms
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  notes: ''
+- id: mgcv_0104
+  formula: y ~ te(X, Z, by = L) + L1 - 1
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: linear.functional.terms
+  dataset_hint: linear.functional.terms
+  executable: yes
+  features:
+  - wr.intercept.minus_one
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.constructor.te
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  notes: ''
+- id: mgcv_0105
+  formula: y ~ s(X, by = L, k = 20)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: linear.functional.terms
+  dataset_hint: linear.functional.terms
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0106
+  formula: y ~ s(x0, k = k) + s(x1, k = k) + s(x2, k = k) + s(x3, k = k)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: magic
+  dataset_hint: magic
+  executable: no
+  features: []
+  notes: k= is an unresolved variable, not a constant
+- id: mgcv_0107
+  formula: y ~ s(x0, bs = bs) + s(x1, bs = bs) + s(x2, bs = bs, k = k)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: mgcv-parallel
+  dataset_hint: mgcv-parallel
+  executable: no
+  features: []
+  notes: bs= is an unresolved variable, not a string literal
+- id: mgcv_0108
+  formula: y ~ s(x0, bs = bs, k = 7) + s(x1, bs = bs, k = 7) + s(x2, bs = bs, k =
+    k)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: mgcv-parallel
+  dataset_hint: mgcv-parallel
+  executable: no
+  features: []
+  notes: bs= is an unresolved variable, not a string literal
+- id: mgcv_0109
+  formula: y ~ s(x0, by = ordered(!mx0)) + s(x1, by = ordered(!mx1)) + s(x2, by =
+    ordered(!mx2)) + s(x3, by = ordered(!mx3)) + s(idx0, bs = "re", by = mx0) + s(idx1,
+    bs = "re", by = mx1) + s(idx2, bs = "re", by = mx2) + s(idx3, bs = "re", by =
+    mx3)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: missing.data
+  dataset_hint: missing.data
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.bs.re
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.smooth_and_re
+  notes: ''
+- id: mgcv_0110
+  formula: y ~ s(x, bs = "cc", k = 6)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: model.matrix.gam
+  dataset_hint: model.matrix.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cc
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0111
+  formula: y ~ s(x, k = 10, bs = "cr")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: pcls
+  dataset_hint: pcls
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0112
+  formula: y ~ s(x, k = 10)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: pcls
+  dataset_hint: pcls
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0113
+  formula: y ~ s(x) + s(z) + s(v, k = 20)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: pcls
+  dataset_hint: pcls
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0114
+  formula: y ~ t2(x0, x1, bs = "tp", m = 1, k = 7) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: pen.edf
+  dataset_hint: pen.edf
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.t2
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0115
+  formula: y ~ t2(x0, x1, bs = "tp", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: pen.edf
+  dataset_hint: pen.edf
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.t2
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0116
+  formula: y ~ x0 + s(x1, x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: plot.gam
+  dataset_hint: plot.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0117
+  formula: y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: plot.gam
+  dataset_hint: plot.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0118
+  formula: y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: predict.gam
+  dataset_hint: predict.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0119
+  formula: y ~ s(x0) + s(x1) + s(x2) + x3
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: predict.gam
+  dataset_hint: predict.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0120
+  formula: y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: predict.gam
+  dataset_hint: predict.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.scale
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0121
+  formula: y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: predict.gam
+  dataset_hint: predict.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.scale
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0122
+  formula: y/n ~ s(x0) + s(x1) + s(x2) + s(x3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: qq.gam
+  dataset_hint: qq.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0123
+  formula: y ~ s(x, k = 5)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: qq.gam
+  dataset_hint: qq.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0124
+  formula: travel ~ s(Rail, bs = "re")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: random.effects
+  dataset_hint: random.effects
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.re
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.smooth_and_re
+  notes: ''
+- id: mgcv_0125
+  formula: y ~ fac + s(x1, by = fac) + x2
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: s
+  dataset_hint: s
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  notes: ''
+- id: mgcv_0126
+  formula: y ~ s(x0, bs = "bs", k = k) + s(x1, bs = "bs", k = k) + s(x2, bs = "bs",
+    k = k) + s(x3, bs = "bs", k = k)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: scasm
+  dataset_hint: scasm
+  executable: no
+  features: []
+  notes: k= is an unresolved variable, not a constant
+- id: mgcv_0127
+  formula: y ~ s(a, fx = fx, k = k) + s(z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: single.index
+  dataset_hint: single.index
+  executable: no
+  features: []
+  notes: k= is an unresolved variable, not a constant
+- id: mgcv_0128
+  formula: y ~ s(x0, bs = "tr", m = 2) + s(x1, bs = "ps", m = c(1, 3)) + s(x2, bs
+    = "tr", m = 3) + s(x3, bs = "tr", m = 2)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct
+  dataset_hint: smooth.construct
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.m_penalty
+  - mgcv.bs.ps
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0129
+  formula: y ~ s(x0, bs = "tr", m = 2) + s(x1, bs = "ps", m = c(1, 3)) + s(x2, bs
+    = "tr", m = 3) + s(x3, bs = "tr", m = 2)
+  source_pkg: mgcv
+  source_fn: gamm
+  source_rd: smooth.construct
+  dataset_hint: smooth.construct
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.m_penalty
+  - mgcv.bs.ps
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0130
+  formula: y ~ te(x, z, bs = c("tr", "tr"), m = c(2, 2))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct
+  dataset_hint: smooth.construct
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0131
+  formula: y ~ s(x, bs = "ad", k = 40, m = 5)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ad.smooth.spec
+  dataset_hint: smooth.construct.ad.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.ad
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0132
+  formula: y ~ s(x, bs = "ad", k = 40, m = 5, xt = list(bs = "cr"))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ad.smooth.spec
+  dataset_hint: smooth.construct.ad.smooth.spec
+  executable: no
+  features: []
+  notes: xt=list(...) references variables from vignette scope
+- id: mgcv_0133
+  formula: y ~ s(x, z, k = 150)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ad.smooth.spec
+  dataset_hint: smooth.construct.ad.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0134
+  formula: y ~ s(x, z, bs = "ad", k = 15, m = 1)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ad.smooth.spec
+  dataset_hint: smooth.construct.ad.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.ad
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0135
+  formula: y ~ s(x, z, bs = "ad", k = 15, m = 3)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ad.smooth.spec
+  dataset_hint: smooth.construct.ad.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.ad
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0136
+  formula: y ~ s(x0, bs = bs, m = c(4, 2)) + s(x1, bs = bs) + s(x2, k = 15, bs = bs,
+    m = c(4, 3, 0)) + s(x3, bs = bs, m = c(1, 0))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.bs.smooth.spec
+  dataset_hint: smooth.construct.bs.smooth.spec
+  executable: no
+  features: []
+  notes: bs= is an unresolved variable, not a string literal
+- id: mgcv_0137
+  formula: y ~ s(x, m = 1, k = 20)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.bs.smooth.spec
+  dataset_hint: smooth.construct.bs.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0138
+  formula: y ~ s(x, bs = "bs", m = c(3, 1), k = 20)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.bs.smooth.spec
+  dataset_hint: smooth.construct.bs.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0139
+  formula: y ~ s(x, bs = "cc", k = 12) + s(z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.cr.smooth.spec
+  dataset_hint: smooth.construct.cr.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cc
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.bs.tp
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0140
+  formula: y ~ s(x, z, bs = "ds", m = c(2, 0), k = 50)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ds.smooth.spec
+  dataset_hint: smooth.construct.ds.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0141
+  formula: y ~ s(x, z, bs = "ds", m = c(1, 0.5), k = 50)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ds.smooth.spec
+  dataset_hint: smooth.construct.ds.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0142
+  formula: y ~ s(x, z, bs = "ds", m = c(2, 0.5), k = 50)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ds.smooth.spec
+  dataset_hint: smooth.construct.ds.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0143
+  formula: y ~ s(x0) + s(x1, fac, bs = "fs", k = 5) + s(x2, k = 20)
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: smooth.construct.fs.smooth.spec
+  dataset_hint: smooth.construct.fs.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.fs
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0144
+  formula: y ~ s(x, z, bs = "gp", k = 50)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.gp.smooth.spec
+  dataset_hint: smooth.construct.gp.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.gp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0145
+  formula: y ~ s(x, z, bs = "gp", k = 50, m = c(1, 0.5))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.gp.smooth.spec
+  dataset_hint: smooth.construct.gp.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.gp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0146
+  formula: y ~ s(x, z, bs = "gp", k = 50, m = c(-1, 0.5))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.gp.smooth.spec
+  dataset_hint: smooth.construct.gp.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.gp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0147
+  formula: crime ~ s(district, bs = "mrf", xt = xt)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.mrf.smooth.spec
+  dataset_hint: smooth.construct.mrf.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0148
+  formula: crime ~ s(district, bs = "mrf", k = 20, xt = xt)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.mrf.smooth.spec
+  dataset_hint: smooth.construct.mrf.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0149
+  formula: crime ~ s(district, bs = "mrf", k = 20, xt = xt) + s(income)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.mrf.smooth.spec
+  dataset_hint: smooth.construct.mrf.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0150
+  formula: crime ~ s(district, bs = "mrf", k = 20, xt = list(nb = nb)) + s(income)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.mrf.smooth.spec
+  dataset_hint: smooth.construct.mrf.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0151
+  formula: y ~ s(x, bs = "cp") + s(z, bs = "ps")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ps.smooth.spec
+  dataset_hint: smooth.construct.ps.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.ps
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0152
+  formula: y ~ s(x, bs = "cp", k = 12) + s(z, bs = "ps", k = 13)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.ps.smooth.spec
+  dataset_hint: smooth.construct.ps.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.bs.ps
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0153
+  formula: y ~ s(r, bs = "re")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.re.smooth.spec
+  dataset_hint: smooth.construct.re.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.re
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.smooth_and_re
+  notes: ''
+- id: mgcv_0154
+  formula: y ~ s(r, bs = "re", xt = list(S = S, rank = c(nb/2, nb/2)))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.re.smooth.spec
+  dataset_hint: smooth.construct.re.smooth.spec
+  executable: no
+  features: []
+  notes: xt=list(...) references variables from vignette scope
+- id: mgcv_0155
+  formula: y ~ s(v, w, k = 30, bs = "so", xt = list(bnd = fsb, nmax = nmax))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.so.smooth.spec
+  dataset_hint: smooth.construct.so.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0156
+  formula: y ~ s(v, w, k = 30, bs = "sf", xt = list(bnd = fsb, nmax = nmax)) + s(v,
+    w, k = 30, bs = "sw", xt = list(bnd = fsb, nmax = nmax))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.so.smooth.spec
+  dataset_hint: smooth.construct.so.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0157
+  formula: y ~ s(v, w, bs = "so", xt = list(bnd = fsb, nmax = nmax))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.so.smooth.spec
+  dataset_hint: smooth.construct.so.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0158
+  formula: y ~ te(v, w, t, bs = c("sf", "cr"), k = c(25, 4), d = c(2, 1), xt = list(list(bnd
+    = fsb, nmax = nmax), NULL)) + te(v, w, t, bs = c("sw", "cr"), k = c(25, 4), d
+    = c(2, 1), xt = list(list(bnd = fsb, nmax = nmax), NULL))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.so.smooth.spec
+  dataset_hint: smooth.construct.so.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) inside bs=c(...)
+- id: mgcv_0159
+  formula: z ~ s(x, y, k = c(30, 15), bs = "so", xt = list(bnd = bnd, nmax = nmax))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.so.smooth.spec
+  dataset_hint: smooth.construct.so.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0160
+  formula: z ~ s(x, y, k = c(30, 15), bs = "sf", xt = list(bnd = bnd, nmax = nmax))
+    + s(x, y, k = c(30, 15), bs = "sw", xt = list(bnd = bnd, nmax = nmax))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.so.smooth.spec
+  dataset_hint: smooth.construct.so.smooth.spec
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) needs auxiliary structures
+- id: mgcv_0161
+  formula: y ~ s(la, lo, bs = "sos", k = 60)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.sos.smooth.spec
+  dataset_hint: smooth.construct.sos.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0162
+  formula: y ~ s(x2) + s(fac, x2, bs = "sz") + s(x0)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.sz.smooth.spec
+  dataset_hint: smooth.construct.sz.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.sz
+  - mgcv.constructor.s_iso_2d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0163
+  formula: y ~ s(x) + s(f1, x, bs = "sz") + s(f2, x, bs = "sz") + s(f1, f2, x, bs
+    = "sz", id = 1)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.sz.smooth.spec
+  dataset_hint: smooth.construct.sz.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.bs.sz
+  - mgcv.constructor.s_iso_2d
+  - mgcv.constructor.s_iso_3d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0164
+  formula: y ~ s(x, m = c(2, 0)) + x
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.tp.smooth.spec
+  dataset_hint: smooth.construct.tp.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.parametric_plus
+  notes: ''
+- id: mgcv_0165
+  formula: y ~ s(x)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.tp.smooth.spec
+  dataset_hint: smooth.construct.tp.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0166
+  formula: y ~ s(x0, x1) + s(x1a, x2, m = c(2, 0)) + x2
+  source_pkg: mgcv
+  source_fn: bam
+  source_rd: smooth.construct.tp.smooth.spec
+  dataset_hint: smooth.construct.tp.smooth.spec
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_2d
+  - mgcv.modifier.m_penalty
+  - mgcv.mixing.parametric_plus
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0167
+  formula: y ~ s(x, k = k, m = m)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: smooth.construct.tp.smooth.spec
+  dataset_hint: smooth.construct.tp.smooth.spec
+  executable: no
+  features: []
+  notes: k= is an unresolved variable, not a constant
+- id: mgcv_0168
+  formula: y ~ s(x, bs = "cc", k = 10) + s(z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: sp.vcov
+  dataset_hint: sp.vcov
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cc
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.bs.tp
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0169
+  formula: y ~ s(x0, bs = "ts") + s(x1, bs = "ts") + s(x2, bs = "ts") + s(x3, bs =
+    "ts") + s(x4, bs = "ts") + s(x5, bs = "ts")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: step.gam
+  dataset_hint: step.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.ts
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0170
+  formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs =
+    "cr") + s(x4, bs = "cr") + s(x5, bs = "cr")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: step.gam
+  dataset_hint: step.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cr
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0171
+  formula: y ~ s(x0, k = b.d[1], fx = TRUE) + s(x1, k = b.d[2], fx = TRUE) + s(x2,
+    k = b.d[3], fx = TRUE) + s(x3, k = b.d[4], fx = TRUE)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: summary.gam
+  dataset_hint: summary.gam
+  executable: no
+  features: []
+  notes: k= is an unresolved variable, not a constant
+- id: mgcv_0172
+  formula: y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = "re")
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: summary.gam
+  dataset_hint: summary.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.m_penalty
+  - mgcv.bs.re
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.smooth_and_re
+  notes: ''
+- id: mgcv_0173
+  formula: y ~ te(x, z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: summary.gam
+  dataset_hint: summary.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0174
+  formula: y ~ t2(x, z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: t2
+  dataset_hint: t2
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.t2
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0175
+  formula: y ~ t2(x, z, bs = c("tp", "tp"))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: t2
+  dataset_hint: t2
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.t2
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0176
+  formula: y ~ t2(v, w, u, k = c(30, 5), d = c(2, 1), bs = c("ds", "cr"), m = m)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: t2
+  dataset_hint: t2
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) inside bs=c(...)
+- id: mgcv_0177
+  formula: y ~ t2(v, w, u, k = c(25, 5), d = c(2, 1), bs = c("tp", "cr"), full = TRUE)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: t2
+  dataset_hint: t2
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.t2
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0178
+  formula: y ~ ti(x) + ti(z) + ti(x, z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: te
+  dataset_hint: te
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.ti_decomp
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0179
+  formula: y ~ ti(x) + ti(x, z, mc = c(0, 1))
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: te
+  dataset_hint: te
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.constructor.ti_decomp
+  - mgcv.constructor.te
+  - mgcv.mixing.smooth_only
+  - mgcv.mixing.two_smooths
+  notes: ''
+- id: mgcv_0180
+  formula: y ~ te(v, w, u, k = c(30, 5), d = c(2, 1), bs = c("ds", "cr"), m = m)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: te
+  dataset_hint: te
+  executable: no
+  features: []
+  notes: deferred basis (mrf/so/sf/ds) inside bs=c(...)
+- id: mgcv_0181
+  formula: y ~ s(x, bs = "cc", k = 10)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: vcov.gam
+  dataset_hint: vcov.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.cc
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.k
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0182
+  formula: y ~ s(x0, x1, x2)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: vis.gam
+  dataset_hint: vis.gam
+  executable: yes
+  features:
+  - wr.intercept.only_intercept
+  - shared.response_shape.univariate
+  - wr.edge.single_col_X
+  - mgcv.bs.tp
+  - mgcv.constructor.s_iso_3d
+  - mgcv.mixing.smooth_only
+  notes: ''
+- id: mgcv_0183
+  formula: y ~ fac + s(x)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: vis.gam
+  dataset_hint: vis.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.mixing.parametric_plus
+  notes: ''
+- id: mgcv_0184
+  formula: y ~ fac + s(x, by = z)
+  source_pkg: mgcv
+  source_fn: gam
+  source_rd: vis.gam
+  dataset_hint: vis.gam
+  executable: yes
+  features:
+  - wr.intercept.default
+  - wr.op.plus
+  - wr.transform.identity
+  - shared.response_shape.univariate
+  - mgcv.bs.tp
+  - mgcv.constructor.s_1d
+  - mgcv.modifier.by_factor
+  - mgcv.mixing.parametric_plus
+  notes: ''

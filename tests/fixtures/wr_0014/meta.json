@@ -1,0 +1,14 @@
+{
+  "id": "wr_0014",
+  "kind": "wr",
+  "formula": "weight ~ 1",
+  "source_pkg": "gamair",
+  "source_fn": "lm",
+  "source_rd": "ch1",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "mpg"
+  },
+  "features": ["wr.intercept.only_intercept", "shared.response_shape.univariate", "wr.edge.single_col_X"],
+  "need_vars": "weight"
+}

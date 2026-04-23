@@ -1,0 +1,34 @@
+{
+  "smooths": [
+    {
+      "index": 1,
+      "class": "tp.smooth.spec",
+      "error": "smoothCon failed"
+    },
+    {
+      "index": 2,
+      "class": "tp.smooth.spec",
+      "label": "s(x1)",
+      "term": "x1",
+      "dim": 1,
+      "bs": -1,
+      "bs_dim": -1,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    },
+    {
+      "index": 3,
+      "class": "tp.smooth.spec",
+      "label": "s(x2)",
+      "term": "x2",
+      "dim": 1,
+      "bs": -1,
+      "bs_dim": -1,
+      "by": "NA",
+      "n_blocks": 1,
+      "n_penalties": 1
+    }
+  ],
+  "parametric_rhs": "1"
+}

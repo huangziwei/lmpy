@@ -1,0 +1,14 @@
+{
+  "id": "cur_0060",
+  "kind": "mgcv",
+  "formula": "temp ~ s(day.of.year, bs = \"cc\", k = 20)",
+  "source_pkg": "gamair",
+  "source_fn": "gam",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "gamair",
+    "name": "cairo"
+  },
+  "features": ["mgcv.constructor.s_1d", "mgcv.bs.cc", "mgcv.modifier.k", "mgcv.mixing.smooth_only", "mgcv.edge_mgcv.cc_wrap", "shared.response_shape.univariate"],
+  "need_vars": ["temp", "day.of.year"]
+}

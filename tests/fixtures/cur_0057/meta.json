@@ -1,0 +1,14 @@
+{
+  "id": "cur_0057",
+  "kind": "mgcv",
+  "formula": "y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))",
+  "source_pkg": "mgcv",
+  "source_fn": "gam",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "mgcv",
+    "name": "gamSim_eg5"
+  },
+  "features": ["mgcv.constructor.s_1d", "mgcv.constructor.ti_decomp", "mgcv.bs.tp", "mgcv.modifier.k", "mgcv.mixing.smooth_only", "mgcv.mixing.two_smooths", "mgcv.mixing.tensor_plus_margins", "shared.response_shape.univariate"],
+  "need_vars": ["y", "x0", "x1"]
+}

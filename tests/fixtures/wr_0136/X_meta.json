@@ -1,0 +1,8 @@
+{
+  "colnames": ["(Intercept)", "ns(x, 6)1", "ns(x, 6)2", "ns(x, 6)3", "ns(x, 6)4", "ns(x, 6)5", "ns(x, 6)6", "z"],
+  "assign": [0, 1, 1, 1, 1, 1, 1, 2],
+  "contrasts": null,
+  "term_labels": ["ns(x, 6)", "z"],
+  "intercept": true,
+  "response": 1
+}

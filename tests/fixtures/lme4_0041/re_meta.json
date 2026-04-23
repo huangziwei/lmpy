@@ -1,0 +1,13 @@
+{
+  "flist_names": "f",
+  "flist_levels": {
+    "f": ["a", "b", "c"]
+  },
+  "cnms": {
+    "f": "(Intercept)"
+  },
+  "Gp": [0, 3],
+  "nl": 3,
+  "n": 100,
+  "q": 3
+}

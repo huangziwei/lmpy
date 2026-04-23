@@ -1,0 +1,14 @@
+{
+  "id": "cur_0023",
+  "kind": "wr",
+  "formula": "mpg ~ cut(wt, breaks = c(0, 3, 4, 6))",
+  "source_pkg": "R",
+  "source_fn": "lm",
+  "source_rd": "curated",
+  "dataset": {
+    "pkg": "R",
+    "name": "mtcars"
+  },
+  "features": ["wr.intercept.default", "wr.transform.cut", "shared.response_shape.univariate"],
+  "need_vars": ["mpg", "wt"]
+}

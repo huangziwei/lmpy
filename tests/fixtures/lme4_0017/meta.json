@@ -1,0 +1,14 @@
+{
+  "id": "lme4_0017",
+  "kind": "lme4",
+  "formula": "angle ~ recipe * temperature + (1 | recipe:replicate)",
+  "source_pkg": "lme4",
+  "source_fn": "lmer",
+  "source_rd": "cake",
+  "dataset": {
+    "pkg": "lme4",
+    "name": "cake"
+  },
+  "features": ["wr.intercept.default", "wr.op.plus", "wr.op.star", "wr.transform.identity", "wr.interaction.num_num", "wr.interaction.num_factor", "shared.response_shape.univariate", "lme4.re_spec.intercept_only", "lme4.grouping.interaction_col", "lme4.mixing.fe_plus_re"],
+  "need_vars": ["angle", "recipe", "temperature"]
+}
