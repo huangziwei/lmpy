@@ -1,0 +1,15 @@
+[project]
+name = "lmpy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "formulae>=0.5.4",
+    "formulaic>=1.1.1",
+    "matplotlib>=3.10.0",
+    "numpy>=2.2.2",
+    "pandas>=2.2.3",
+    "polars>=1.20.0",
+    "scipy>=1.15.1",
+]
