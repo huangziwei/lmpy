@@ -1,0 +1,1925 @@
+meta:
+  generated_by: scripts/harvest.R
+  generated_at: 2026-04-23 17:39:20 CEST
+  r_version: R version 4.5.3 (2026-03-11)
+  packages:
+  - pkg: stats
+    version: 4.5.3
+  - pkg: lme4
+    version: 2.0.1
+  - pkg: mgcv
+    version: 1.9.4
+  - pkg: nlme
+    version: 3.1.168
+  - pkg: MASS
+    version: 7.3.65
+  - pkg: faraway
+    version: 1.0.9
+  - pkg: gamair
+    version: 1.0.2
+  - pkg: splines
+    version: 4.5.3
+  count_total: 370
+  counts_by_pkg:
+    faraway: 1
+    gamair: 63
+    lme4: 44
+    MASS: 26
+    mgcv: 159
+    nlme: 18
+    stats: 59
+formulas:
+  faraway:
+  - fn: lm
+    formula: stack.loss ~ .
+    source_rd: prplot
+    features: []
+    notes: ''
+  gamair:
+  - fn: gam
+    formula: chl ~ s(lon, lat, k = 30, bs = "so", xt = list(bnd = list(aral.bnd),
+      nmax = 150))
+    source_rd: aral
+    features: []
+    notes: ''
+  - fn: bam
+    formula: T ~ region + s(time, k = 20, bs = "cr", by = region) + s(time, k = 40,
+      bs = "cr", by = latitude)
+    source_rd: canWeather
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ x - 1
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ time.ipc + prop.partner
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ time.ipc + I(prop.partner * time.ipc)
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ prop.partner
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ 1
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ f.age + f.height + f.weight + m.age + m.height + m.weight + m.vol
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ f.age + f.height + f.weight + m.height + m.weight + m.vol
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ f.weight
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: count ~ m.vol
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ z
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ x + z
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: weight ~ group
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: weight ~ 1
+    source_rd: ch1
+    features: []
+    notes: ''
+  - fn: lm
+    formula: loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2
+      * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3)
+    source_rd: ch1.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: breaks ~ wool * tension
+    source_rd: ch1.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: dist ~ speed + I(speed^2)
+    source_rd: ch1.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: dist ~ speed + I(speed^2) - 1
+    source_rd: ch1.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: dist ~ I(speed^2)
+    source_rd: ch1.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: InsectSprays$count ~ XZ - 1
+    source_rd: ch1.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: z ~ EV$J - 1
+    source_rd: ch1.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: area ~ CO2 + tree
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: area ~ CO2
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: area ~ tree
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: travel ~ Rail
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: travel ~ 1
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: score ~ Worker * Machine
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: score ~ Worker + Machine
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: score ~ 1
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: gam
+    formula: score ~ Machine + s(Worker, bs = "re") + s(Machine, Worker, bs = "re")
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: gam
+    formula: score ~ Machine + s(Worker, bs = "re") + s(Worker, bs = "re", by = Machine)
+    source_rd: ch2
+    features: []
+    notes: ''
+  - fn: lm
+    formula: rf ~ 1
+    source_rd: ch3
+    features: []
+    notes: ''
+  - fn: lm
+    formula: z ~ WX - 1
+    source_rd: ch3.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: wear ~ X - 1
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ X - 1
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y1 ~ X - 1
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Volume ~ s(Height) + s(Girth)
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Volume ~ s(Height, bs = "cr") + s(Girth, bs = "cr")
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Volume ~ s(Height) + s(Girth, bs = "cr", k = 20)
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Volume ~ s(Height, Girth, k = 25)
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Volume ~ te(Height, Girth, k = 5)
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Volume ~ Height + s(Girth)
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Volume ~ Hclass + s(Girth)
+    source_rd: ch4
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ poly(x, 5)
+    source_rd: ch4.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ poly(x, 10)
+    source_rd: ch4.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: z ~ X - 1
+    source_rd: ch5.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "pl", m = 2) + s(x1, bs = "pl", m = 2) + s(x2, bs = "pl",
+      m = 3) + s(x3, bs = "pl", m = 2)
+    source_rd: ch5.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: mcycle$accel ~ sm$X - 1
+    source_rd: ch7
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x)
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ x
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: accel ~ s(times, k = 40)
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: lm
+    formula: accel ~ poly(times, 11)
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: accel ~ s(times, k = 11, fx = TRUE)
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: accel ~ s(times, k = 11, fx = TRUE, bs = "cr")
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: accel ~ s(times, k = 40, m = 3)
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(times, k = 40)
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year)
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: dn ~ n.lag + pop + s(log(n.lag), by = n.lag) + s(log(pop), by = -pop)
+      - 1
+    source_rd: ch7.solutions
+    features: []
+    notes: ''
+  - fn: gam
+    formula: octane ~ s(nm, by = NIR, k = 50)
+    source_rd: gas
+    features: []
+    notes: ''
+  - fn: gam
+    formula: Y ~ s(region, k = 60, bs = "mrf", xt = list(polys = german.polys)) +
+      offset(log(E)) + s(x, k = 10)
+    source_rd: larynx
+    features: []
+    notes: ''
+  - fn: gam
+    formula: type ~ s(MZ, by = intensity, k = 100)
+    source_rd: prostate
+    features: []
+    notes: ''
+  - fn: gam
+    formula: ret ~ s(dur, k = k) + s(gly, k = k) + s(bmi, k = k) + ti(dur, gly, k
+      = k) + ti(dur, bmi, k = k) + ti(gly, bmi, k = k)
+    source_rd: wesdr
+    features: []
+    notes: ''
+  lme4:
+  - fn: lmer
+    formula: Reaction ~ Days + us(Days | Subject)
+    source_rd: Covariance-class
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + diag(Days | Subject)
+    source_rd: Covariance-class
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + diag(Days | Subject, hom = TRUE)
+    source_rd: Covariance-class
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + cs(Days | Subject)
+    source_rd: Covariance-class
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + cs(Days | Subject, hom = TRUE)
+    source_rd: Covariance-class
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Daysf + ar1(0 + Daysf | Subject, hom = TRUE)
+    source_rd: Covariance-class
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Yield ~ 1 | Batch
+    source_rd: Dyestuff
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: strength ~ (1 | batch) + (1 | sample)
+    source_rd: Pastes
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: strength ~ (1 | batch/cask)
+    source_rd: Pastes
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: strength ~ (1 | batch) + (1 | batch:cask)
+    source_rd: Pastes
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: strength ~ (1 | batch/sample)
+    source_rd: Pastes
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: strength ~ (1 | batch) + (1 | cask)
+    source_rd: Pastes
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: diameter ~ (1 | plate) + (1 | sample)
+    source_rd: Penicillin
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: distance ~ age + (age | Subject)
+    source_rd: VarCorr
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item)
+    source_rd: VerbAgg
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: cbind(incidence, size - incidence) ~ period + (1 | herd)
+    source_rd: allFit
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: angle ~ recipe * temperature + (1 | recipe:replicate)
+    source_rd: cake
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: angle ~ recipe + temperature + (1 | recipe:replicate)
+    source_rd: cake
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: angle ~ recipe + temp + (1 | recipe:replicate)
+    source_rd: cake
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: incidence/size ~ period + (1 | herd)
+    source_rd: cbpp
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: cbind(incidence, size - incidence) ~ period + (1 | herd) + (1 | obs)
+    source_rd: cbpp
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: incidence/size ~ period + treatment + avg_size + (1 | herd)
+    source_rd: cbpp
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + (Days | Subject)
+    source_rd: confint.merMod
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + (Days || Subject)
+    source_rd: confint.merMod
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: predation ~ ttt2 + (1 | block)
+    source_rd: culcitalogreg
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: tvol ~ ttt2 + (1 | block)
+    source_rd: culcitalvolume
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: propeaten ~ ttt2 + (1 | block)
+    source_rd: culcitalvolume
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: tvol ~ crab * shrimp + (1 | block)
+    source_rd: culcitalvolume
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: propeaten ~ crab * shrimp + (1 | block)
+    source_rd: culcitalvolume
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: distance ~ age + (age | Subject) + (0 + dummy(Sex, "Female") | Subject)
+    source_rd: dummy
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + (1 | Subject) + (0 + Days | Subject)
+    source_rd: fixef
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + Days2 + (1 | Subject)
+    source_rd: fixef
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ Days + (1 | Subject)
+    source_rd: fortify
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site)
+    source_rd: gopherdat2
+    features: []
+    notes: ''
+  - fn: nlmer
+    formula: circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym | Tree
+    source_rd: isREML
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: distance ~ age + (age | Subject) + (0 + nsex | Subject) + (0 + nsexage
+      | Subject)
+    source_rd: lmer
+    features: []
+    notes: ''
+  - fn: lFormula
+    formula: Reaction ~ Days + (Days | Subject)
+    source_rd: modular
+    features: []
+    notes: ''
+  - fn: glFormula
+    formula: cbind(incidence, size - incidence) ~ period + (1 | herd)
+    source_rd: modular
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: Reaction ~ 1 | Subject
+    source_rd: ngrps
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: y ~ 1 + (1 | `Animal ID`)
+    source_rd: predict.merMod
+    features: []
+    notes: ''
+  - fn: lmer
+    formula: y ~ x + (1 | f)
+    source_rd: refit
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: Mate ~ (1 | Female) + (1 | Male) + Cross
+    source_rd: salamander
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: imps79 ~ TxDrug * Week + (1 | id)
+    source_rd: schizophrenia
+    features: []
+    notes: ''
+  - fn: glmer
+    formula: outcome ~ time * treatment + (1 | patientID)
+    source_rd: toenail
+    features: []
+    notes: ''
+  MASS:
+  - fn: glm
+    formula: Claims ~ District + Group + Age + offset(log(Holders))
+    source_rd: Insurance
+    features: []
+    notes: ''
+  - fn: lm
+    formula: L75 ~ Noise/Age
+    source_rd: OME
+    features: []
+    notes: ''
+  - fn: lm
+    formula: L75 ~ Noise/(Age + OME)
+    source_rd: OME
+    features: []
+    notes: ''
+  - fn: glm
+    formula: Freq ~ Infl * Type * Cont + Sat
+    source_rd: addterm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ trt * week
+    source_rd: bacteria
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ trt + week
+    source_rd: bacteria
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ trt + I(week > 2)
+    source_rd: bacteria
+    features: []
+    notes: ''
+  - fn: lm
+    formula: stemp ~ -1 + sX
+    source_rd: beav1
+    features: []
+    notes: ''
+  - fn: glm
+    formula: low ~ .
+    source_rd: birthwt
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ x1 + x2 + x3 + x4
+    source_rd: cement
+    features: []
+    notes: ''
+  - fn: glm
+    formula: SF ~ sex + ldose - 1
+    source_rd: dose.p
+    features: []
+    notes: ''
+  - fn: glm
+    formula: cbind(y, n - y) ~ P * A + V
+    source_rd: eagles
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ lbase * trt + lage + V4
+    source_rd: epil
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ pred + factor(subject) + offset(log(time))
+    source_rd: epil
+    features: []
+    notes: ''
+  - fn: glm
+    formula: lot1 ~ log(u)
+    source_rd: gamma.shape.glm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: Days + 0.1 ~ Age * Eth * Sex * Lrn
+    source_rd: gamma.shape.glm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ lag1 + lag2 + lag3
+    source_rd: glm.nb
+    features: []
+    notes: ''
+  - fn: glm
+    formula: Days ~ .^2
+    source_rd: loglm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: cbind(Menarche, Total - Menarche) ~ Age
+    source_rd: menarche
+    features: []
+    notes: ''
+  - fn: glm
+    formula: Days ~ .^4
+    source_rd: negative.binomial
+    features: []
+    notes: ''
+  - fn: lm
+    formula: log10(perf) ~ .
+    source_rd: stepAIC
+    features: []
+    notes: ''
+  - fn: lm
+    formula: Gas ~ Temp
+    source_rd: whiteside
+    features: []
+    notes: ''
+  - fn: lm
+    formula: Gas ~ Insul/Temp - 1
+    source_rd: whiteside
+    features: []
+    notes: ''
+  - fn: lm
+    formula: Gas ~ Insul/(Temp + I(Temp^2)) - 1
+    source_rd: whiteside
+    features: []
+    notes: ''
+  - fn: lm
+    formula: Gas ~ Insul + Temp
+    source_rd: whiteside
+    features: []
+    notes: ''
+  - fn: lm
+    formula: Gas ~ Insul * Temp
+    source_rd: whiteside
+    features: []
+    notes: ''
+  mgcv:
+  - fn: gam
+    formula: y ~ s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: Beta
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, k = 40)
+    source_rd: NCV
+    features: []
+    notes: ''
+  - fn: gam
+    formula: z ~ s(x, y, k = 100)
+    source_rd: Predict.matrix.soap.film
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(x0, x2, k = 5, bs = "bs", m = 1) + s(x1) + s(x4) + s(x3, fac,
+      bs = "fs")
+    source_rd: XWXd
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ x0 + s(x1) + s(x2) + s(x3)
+    source_rd: anova.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ x0 + s(x1) + s(x2)
+    source_rd: anova.gam
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0, bs = bs) + s(x1, bs = bs) + s(x2, bs = bs, k = k) + s(x3, bs
+      = bs)
+    source_rd: bam
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0, bs = bs, k = k) + s(x1, bs = bs, k = k) + s(x2, bs = bs, k
+      = k) + s(x3, bs = bs, k = k)
+    source_rd: bam
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0, bs = bs) + s(x1, bs = bs) + s(x2, bs = bs, k = k)
+    source_rd: bam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: yb ~ s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: bcg
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: rsd ~ s(x0, k = 40, bs = "cs")
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: rsd ~ s(x1, k = 40, bs = "cs")
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: rsd ~ s(x2, k = 40, bs = "cs")
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: rsd ~ s(x3, k = 40, bs = "cs")
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(x1, x2, k = 15) + s(x3)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: rsd ~ s(x1, x2, k = 100, bs = "ts")
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + te(x1, x2, k = 4) + s(x3)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: rsd ~ te(x1, x2, k = 10, bs = "cs")
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)
+    source_rd: choose.k
+    features: []
+    notes: ''
+  - fn: gam
+    formula: logt ~ s(age, by = sex) + sex + s(nodes) + perfor + rx + obstruct + adhere
+    source_rd: clog
+    features: []
+    notes: ''
+  - fn: gam
+    formula: yt ~ s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: cnorm
+    features: []
+    notes: ''
+  - fn: gam
+    formula: yi ~ s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: cnorm
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(t, k = 15) + s(x, k = 15)
+    source_rd: concurvity
+    features: []
+    notes: ''
+  - fn: gam
+    formula: time ~ s(age, by = sex) + sex + s(nodes) + perfor + rx + obstruct + adhere
+    source_rd: coxph
+    features: []
+    notes: ''
+  - fn: gam
+    formula: cbind(time, strata) ~ s(age, by = sex) + sex + s(nodes) + perfor + rx
+      + obstruct + adhere
+    source_rd: coxph
+    features: []
+    notes: ''
+  - fn: gam
+    formula: t ~ s(x0) + s(x1) + s(x2, k = 15) + s(x3)
+    source_rd: coxph
+    features: []
+    notes: ''
+  - fn: gam
+    formula: t ~ s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: coxph
+    features: []
+    notes: ''
+  - fn: gam
+    formula: cbind(dumt, stratum) ~ spontaneous + induced
+    source_rd: coxph
+    features: []
+    notes: ''
+  - fn: bam
+    formula: z ~ tf - 1 + sex + trt + s(sqrt(protime)) + s(platelet) + s(age) + s(bili)
+      + s(albumin)
+    source_rd: coxpht
+    features: []
+    notes: ''
+  - fn: gam
+    formula: cbind(dumt, tf) ~ sex + trt + s(sqrt(protime)) + s(platelet) + s(age)
+      + s(bili) + s(albumin)
+    source_rd: coxpht
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs
+      = "cr")
+    source_rd: cpois
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ s(x0) + s(x1, fac, bs = "fs", k = 5) + s(x2, k = 20)
+    source_rd: factor.smooth
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0) + s(x1) + s(x1, fac, bs = "sz", k = 5) + s(x2, k = 20)
+    source_rd: factor.smooth
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(x0, x1, k = 7) + s(x2) + s(x3)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, x1, k = 40) + s(x2) + s(x3)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = 4, fx = TRUE, bs = "tp") + s(x1, k = 12) + s(x2, k = 15)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr")
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(x1) + s(x2)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x1) + s(x2)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, k = 40)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, k = 64)
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, k = 40, xt = list(max.knots = 500, seed = 2))
+    source_rd: gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, k = 15)
+    source_rd: gam.mh
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x2, by = x1)
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ fac + s(x2, by = fac) + s(x0)
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2))
+      + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ fac + s(x2, by = fac, id = 1) + s(x0)
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ fac + s(x2) + s(x2, by = fac) + s(x0)
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ X + s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(fac, bs = "re") + s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: travel ~ Z
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs
+      = "cr") + offset(s)
+    source_rd: gam.models
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(x1) + s(x2) + s(x3) + s(x4) + s(x5)
+    source_rd: gam.selection
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)
+    source_rd: gam.side
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "cr", k = 6) + s(z, bs = "cr", k = 6) + te(x, z, k = 6)
+    source_rd: gam.side
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)
+    source_rd: gam.side
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(a, bs = "re") + s(b, bs = "re") + s(a, b, bs = "re") + s(x0, id
+      = 1) + s(x1, id = 1) + s(x2, k = 15) + s(x3)
+    source_rd: gam.vcomp
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ te(x0, x1) + s(x2) + s(x3)
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ s(x0) + s(x1) + s(x2)
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ s(x, k = 20)
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, k = 20)
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs
+      = "cr")
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ s(x, z, k = 50)
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, k = 50)
+    source_rd: gamm
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, by = id1) + s(x1) + s(x2) + s(x3)
+    source_rd: gfam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, by = fac, pc = 0) + s(z)
+    source_rd: identifiability
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(X)
+    source_rd: linear.functional.terms
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x) + s(fac, by = L, bs = "re")
+    source_rd: linear.functional.terms
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(X, Z, by = L) + L1 - 1
+    source_rd: linear.functional.terms
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(X, Z, by = L) + L1 - 1
+    source_rd: linear.functional.terms
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(X, by = L, k = 20)
+    source_rd: linear.functional.terms
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = k) + s(x1, k = k) + s(x2, k = k) + s(x3, k = k)
+    source_rd: magic
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = bs) + s(x1, bs = bs) + s(x2, bs = bs, k = k)
+    source_rd: mgcv-parallel
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0, bs = bs, k = 7) + s(x1, bs = bs, k = 7) + s(x2, bs = bs, k
+      = k)
+    source_rd: mgcv-parallel
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0, by = ordered(!mx0)) + s(x1, by = ordered(!mx1)) + s(x2, by
+      = ordered(!mx2)) + s(x3, by = ordered(!mx3)) + s(idx0, bs = "re", by = mx0)
+      + s(idx1, bs = "re", by = mx1) + s(idx2, bs = "re", by = mx2) + s(idx3, bs =
+      "re", by = mx3)
+    source_rd: missing.data
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "cc", k = 6)
+    source_rd: model.matrix.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, k = 10, bs = "cr")
+    source_rd: pcls
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, k = 10)
+    source_rd: pcls
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x) + s(z) + s(v, k = 20)
+    source_rd: pcls
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ t2(x0, x1, bs = "tp", m = 1, k = 7) + s(x2) + s(x3)
+    source_rd: pen.edf
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ t2(x0, x1, bs = "tp", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)
+    source_rd: pen.edf
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ x0 + s(x1, x2) + s(x3)
+    source_rd: plot.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)
+    source_rd: plot.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3)
+    source_rd: predict.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(x1) + s(x2) + x3
+    source_rd: predict.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3)
+    source_rd: predict.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3)
+    source_rd: predict.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y/n ~ s(x0) + s(x1) + s(x2) + s(x3)
+    source_rd: qq.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, k = 5)
+    source_rd: qq.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: travel ~ s(Rail, bs = "re")
+    source_rd: random.effects
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ fac + s(x1, by = fac) + x2
+    source_rd: s
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "bs", k = k) + s(x1, bs = "bs", k = k) + s(x2, bs = "bs",
+      k = k) + s(x3, bs = "bs", k = k)
+    source_rd: scasm
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(a, fx = fx, k = k) + s(z)
+    source_rd: single.index
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "tr", m = 2) + s(x1, bs = "ps", m = c(1, 3)) + s(x2, bs
+      = "tr", m = 3) + s(x3, bs = "tr", m = 2)
+    source_rd: smooth.construct
+    features: []
+    notes: ''
+  - fn: gamm
+    formula: y ~ s(x0, bs = "tr", m = 2) + s(x1, bs = "ps", m = c(1, 3)) + s(x2, bs
+      = "tr", m = 3) + s(x3, bs = "tr", m = 2)
+    source_rd: smooth.construct
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(x, z, bs = c("tr", "tr"), m = c(2, 2))
+    source_rd: smooth.construct
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "ad", k = 40, m = 5)
+    source_rd: smooth.construct.ad.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "ad", k = 40, m = 5, xt = list(bs = "cr"))
+    source_rd: smooth.construct.ad.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, k = 150)
+    source_rd: smooth.construct.ad.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "ad", k = 15, m = 1)
+    source_rd: smooth.construct.ad.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "ad", k = 15, m = 3)
+    source_rd: smooth.construct.ad.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = bs, m = c(4, 2)) + s(x1, bs = bs) + s(x2, k = 15, bs =
+      bs, m = c(4, 3, 0)) + s(x3, bs = bs, m = c(1, 0))
+    source_rd: smooth.construct.bs.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, m = 1, k = 20)
+    source_rd: smooth.construct.bs.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "bs", m = c(3, 1), k = 20)
+    source_rd: smooth.construct.bs.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "cc", k = 12) + s(z)
+    source_rd: smooth.construct.cr.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "ds", m = c(2, 0), k = 50)
+    source_rd: smooth.construct.ds.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "ds", m = c(1, 0.5), k = 50)
+    source_rd: smooth.construct.ds.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "ds", m = c(2, 0.5), k = 50)
+    source_rd: smooth.construct.ds.smooth.spec
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0) + s(x1, fac, bs = "fs", k = 5) + s(x2, k = 20)
+    source_rd: smooth.construct.fs.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "gp", k = 50)
+    source_rd: smooth.construct.gp.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "gp", k = 50, m = c(1, 0.5))
+    source_rd: smooth.construct.gp.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, z, bs = "gp", k = 50, m = c(-1, 0.5))
+    source_rd: smooth.construct.gp.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: crime ~ s(district, bs = "mrf", xt = xt)
+    source_rd: smooth.construct.mrf.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: crime ~ s(district, bs = "mrf", k = 20, xt = xt)
+    source_rd: smooth.construct.mrf.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: crime ~ s(district, bs = "mrf", k = 20, xt = xt) + s(income)
+    source_rd: smooth.construct.mrf.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: crime ~ s(district, bs = "mrf", k = 20, xt = list(nb = nb)) + s(income)
+    source_rd: smooth.construct.mrf.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "cp") + s(z, bs = "ps")
+    source_rd: smooth.construct.ps.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "cp", k = 12) + s(z, bs = "ps", k = 13)
+    source_rd: smooth.construct.ps.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(r, bs = "re")
+    source_rd: smooth.construct.re.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(r, bs = "re", xt = list(S = S, rank = c(nb/2, nb/2)))
+    source_rd: smooth.construct.re.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(v, w, k = 30, bs = "so", xt = list(bnd = fsb, nmax = nmax))
+    source_rd: smooth.construct.so.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(v, w, k = 30, bs = "sf", xt = list(bnd = fsb, nmax = nmax)) + s(v,
+      w, k = 30, bs = "sw", xt = list(bnd = fsb, nmax = nmax))
+    source_rd: smooth.construct.so.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(v, w, bs = "so", xt = list(bnd = fsb, nmax = nmax))
+    source_rd: smooth.construct.so.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(v, w, t, bs = c("sf", "cr"), k = c(25, 4), d = c(2, 1), xt = list(list(bnd
+      = fsb, nmax = nmax), NULL)) + te(v, w, t, bs = c("sw", "cr"), k = c(25, 4),
+      d = c(2, 1), xt = list(list(bnd = fsb, nmax = nmax), NULL))
+    source_rd: smooth.construct.so.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: z ~ s(x, y, k = c(30, 15), bs = "so", xt = list(bnd = bnd, nmax = nmax))
+    source_rd: smooth.construct.so.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: z ~ s(x, y, k = c(30, 15), bs = "sf", xt = list(bnd = bnd, nmax = nmax))
+      + s(x, y, k = c(30, 15), bs = "sw", xt = list(bnd = bnd, nmax = nmax))
+    source_rd: smooth.construct.so.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(la, lo, bs = "sos", k = 60)
+    source_rd: smooth.construct.sos.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x2) + s(fac, x2, bs = "sz") + s(x0)
+    source_rd: smooth.construct.sz.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x) + s(f1, x, bs = "sz") + s(f2, x, bs = "sz") + s(f1, f2, x, bs
+      = "sz", id = 1)
+    source_rd: smooth.construct.sz.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, m = c(2, 0)) + x
+    source_rd: smooth.construct.tp.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x)
+    source_rd: smooth.construct.tp.smooth.spec
+    features: []
+    notes: ''
+  - fn: bam
+    formula: y ~ s(x0, x1) + s(x1a, x2, m = c(2, 0)) + x2
+    source_rd: smooth.construct.tp.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, k = k, m = m)
+    source_rd: smooth.construct.tp.smooth.spec
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "cc", k = 10) + s(z)
+    source_rd: sp.vcov
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "ts") + s(x1, bs = "ts") + s(x2, bs = "ts") + s(x3, bs
+      = "ts") + s(x4, bs = "ts") + s(x5, bs = "ts")
+    source_rd: step.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") + s(x3, bs
+      = "cr") + s(x4, bs = "cr") + s(x5, bs = "cr")
+    source_rd: step.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, k = b.d[1], fx = TRUE) + s(x1, k = b.d[2], fx = TRUE) + s(x2,
+      k = b.d[3], fx = TRUE) + s(x3, k = b.d[4], fx = TRUE)
+    source_rd: summary.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = "re")
+    source_rd: summary.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(x, z)
+    source_rd: summary.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ t2(x, z)
+    source_rd: t2
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ t2(x, z, bs = c("tp", "tp"))
+    source_rd: t2
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ t2(v, w, u, k = c(30, 5), d = c(2, 1), bs = c("ds", "cr"), m = m)
+    source_rd: t2
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ t2(v, w, u, k = c(25, 5), d = c(2, 1), bs = c("tp", "cr"), full =
+      TRUE)
+    source_rd: t2
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ ti(x) + ti(z) + ti(x, z)
+    source_rd: te
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ ti(x) + ti(x, z, mc = c(0, 1))
+    source_rd: te
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ te(v, w, u, k = c(30, 5), d = c(2, 1), bs = c("ds", "cr"), m = m)
+    source_rd: te
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x, bs = "cc", k = 10)
+    source_rd: vcov.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ s(x0, x1, x2)
+    source_rd: vis.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ fac + s(x)
+    source_rd: vis.gam
+    features: []
+    notes: ''
+  - fn: gam
+    formula: y ~ fac + s(x, by = z)
+    source_rd: vis.gam
+    features: []
+    notes: ''
+  nlme:
+  - fn: gls
+    formula: follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time)
+    source_rd: ACF.gls
+    features: []
+    notes: ''
+  - fn: gls
+    formula: rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB
+    source_rd: ACF.gls
+    features: []
+    notes: ''
+  - fn: lme
+    formula: follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time)
+    source_rd: ACF.lme
+    features: []
+    notes: ''
+  - fn: lme
+    formula: pixel ~ day + I(day^2)
+    source_rd: Pixel
+    features: []
+    notes: ''
+  - fn: lme
+    formula: distance ~ age
+    source_rd: VarCorr
+    features: []
+    notes: ''
+  - fn: gls
+    formula: weight ~ Time * Diet
+    source_rd: Variogram.gls
+    features: []
+    notes: ''
+  - fn: lme
+    formula: weight ~ Time * Diet
+    source_rd: Variogram.lme
+    features: []
+    notes: ''
+  - fn: gls
+    formula: distance ~ Sex * I(age - 11)
+    source_rd: anova.gls
+    features: []
+    notes: ''
+  - fn: lme
+    formula: rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB
+    source_rd: anova.gls
+    features: []
+    notes: ''
+  - fn: gls
+    formula: yield ~ variety - 1
+    source_rd: anova.gls
+    features: []
+    notes: ''
+  - fn: lme
+    formula: distance ~ Sex * I(age - 11)
+    source_rd: anova.lme
+    features: []
+    notes: ''
+  - fn: lme
+    formula: distance ~ age * Sex
+    source_rd: comparePred
+    features: []
+    notes: ''
+  - fn: nlme
+    formula: A + B + C + w ~ 1
+    source_rd: corAR1
+    features: []
+    notes: ''
+  - fn: lme
+    formula: effort ~ Type
+    source_rd: ergoStool
+    features: []
+    notes: ''
+  - fn: lme
+    formula: distance ~ age + Sex
+    source_rd: fitted.lme
+    features: []
+    notes: ''
+  - fn: lme
+    formula: pixel ~ day + day^2
+    source_rd: getGroups.lme
+    features: []
+    notes: ''
+  - fn: lme
+    formula: distance ~ Sex * age
+    source_rd: logLik.lme
+    features: []
+    notes: ''
+  - fn: nlme
+    formula: Asym + R0 + lrc ~ 1
+    source_rd: nlme
+    features: []
+    notes: ''
+  stats:
+  - fn: lm
+    formula: Fertility ~ .
+    source_rd: add1
+    features: []
+    notes: ''
+  - fn: aov
+    formula: yield ~ block + N * P * K
+    source_rd: alias
+    features: []
+    notes: ''
+  - fn: lm
+    formula: sr ~ .
+    source_rd: anova.lm
+    features: []
+    notes: ''
+  - fn: lm
+    formula: sr ~ 1
+    source_rd: anova.lm
+    features: []
+    notes: ''
+  - fn: aov
+    formula: yield ~ block + N * P + K
+    source_rd: aov
+    features: []
+    notes: ''
+  - fn: aov
+    formula: yield ~ N * P * K + Error(block)
+    source_rd: aov
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ x + I(x^2) + I(x^3) + I((x - 10)^2)
+    source_rd: case.names
+    features: []
+    notes: ''
+  - fn: model.frame
+    formula: Sepal.Width ~ Species
+    source_rd: checkMFClasses
+    features: []
+    notes: ''
+  - fn: model.frame
+    formula: Sepal.Width ~ Sepal.Length
+    source_rd: checkMFClasses
+    features: []
+    notes: ''
+  - fn: lm
+    formula: c(1:3, 7, 6) ~ x
+    source_rd: coef
+    features: []
+    notes: ''
+  - fn: lm
+    formula: 100/mpg ~ disp + hp + wt + am
+    source_rd: confint
+    features: []
+    notes: ''
+  - fn: glm
+    formula: counts ~ outcome + treatment
+    source_rd: confint
+    features: []
+    notes: ''
+  - fn: aov
+    formula: Yield ~ A * B * C + Error(Block)
+    source_rd: eff.aovlist
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ x
+    source_rd: effects
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y + 10 ~ I(x - 3.8)
+    source_rd: effects
+    features: []
+    notes: ''
+  - fn: lm
+    formula: log(Volume) ~ log(Girth) + log(Height)
+    source_rd: expand.model.frame
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ x
+    source_rd: expand.model.frame
+    features: []
+    notes: ''
+  - fn: glm
+    formula: Postwt ~ Prewt + Treat + offset(Prewt)
+    source_rd: glm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: lot1 ~ log(u)
+    source_rd: glm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: lot2 ~ log(u)
+    source_rd: glm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: lot2 ~ log(u) + log(u^2)
+    source_rd: glm
+    features: []
+    notes: ''
+  - fn: lm
+    formula: sr ~ pop15 + pop75 + dpi + ddpi
+    source_rd: influence.measures
+    features: []
+    notes: ''
+  - fn: lm
+    formula: yh ~ xh
+    source_rd: influence.measures
+    features: []
+    notes: ''
+  - fn: glm
+    formula: cbind(yi, mi - yi) ~ xi
+    source_rd: influence.measures
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ 0
+    source_rd: is.empty
+    features: []
+    notes: ''
+  - fn: lm
+    formula: weight ~ group
+    source_rd: lm
+    features: []
+    notes: ''
+  - fn: lm
+    formula: weight ~ group - 1
+    source_rd: lm
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ X - 1
+    source_rd: lmfit
+    features: []
+    notes: ''
+  - fn: lm
+    formula: x ~ 1
+    source_rd: logLik
+    features: []
+    notes: ''
+  - fn: lm
+    formula: rating ~ .
+    source_rd: logLik
+    features: []
+    notes: ''
+  - fn: lm
+    formula: distance ~ Sex * age
+    source_rd: logLik
+    features: []
+    notes: ''
+  - fn: lm
+    formula: weight ~ poly(height, 2)
+    source_rd: makepredictcall
+    features: []
+    notes: ''
+  - fn: model.frame
+    formula: cbind(ncases, ncontrols) ~ agegp + tobgp + alcgp
+    source_rd: model.extract
+    features: []
+    notes: ''
+  - fn: model.frame
+    formula: ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp
+    source_rd: model.extract
+    features: []
+    notes: ''
+  - fn: model.frame
+    formula: cbind(ncases, ncontrols) ~ agegp
+    source_rd: model.extract
+    features: []
+    notes: ''
+  - fn: model.frame
+    formula: dist ~ speed
+    source_rd: model.frame
+    features: []
+    notes: ''
+  - fn: model.matrix
+    formula: ~a + b
+    source_rd: model.matrix
+    features: []
+    notes: ''
+  - fn: lm
+    formula: extra ~ group
+    source_rd: oneway.test
+    features: []
+    notes: ''
+  - fn: lm
+    formula: long.var.name.1 ~ long.var.name.2 + long.var.name.3 + long.var.name.4
+      + long.var.name.5
+    source_rd: plot.lm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: counts ~ outcome * treatment
+    source_rd: plot.profile
+    features: []
+    notes: ''
+  - fn: glm
+    formula: SF ~ sex * ldose
+    source_rd: predict.glm
+    features: []
+    notes: ''
+  - fn: lm
+    formula: breaks ~ wool + tension
+    source_rd: relevel
+    features: []
+    notes: ''
+  - fn: aov
+    formula: yield ~ block + N + K
+    source_rd: se.contrast
+    features: []
+    notes: ''
+  - fn: aov
+    formula: yield ~ N + K + Error(block/(N + K))
+    source_rd: se.contrast
+    features: []
+    notes: ''
+  - fn: aov
+    formula: score ~ A * B
+    source_rd: se.contrast
+    features: []
+    notes: ''
+  - fn: aov
+    formula: Yield ~ A + B * C + Error(Block)
+    source_rd: se.contrast
+    features: []
+    notes: ''
+  - fn: lm
+    formula: x ~ z
+    source_rd: selfStart
+    features: []
+    notes: ''
+  - fn: glm
+    formula: yb1 ~ x
+    source_rd: simulate
+    features: []
+    notes: ''
+  - fn: glm
+    formula: yb2 ~ x2
+    source_rd: simulate
+    features: []
+    notes: ''
+  - fn: lm
+    formula: reacttime ~ 1
+    source_rd: SSD
+    features: []
+    notes: ''
+  - fn: aov
+    formula: y ~ N * P
+    source_rd: summary.aov
+    features: []
+    notes: ''
+  - fn: lm
+    formula: weight ~ group + I(group != "Ctl")
+    source_rd: summary.lm
+    features: []
+    notes: ''
+  - fn: glm
+    formula: y ~ ns(x, 6) + z
+    source_rd: termplot
+    features: []
+    notes: ''
+  - fn: lm
+    formula: log(time) ~ log(climb) + log(dist)
+    source_rd: termplot
+    features: []
+    notes: ''
+  - fn: aov
+    formula: breaks ~ wool + tension
+    source_rd: TukeyHSD
+    features: []
+    notes: ''
+  - fn: lm
+    formula: y ~ 1
+    source_rd: var.test
+    features: []
+    notes: ''
+  - fn: aov
+    formula: breaks ~ wool + tens + tension
+    source_rd: zC
+    features: []
+    notes: ''
+  - fn: lm
+    formula: breaks ~ wool + C(tension, base = 2)
+    source_rd: zC
+    features: []
+    notes: ''
+  - fn: glm
+    formula: cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)
+    source_rd: zC
+    features: []
+    notes: ''

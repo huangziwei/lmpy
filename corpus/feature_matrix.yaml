@@ -1,0 +1,356 @@
+# =============================================================================
+# Feature matrix for the lmpy formula corpus.
+#
+# Purpose: enumerate every formula-feature *axis* the Python formula compiler
+# must reproduce, so the test corpus can be audited for coverage. Each axis
+# has a set of values; each fixture case is tagged with which values it hits.
+# Coverage target: every value at least once; every pairwise combination of
+# values from compatible axes at least once (per section).
+#
+# This file is design-time input. It does not contain formulas itself —
+# formulas live in corpus/wr.yaml, corpus/lme4.yaml, corpus/mgcv.yaml and
+# carry `features:` tags that reference the axis:value ids defined here.
+#
+# Sections:
+#   shared  — axes common to all three systems (var types, NA, rank, ...)
+#   wr      — Wilkinson-Rogers (base R stats::model.matrix, lm)
+#   lme4    — random-effects DSL on top of WR
+#   mgcv    — smooth terms on top of WR
+#
+# Id convention: <section>.<axis>.<value>, e.g. wr.op.star, lme4.re.corr_slope.
+# =============================================================================
+
+meta:
+  version: 0
+  coverage_policy: pairwise_within_section
+  canonical_datasets:
+    # Datasets that ship with R packages and are standard in the LMM/GAM
+    # literature. Export to datasets/<pkg>/<name>.csv via scripts/export_canonical_data.R.
+    lm:
+      - {pkg: datasets, name: iris}        # num + factor + multivariate
+      - {pkg: datasets, name: mtcars}      # num + ordered + interactions
+      - {pkg: datasets, name: ToothGrowth} # 2x num + 2-level factor
+      - {pkg: faraway,  name: gala}        # the lmpy textbook example
+      - {pkg: faraway,  name: chicago}     # multi-numeric
+    lme4:
+      - {pkg: lme4, name: sleepstudy}      # classical (Days|Subject)
+      - {pkg: lme4, name: Dyestuff}        # simple (1|Batch)
+      - {pkg: lme4, name: Dyestuff2}       # boundary-singular case
+      - {pkg: lme4, name: Penicillin}      # crossed (1|plate)+(1|sample)
+      - {pkg: lme4, name: Pastes}          # nested (1|batch/cask)
+      - {pkg: lme4, name: cbpp}            # GLMM / binomial
+      - {pkg: lme4, name: VerbAgg}         # many-level grouping
+      - {pkg: lme4, name: InstEval}        # partially crossed, large
+    nlme:
+      - {pkg: nlme, name: Orthodont}       # longitudinal, 2-level
+      - {pkg: nlme, name: Oxboys}          # classic growth
+      - {pkg: nlme, name: Machines}        # crossed operators
+    mgcv:
+      - {pkg: MASS,   name: mcycle}        # 1D smooth demo
+      - {pkg: gamair, name: chl}           # 2D spatial (skipped if gamair absent)
+      - {pkg: mgcv,   name: gamSim_eg1}    # synthetic via mgcv::gamSim(1); exporter special-cases
+  synthetic_generators:
+    # Cases that need a specific structure (rank deficiency, empty cells,
+    # singleton factor, ...) use seeded synthetic data. Generators defined in
+    # scripts/synthetic_data.R.
+    - seed_synth_basic        # num x1..x5, factor f (3 levels), group g (5 levels)
+    - seed_synth_aliased      # two columns perfectly collinear
+    - seed_synth_empty_cell   # factor:factor with one empty combination
+    - seed_synth_singleton    # factor with a level that has only 1 observation
+    - seed_synth_big_factor   # factor with 50 levels
+    - seed_synth_na_mixed     # 5% NA scattered across several columns
+    - seed_synth_nested_group # g1/g2 with imbalanced nesting
+    - seed_synth_crossed_re   # two fully-crossed grouping factors
+    - seed_synth_longitudinal # id x time, for RE slopes
+    - seed_synth_2d_smooth    # x, y in [0,1]^2 with known smooth surface
+
+# =============================================================================
+# Shared axes (apply to WR, lme4, and mgcv parametric parts)
+# =============================================================================
+shared:
+
+  - axis: var_type
+    description: Type of an individual variable referenced on RHS or LHS.
+    values:
+      - {id: numeric,        example: "x (double)"}
+      - {id: integer,        example: "x (integer)"}
+      - {id: logical,        example: "x (TRUE/FALSE)"}
+      - {id: character,      example: "x (character, coerced to factor)"}
+      - {id: factor,         example: "f (unordered factor)"}
+      - {id: ordered,        example: "f (ordered factor)"}
+      - {id: date,           example: "x (Date / POSIXct)"}
+      - {id: matrix_column,  example: "cbind(y1, y2) ~ ..."}
+
+  - axis: factor_cardinality
+    description: Shape of a factor variable used on RHS.
+    values:
+      - {id: two_level}
+      - {id: balanced_3_5,  example: "3-5 levels, balanced"}
+      - {id: many_level,    example: ">20 levels"}
+      - {id: singleton,     example: "level appears in only 1 row"}
+      - {id: unused_level,  example: "factor level with 0 rows after filter"}
+
+  - axis: na_policy
+    description: How missing values in model variables are handled.
+    r_ref: "?na.action"
+    values:
+      - {id: omit,    example: "na.action = na.omit"}
+      - {id: exclude, example: "na.action = na.exclude"}
+      - {id: fail,    example: "na.action = na.fail"}
+      - {id: pass,    example: "na.action = na.pass"}
+
+  - axis: rank
+    description: Rank structure of the resulting model matrix X.
+    values:
+      - {id: full}
+      - {id: aliased_cols,  example: "two columns linearly dependent"}
+      - {id: empty_cells,   example: "factor:factor with some combinations absent"}
+      - {id: perfect_fit,   example: "n == p"}
+
+  - axis: response_shape
+    description: LHS shape.
+    values:
+      - {id: univariate,  example: "y ~ ..."}
+      - {id: cbind,       example: "cbind(y1, y2) ~ ...  (e.g. binomial)"}
+      - {id: matrix,      example: "Y ~ ...  where Y is n x m"}
+      - {id: transformed, example: "log(y) ~ ..."}
+
+# =============================================================================
+# Wilkinson-Rogers: stats::model.matrix / lm
+# =============================================================================
+wr:
+
+  - axis: op
+    description: Term-algebra operators.
+    r_ref: "?formula"
+    values:
+      - {id: plus,     syntax: "a + b"}
+      - {id: minus,    syntax: "a + b - a"}
+      - {id: star,     syntax: "a * b",             note: "a + b + a:b"}
+      - {id: colon,    syntax: "a:b",               note: "interaction only"}
+      - {id: slash,    syntax: "a/b",               note: "a + a:b (nesting)"}
+      - {id: power,    syntax: "(a + b + c)^2",     note: "all up to 2-way"}
+      - {id: power3,   syntax: "(a + b + c)^3"}
+      - {id: in_op,    syntax: "a + b %in% a",      note: "b-within-a"}
+      - {id: dot,      syntax: "y ~ ."}
+      - {id: dot_minus,syntax: "y ~ . - x"}
+      - {id: parens,   syntax: "(a + b) * c"}
+
+  - axis: intercept
+    description: Intercept inclusion / suppression.
+    values:
+      - {id: default,        syntax: "y ~ x"}
+      - {id: minus_one,      syntax: "y ~ x - 1"}
+      - {id: plus_zero,      syntax: "y ~ x + 0"}
+      - {id: leading_zero,   syntax: "y ~ 0 + x"}
+      - {id: explicit_one,   syntax: "y ~ 1 + x"}
+      - {id: only_intercept, syntax: "y ~ 1"}
+
+  - axis: transform
+    description: Function calls / expressions in term positions (RHS or LHS).
+    values:
+      - {id: identity,       syntax: "x"}
+      - {id: I_square,       syntax: "I(x^2)"}
+      - {id: I_combine,      syntax: "I(x1 + x2)"}
+      - {id: I_product,      syntax: "I(x1 * x2)"}
+      - {id: log,            syntax: "log(x)"}
+      - {id: log1p,          syntax: "log1p(x)"}
+      - {id: exp,            syntax: "exp(x)"}
+      - {id: sqrt,           syntax: "sqrt(x)"}
+      - {id: sin_cos,        syntax: "sin(x) + cos(x)"}
+      - {id: poly_orth,      syntax: "poly(x, 3)",               note: "orthogonal"}
+      - {id: poly_raw,       syntax: "poly(x, 3, raw=TRUE)"}
+      - {id: bs,             syntax: "splines::bs(x, df=5)"}
+      - {id: bs_degree,      syntax: "splines::bs(x, df=7, degree=2)"}
+      - {id: ns,             syntax: "splines::ns(x, df=4)"}
+      - {id: scale,          syntax: "scale(x)"}
+      - {id: cut,            syntax: "cut(x, 4)",                note: "numeric -> factor"}
+      - {id: offset,         syntax: "offset(log(exposure))"}
+      - {id: inline_logical, syntax: "(x > 0)"}
+      - {id: asis_factor,    syntax: "factor(g)"}
+      - {id: reorder_factor, syntax: "relevel(f, ref='b')"}
+
+  - axis: contrast
+    description: Factor-coding scheme.
+    r_ref: "?contrasts"
+    values:
+      - {id: treatment,  note: "default for unordered factors"}
+      - {id: sum,        syntax: "contr.sum"}
+      - {id: helmert,    syntax: "contr.helmert"}
+      - {id: poly,       syntax: "contr.poly", note: "default for ordered factors"}
+      - {id: sas,        syntax: "contr.SAS"}
+      - {id: user_per_factor,  note: "contrasts.arg = list(f = custom_matrix)"}
+      - {id: C_wrapper,        syntax: "C(f, contr.sum)"}
+
+  - axis: interaction
+    description: Term combinations with mixed variable types.
+    values:
+      - {id: num_num,          syntax: "x1:x2"}
+      - {id: num_factor,       syntax: "x:f"}
+      - {id: factor_factor,    syntax: "f:g"}
+      - {id: three_way,        syntax: "a:b:c"}
+      - {id: four_way,         syntax: "a:b:c:d"}
+      - {id: crossed_expand,   syntax: "(a+b+c)^2"}
+      - {id: nested,           syntax: "a + a:b"}
+      - {id: transform_in_int, syntax: "poly(x,2):f"}
+      - {id: I_in_int,         syntax: "I(x^2):f"}
+
+  - axis: edge
+    description: Known-tricky WR cases to pin down.
+    values:
+      - {id: dup_term,         syntax: "y ~ x + x"}
+      - {id: subtract_absent,  syntax: "y ~ x - z"}
+      - {id: subtract_main,    syntax: "y ~ a*b - a"}
+      - {id: subtract_inter,   syntax: "y ~ a*b - a:b"}
+      - {id: subtract_all,     syntax: "y ~ . - x1 - x2"}
+      - {id: single_row,       note: "data has 1 row"}
+      - {id: single_col_X,     syntax: "y ~ 1", note: "intercept-only"}
+      - {id: factor_as_y,      syntax: "f ~ x",  note: "usually for glm, still valid"}
+      - {id: interaction_only, syntax: "y ~ x:f", note: "no main effects"}
+      - {id: tilde_in_arg,     syntax: "y ~ I(f == 'a')"}
+
+# =============================================================================
+# lme4 random-effects DSL (formulas of form `fixed ~ ... + (re | g)`)
+# =============================================================================
+lme4:
+
+  - axis: re_spec
+    description: Random-effect term inside a single (... | g) block.
+    r_ref: "?lme4::lFormula"
+    values:
+      - {id: intercept_only,  syntax: "(1 | g)"}
+      - {id: slope_only,      syntax: "(0 + x | g)"}
+      - {id: corr_slope,      syntax: "(x | g)",            note: "= (1 + x | g)"}
+      - {id: corr_slope_expl, syntax: "(1 + x | g)"}
+      - {id: uncorr_slope,    syntax: "(x || g)",           note: "expands to (1|g) + (0+x|g)"}
+      - {id: multi_corr,      syntax: "(1 + x + y | g)"}
+      - {id: multi_uncorr,    syntax: "(1 + x + y || g)"}
+      - {id: factor_slope,    syntax: "(f | g)",            note: "f is a factor"}
+      - {id: factor_uncorr,   syntax: "(f || g)",           note: "formulae issue #55 territory"}
+      - {id: transform_slope, syntax: "(poly(x,2) | g)"}
+      - {id: no_intercept,    syntax: "(0 + f | g)",        note: "factor, no ref level absorbed"}
+
+  - axis: grouping
+    description: Structure across grouping variables.
+    values:
+      - {id: single,          syntax: "(1|g)"}
+      - {id: crossed,         syntax: "(1|g1) + (1|g2)"}
+      - {id: nested_slash,    syntax: "(1|g1/g2)",          note: "= (1|g1) + (1|g1:g2)"}
+      - {id: interaction_col, syntax: "(1|g1:g2)"}
+      - {id: partial_crossed, note: "two factors, not fully crossed"}
+      - {id: two_groups_same, syntax: "(1|g) + (0+x|g)",    note: "two uncorrelated blocks on same group"}
+
+  - axis: mixing
+    description: Interaction between fixed and random parts.
+    values:
+      - {id: fe_only,          syntax: "y ~ x"}
+      - {id: re_only,          syntax: "y ~ 1 + (1|g)"}
+      - {id: fe_plus_re,       syntax: "y ~ x + (1|g)"}
+      - {id: slope_also_fe,    syntax: "y ~ x + (x|g)",    note: "common sleepstudy pattern"}
+      - {id: slope_not_fe,     syntax: "y ~ 1 + (x|g)",    note: "slope only at RE level"}
+      - {id: nested_fixed,     syntax: "y ~ f*g + (1|g)"}
+
+  - axis: edge_lme4
+    description: Known-tricky lme4 cases.
+    values:
+      - {id: double_bar_factor,  syntax: "(f || g)",                  note: "formulae issue #55"}
+      - {id: double_bar_multi,   syntax: "(1 + x + y || g)",          note: "must expand to 3 blocks"}
+      - {id: slash_with_slope,   syntax: "(x | g1/g2)"}
+      - {id: re_on_coerced,      syntax: "(1 | factor(g))",           note: "grouping via coercion"}
+      - {id: singular_fit,       note: "data that triggers boundary fit"}
+      - {id: interaction_in_re,  syntax: "(1 | g1:g2) + (1|g1) + (1|g2)"}
+      - {id: transform_group,    syntax: "(1 | paste(g1, g2, sep=':'))"}
+      - {id: complex_re,         syntax: "(1 + poly(x,2) || g)"}
+
+# =============================================================================
+# mgcv smooth terms (formulas of form `y ~ parametric + s(...) + te(...) + ...`)
+# =============================================================================
+mgcv:
+
+  - axis: bs
+    description: Basis specification for a smooth.
+    r_ref: "?mgcv::smooth.terms"
+    values:
+      - {id: tp,  syntax: "s(x, bs='tp')",  note: "default thin-plate"}
+      - {id: ts,  syntax: "s(x, bs='ts')",  note: "shrinkage TPRS"}
+      - {id: cr,  syntax: "s(x, bs='cr')",  note: "cubic regression"}
+      - {id: cs,  syntax: "s(x, bs='cs')",  note: "shrinkage CR"}
+      - {id: cc,  syntax: "s(x, bs='cc')",  note: "cyclic cubic"}
+      - {id: ps,  syntax: "s(x, bs='ps')",  note: "P-spline"}
+      - {id: cp,  syntax: "s(x, bs='cp')",  note: "cyclic P-spline"}
+      - {id: re,  syntax: "s(g, bs='re')",  note: "random effect via mgcv"}
+      - {id: fs,  syntax: "s(x, g, bs='fs')", note: "factor-smooth interaction"}
+      - {id: gp,  syntax: "s(x, bs='gp')",  note: "Gaussian process"}
+      - {id: ad,  syntax: "s(x, bs='ad')",  note: "adaptive, 1D only"}
+      - {id: sz,  syntax: "s(x, g, bs='sz')", note: "constrained factor smooth"}
+      # Deferred (need extra structures):
+      # - mrf  (requires neighborhood list)
+      # - so   (requires soap-film boundary)
+
+  - axis: constructor
+    description: Smooth constructor form.
+    values:
+      - {id: s_1d,           syntax: "s(x)"}
+      - {id: s_iso_2d,       syntax: "s(x, y)",              note: "isotropic 2D"}
+      - {id: s_iso_3d,       syntax: "s(x, y, z)"}
+      - {id: te,             syntax: "te(x, y)",             note: "tensor product"}
+      - {id: te_mixed_bs,    syntax: "te(x, y, bs=c('cr','cc'))"}
+      - {id: te_different_k, syntax: "te(x, y, k=c(10, 5))"}
+      - {id: ti_decomp,      syntax: "s(x) + s(y) + ti(x, y)", note: "main+interaction decomposition"}
+      - {id: t2,             syntax: "t2(x, y)",             note: "ANOVA-style tensor"}
+
+  - axis: modifier
+    description: Per-smooth keyword modifiers.
+    values:
+      - {id: k,           syntax: "s(x, k=20)"}
+      - {id: m_penalty,   syntax: "s(x, m=2)"}
+      - {id: by_factor,   syntax: "s(x, by=f)"}
+      - {id: by_factor_id,syntax: "s(x, by=f, id=1)", note: "share smoothing param across by-levels"}
+      - {id: by_numeric,  syntax: "s(x, by=z)",      note: "varying-coefficient"}
+      - {id: sp_fixed,    syntax: "s(x, sp=0.1)"}
+      - {id: xt_extras,   syntax: "s(x, xt=list(...))"}
+      - {id: pc_point,    syntax: "s(x, pc=0)",      note: "point constraint"}
+
+  - axis: mixing
+    description: How smooths combine with parametric / RE terms.
+    values:
+      - {id: smooth_only,        syntax: "y ~ s(x)"}
+      - {id: parametric_plus,    syntax: "y ~ f + s(x)"}
+      - {id: two_smooths,        syntax: "y ~ s(x) + s(z)"}
+      - {id: smooth_and_re,      syntax: "y ~ s(x) + s(g, bs='re')"}
+      - {id: by_with_main,       syntax: "y ~ f + s(x, by=f)", note: "per-level smooth w/ main effect"}
+      - {id: parametric_smooth_re, syntax: "y ~ f + s(x) + s(g, bs='re')"}
+      - {id: tensor_plus_margins,  syntax: "y ~ s(x) + s(z) + ti(x, z)"}
+
+  - axis: edge_mgcv
+    description: Known-tricky mgcv cases.
+    values:
+      - {id: high_k,             syntax: "s(x, k=100)"}
+      - {id: low_k,              syntax: "s(x, k=4)"}
+      - {id: cc_wrap,            syntax: "s(t, bs='cc')", note: "knots at endpoints wrap"}
+      - {id: fs_many_levels,     syntax: "s(x, g, bs='fs')", note: "g has many levels"}
+      - {id: te_one_var,         syntax: "te(x)",        note: "degenerate tensor"}
+      - {id: smooth_of_ordered,  syntax: "s(ordered_f, bs='re')"}
+      - {id: by_missing_level,   note: "by=factor with an unused level"}
+
+# =============================================================================
+# Cross-section pairings that MUST be covered
+# =============================================================================
+# Listed because they're documented compatibility / bug points that a naive
+# corpus-builder might miss. Each entry means "at least one case with both."
+forced_pairs:
+  - [wr.op.star,            wr.interaction.num_factor]
+  - [wr.op.power,           wr.contrast.sum]
+  - [wr.transform.poly_orth, wr.interaction.num_factor]
+  - [wr.transform.poly_raw,  wr.interaction.num_factor]
+  - [wr.intercept.leading_zero, wr.contrast.treatment]
+  - [wr.edge.subtract_inter, wr.op.star]
+  - [lme4.re_spec.uncorr_slope,  lme4.grouping.crossed]
+  - [lme4.re_spec.factor_uncorr, lme4.grouping.single]   # issue #55 core
+  - [lme4.re_spec.corr_slope,    lme4.grouping.nested_slash]
+  - [lme4.mixing.slope_also_fe,  lme4.grouping.single]   # sleepstudy canonical
+  - [mgcv.bs.cc,            mgcv.modifier.k]
+  - [mgcv.bs.fs,            mgcv.edge_mgcv.fs_many_levels]
+  - [mgcv.constructor.ti_decomp, mgcv.modifier.k]
+  - [mgcv.constructor.te,   mgcv.modifier.by_factor]
+  - [mgcv.mixing.smooth_and_re, mgcv.bs.re]
