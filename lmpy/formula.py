@@ -42,6 +42,8 @@ __all__ = [
     "materialize",
     "materialize_bars",
     "ReTerms",
+    "materialize_smooths",
+    "SmoothBlock",
 ]
 
 
@@ -560,7 +562,7 @@ class ExpandedFormula:
 
     Fixed-effect side is a list of Terms plus an intercept flag. RE bars from
     lme4 are separated out (each an unextracted BinOp with op '|' or '||');
-    mgcv smooth calls remain as atoms inside `terms`, to be materialized later.
+    mgcv smooth calls (`s`/`te`/`ti`/`t2`) are extracted into `smooths`.
     `offsets` holds the inner arg of every `offset(...)` call — those never
     contribute to the design matrix but are added directly to the linear
     predictor at fit time.
@@ -569,6 +571,7 @@ class ExpandedFormula:
     terms: list[Term] = field(default_factory=list)
     bars: list[BinOp] = field(default_factory=list)
     offsets: list = field(default_factory=list)
+    smooths: list[Call] = field(default_factory=list)
 
     @property
     def term_labels(self) -> list[str]:
@@ -820,15 +823,23 @@ def expand(
     # filters these out of term.labels and stores them under the "offset"
     # attribute. If an offset shows up mixed into an interaction (e.g.
     # `offset(x):y`), that's not meaningful R; we leave it in terms.
+    #
+    # Same treatment for mgcv smooth constructors s/te/ti/t2: they don't
+    # contribute to the parametric X; they become per-smooth (X_block, S_blocks)
+    # pairs in `materialize_smooths`.
     offsets: list = []
+    smooths: list[Call] = []
     kept: list[Term] = []
     for t in fixed_terms:
-        if len(t.atoms) == 1 and isinstance(t.atoms[0], Call) and t.atoms[0].fn == "offset":
-            # Offset arg is the single positional (R's offset() takes one expr).
-            args = t.atoms[0].args
-            if args:
-                offsets.append(args[0])
-            continue
+        if len(t.atoms) == 1 and isinstance(t.atoms[0], Call):
+            c = t.atoms[0]
+            if c.fn == "offset":
+                if c.args:
+                    offsets.append(c.args[0])
+                continue
+            if c.fn in ("s", "te", "ti", "t2"):
+                smooths.append(c)
+                continue
         kept.append(t)
 
     # R's terms() sorts by interaction order (main effects → pairwise → …),
@@ -837,6 +848,7 @@ def expand(
 
     return ExpandedFormula(
         intercept=intercept, terms=kept, bars=bars, offsets=offsets,
+        smooths=smooths,
     )
 
 
@@ -2024,3 +2036,157 @@ def materialize_bars(expanded: ExpandedFormula, data: pd.DataFrame) -> ReTerms:
         flist_names=flist_names, flist_levels=flist_levels,
         cnms=cnms, Gp=Gp,
     )
+
+
+# ---------------------------------------------------------------------------
+# mgcv smooth constructors → per-smooth (X, S_list)
+# ---------------------------------------------------------------------------
+#
+# mgcv's `smoothCon(sp, data, absorb.cons=TRUE, scale.penalty=TRUE)` does:
+#   1. Dispatch on class(sp) → smooth.construct.<bs>.smooth.spec
+#      - re:  X = model.matrix(~ term1:term2:...-1, data);  S = [I]
+#      - cr:  cubic regression spline basis with 2nd-derivative penalty
+#      - tp:  thin-plate regression spline (eigen-reduced from n basis)
+#      - tensor (te/ti/t2): tensor product of marginal bases
+#      - ...
+#   2. Absorb sum-to-zero constraint (drops 1 col from X, reparameterizes S).
+#   3. Rescale each S[i] so `norm(S[i],"O")/ncol(S[i])` matches
+#      `norm(X,"I")^2/ncol(X)` — makes penalty magnitudes comparable to X'X
+#      for numerical conditioning.
+
+
+@dataclass(slots=True)
+class SmoothBlock:
+    """One per-smooth basis + penalty set.
+
+    Produced by `materialize_smooths`. Matches what R's
+    `smoothCon(..., absorb.cons=TRUE, scale.penalty=TRUE)` returns for each
+    block under a given smooth.spec.
+    """
+    label: str                      # e.g. "s(x)", "s(Machine,Worker)"
+    term: list[str]                 # variable names referenced
+    cls: str                        # class name (e.g. "re.smooth.spec")
+    X: np.ndarray                   # basis matrix, (n, k)
+    S: list[np.ndarray]             # penalty matrices, each (k, k)
+
+
+def _smooth_bs(call: Call) -> str:
+    """Pick the bs string for an s()/te()/ti()/t2() call."""
+    if call.fn in ("te", "ti", "t2"):
+        # Tensor constructors default to cr marginals but the class is
+        # `tensor.smooth.spec` / `t2.smooth.spec` regardless. The bs kwarg
+        # there controls marginal bs.
+        return "tensor"
+    # s(): default bs is "tp"
+    bs = call.kwargs.get("bs")
+    if bs is None:
+        return "tp"
+    if isinstance(bs, Literal) and bs.kind == "str":
+        return str(bs.value)
+    return "tp"
+
+
+def _smooth_term_vars(call: Call) -> list[str]:
+    """Pluck variable names from an s(...)'s positional args.
+
+    mgcv treats the non-keyword args of s() as the term variables. e.g.
+    `s(Machine, Worker, bs="re")` → ["Machine", "Worker"].
+    """
+    names: list[str] = []
+    for a in call.args:
+        if isinstance(a, Name):
+            names.append(a.ident)
+        else:
+            # Could be an expression — not supported yet.
+            names.append(_deparse(a))
+    return names
+
+
+def _smooth_label(call: Call) -> str:
+    """Reproduce mgcv's smooth label (e.g. `s(x)`, `s(Machine,Worker)`)."""
+    return f"{call.fn}({','.join(_smooth_term_vars(call))})"
+
+
+def _scale_penalty(X: np.ndarray, S_list: list[np.ndarray]) -> list[np.ndarray]:
+    """Match mgcv's `scale.penalty=TRUE` rescaling.
+
+    For each penalty S in S_list:
+        scale = (norm(X,"I")^2 / ncol(X)) / (norm(S,"O") / ncol(S))
+        S := S * scale
+    where norm("I") = max abs row sum, norm("O") = max abs col sum.
+    """
+    if X.size == 0 or not S_list:
+        return [np.asarray(s, dtype=float) for s in S_list]
+    maXX = float(np.abs(X).sum(axis=1).max()) ** 2 / X.shape[1]
+    out = []
+    for S in S_list:
+        S = np.asarray(S, dtype=float)
+        if S.size == 0:
+            out.append(S)
+            continue
+        maS = float(np.abs(S).sum(axis=0).max()) / S.shape[1]
+        if maS == 0:
+            out.append(S)
+        else:
+            out.append(S * (maXX / maS))
+    return out
+
+
+def _build_re_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """`bs="re"` → `model.matrix(~ term1:term2:...-1, data)`.
+
+    Penalty is `diag(ncol(X))`, then scale.penalty rescales.
+    """
+    term_vars = _smooth_term_vars(call)
+    # Build the formula `~ term1:term2:...-1` using our existing machinery.
+    rhs = None
+    for v in term_vars:
+        node = Name(v)
+        rhs = node if rhs is None else BinOp(":", rhs, node)
+    # `-1`: no intercept.
+    fake = Formula(lhs=None, rhs=rhs)
+    ef = expand(fake)
+    ef.intercept = False  # override implicit intercept
+    X_df = materialize(ef, data)
+    X = X_df.values.astype(float)
+    S_list = [np.eye(X.shape[1])]
+    S_list = _scale_penalty(X, S_list)
+    return [SmoothBlock(
+        label=_smooth_label(call),
+        term=term_vars,
+        cls="re.smooth.spec",
+        X=X,
+        S=S_list,
+    )]
+
+
+def materialize_smooths(
+    expanded: ExpandedFormula, data: pd.DataFrame,
+) -> list[list[SmoothBlock]]:
+    """Materialize each smooth in `expanded.smooths` to one or more blocks.
+
+    Returns a list parallel to `expanded.smooths`; each entry is the list of
+    SmoothBlock that mgcv's smoothCon returns for that spec. Most smooths
+    produce exactly one block; `by = <factor>` with `id` yields n_levels.
+    """
+    # NA-drop using every referenced variable, to match R's `na.omit` over the
+    # union of all formula variables.
+    referenced: set[str] = set()
+    for c in expanded.smooths:
+        for v in _smooth_term_vars(c):
+            if v in data.columns:
+                referenced.add(v)
+    if referenced:
+        data = data.dropna(subset=list(referenced)).reset_index(drop=True)
+
+    out: list[list[SmoothBlock]] = []
+    for call in expanded.smooths:
+        bs = _smooth_bs(call)
+        if bs == "re":
+            out.append(_build_re_smooth(call, data))
+        else:
+            raise NotImplementedError(
+                f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
+                "not yet implemented"
+            )
+    return out
