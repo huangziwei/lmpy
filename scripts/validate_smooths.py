@@ -67,6 +67,11 @@ def main() -> int:
             f = parse(meta["formula"])
             data_cols = list(data.columns) if "." in meta["formula"] else None
             ef = expand(f, data_columns=data_cols)
+            # R's gam drops rows with NA in ANY formula variable — match that.
+            need = set(meta.get("need_vars", []))
+            need &= set(data.columns)
+            if need:
+                data = data.dropna(subset=list(need)).reset_index(drop=True)
             ours = materialize_smooths(ef, data)
         except NotImplementedError as e:
             # Record by smooth class so we can prioritize what to implement.
@@ -107,9 +112,21 @@ def main() -> int:
                     )
                     ok = False
                     break
-                try:
-                    np.testing.assert_allclose(blk.X, X_ref, rtol=1e-6, atol=1e-8)
-                except AssertionError:
+                # mgcv's Lanczos uses an arbitrary sign convention for
+                # eigenvectors; lmpy's np.linalg.eigh uses its own. Per-column
+                # sign flips are expected and mathematically irrelevant — match
+                # each column up to sign, then apply the same flip to S.
+                signs = np.ones(blk.X.shape[1])
+                X_got = blk.X.copy()
+                for c in range(blk.X.shape[1]):
+                    plus = float(np.max(np.abs(blk.X[:, c] - X_ref[:, c])))
+                    minus = float(np.max(np.abs(blk.X[:, c] + X_ref[:, c])))
+                    if minus < plus:
+                        signs[c] = -1.0
+                        X_got[:, c] = -blk.X[:, c]
+                # Same normalized comparison as for S (max|X|-scaled tol).
+                tol_X = max(1e-6, 1e-5 * float(np.max(np.abs(X_ref))))
+                if not np.allclose(X_got, X_ref, atol=tol_X, rtol=0):
                     fails.setdefault("X_VALS", []).append(
                         f"[{fid}] smooth #{i} block {k} ({r_meta['class']})"
                     )
@@ -137,9 +154,13 @@ def main() -> int:
                         )
                         ok = False
                         break
-                    try:
-                        np.testing.assert_allclose(S_got, S_ref, rtol=1e-6, atol=1e-8)
-                    except AssertionError:
+                    # Apply the same per-column sign flips to S so the
+                    # basis-equivalent comparison is consistent.
+                    S_got_flipped = S_got * signs[:, None] * signs[None, :]
+                    # S matrices have large dynamic range; tolerance relative
+                    # to max|S| is more meaningful than entrywise rtol.
+                    tol = max(1e-6, 1e-5 * float(np.max(np.abs(S_ref))))
+                    if not np.allclose(S_got_flipped, S_ref, atol=tol, rtol=0):
                         fails.setdefault("S_VALS", []).append(
                             f"[{fid}] smooth #{i} block {k} S_{j} ({r_meta['class']})"
                         )

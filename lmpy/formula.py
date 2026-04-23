@@ -2107,35 +2107,138 @@ def _smooth_label(call: Call) -> str:
     return f"{call.fn}({','.join(_smooth_term_vars(call))})"
 
 
+def _smooth_by_expr(call: Call) -> str | None:
+    """Return the `by=` expression as a string, or None if unset/NA."""
+    by = call.kwargs.get("by")
+    if by is None:
+        return None
+    if isinstance(by, Name) and by.ident == "NA":
+        return None
+    return _deparse(by)
+
+
+def _eval_by_col(by_expr: str, data: pd.DataFrame) -> np.ndarray | pd.Series:
+    """Evaluate the by expression against `data`.
+    Plain name → column.
+    Otherwise use pandas.eval (limited).
+    """
+    if by_expr in data.columns:
+        return data[by_expr]
+    # Support a few common forms: `as.numeric(expr)`, `expr == lit`, etc.
+    py_expr = by_expr
+    # R-ism → Python. Simple translations: `as.numeric(x)` → `x.astype(float)`.
+    # Lean on pandas/numexpr by handing it the expression with column names
+    # mapped via local_dict. Strip R wrappers.
+    import re as _re
+    m = _re.fullmatch(r"as\.numeric\((.*)\)", py_expr.strip())
+    if m:
+        inner = m.group(1)
+        return _eval_by_col(inner, data).astype(float)
+    # `==` works in both R and pandas.eval; let pandas handle it.
+    return pd.eval(py_expr, local_dict={c: data[c] for c in data.columns})
+
+
+def _is_factor_like(col: np.ndarray | pd.Series) -> bool:
+    """Treat string / object / categorical columns as factor-ish."""
+    if isinstance(col, pd.Series):
+        if isinstance(col.dtype, pd.CategoricalDtype):
+            return True
+        if col.dtype == object:
+            return True
+        return False
+    return col.dtype.kind in ("O", "U", "S")
+
+
+def _factor_levels(col: pd.Series) -> list:
+    """R-style factor levels: alphabetically sorted unique values."""
+    if isinstance(col.dtype, pd.CategoricalDtype):
+        return list(col.cat.categories)
+    return sorted(col.dropna().unique())
+
+
+def _apply_by_and_absorb(
+    call: Call,
+    data: pd.DataFrame,
+    X: np.ndarray,
+    S_list: list[np.ndarray],
+    cls: str,
+    term: list[str],
+) -> list[SmoothBlock]:
+    """Apply mgcv's smoothCon post-processing:
+    scale.penalty → by-handling → absorb.cons → SmoothBlock(s).
+
+    For numeric `by` with variance: multiply X by by; skip absorb.cons.
+    For factor `by`: produce one block per level with (by==lev)*X; each
+    gets absorb.cons applied.
+    For no `by`: one block with absorb.cons applied.
+    """
+    S_list = [(S + S.T) / 2.0 for S in S_list]
+    S_list = _scale_penalty(X, S_list)
+
+    by_expr = _smooth_by_expr(call)
+    base_label = _smooth_label(call)
+    if by_expr is None:
+        X2, S2 = _absorb_sumzero(X, S_list)
+        return [SmoothBlock(label=base_label, term=term, cls=cls, X=X2, S=S2)]
+
+    by_col = _eval_by_col(by_expr, data)
+    if _is_factor_like(by_col):
+        by_series = pd.Series(by_col).reset_index(drop=True)
+        levels = _factor_levels(by_series)
+        # TODO: ordered factors drop first level; detect via CategoricalDtype.ordered.
+        if isinstance(by_series.dtype, pd.CategoricalDtype) and by_series.dtype.ordered and len(levels) > 1:
+            levels = levels[1:]
+        blocks: list[SmoothBlock] = []
+        for lev in levels:
+            mask = (by_series == lev).to_numpy().astype(float)
+            X_lev = X * mask[:, None]
+            X2, S2 = _absorb_sumzero(X_lev, S_list)
+            label = f"{base_label}:{by_expr}{lev}"
+            blocks.append(SmoothBlock(label=label, term=term, cls=cls, X=X2, S=S2))
+        return blocks
+
+    # Numeric by: multiply X by by-column, skip absorb.cons.
+    by_arr = np.asarray(by_col, dtype=float)
+    X2 = X * by_arr[:, None]
+    return [SmoothBlock(
+        label=f"{base_label}:{by_expr}",
+        term=term, cls=cls, X=X2, S=S_list,
+    )]
+
+
 def _scale_penalty(X: np.ndarray, S_list: list[np.ndarray]) -> list[np.ndarray]:
     """Match mgcv's `scale.penalty=TRUE` rescaling.
 
-    For each penalty S in S_list:
-        scale = (norm(X,"I")^2 / ncol(X)) / (norm(S,"O") / ncol(S))
-        S := S * scale
-    where norm("I") = max abs row sum, norm("O") = max abs col sum.
+    mgcv applies this on the raw (pre-absorb.cons) X and S:
+        maXX = norm(X, "I")^2      # max abs row sum, squared
+        maS  = norm(S, "O") / maXX # default R norm() = one-norm
+        S   := S / maS = S * maXX / norm(S, "O")
     """
     if X.size == 0 or not S_list:
         return [np.asarray(s, dtype=float) for s in S_list]
-    maXX = float(np.abs(X).sum(axis=1).max()) ** 2 / X.shape[1]
+    maXX = float(np.abs(X).sum(axis=1).max()) ** 2
     out = []
     for S in S_list:
         S = np.asarray(S, dtype=float)
         if S.size == 0:
             out.append(S)
             continue
-        maS = float(np.abs(S).sum(axis=0).max()) / S.shape[1]
-        if maS == 0:
+        normS = float(np.abs(S).sum(axis=0).max())
+        if normS == 0 or maXX == 0:
             out.append(S)
         else:
-            out.append(S * (maXX / maS))
+            out.append(S * (maXX / normS))
     return out
 
 
 def _build_re_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     """`bs="re"` → `model.matrix(~ term1:term2:...-1, data)`.
 
-    Penalty is `diag(ncol(X))`, then scale.penalty rescales.
+    Penalty is `diag(ncol(X))`. re sets `no.rescale=TRUE` in mgcv, so
+    scale.penalty is skipped — but then smoothCon's default sum-to-zero
+    constraint is also typically disabled for re... actually, empirically
+    the fixtures show S has been rescaled. mgcv's re.smooth.spec produces
+    X = model.matrix(...), S = [I], and scale.penalty runs normally.
     """
     term_vars = _smooth_term_vars(call)
     # Build the formula `~ term1:term2:...-1` using our existing machinery.
@@ -2143,21 +2246,721 @@ def _build_re_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     for v in term_vars:
         node = Name(v)
         rhs = node if rhs is None else BinOp(":", rhs, node)
-    # `-1`: no intercept.
     fake = Formula(lhs=None, rhs=rhs)
     ef = expand(fake)
-    ef.intercept = False  # override implicit intercept
+    ef.intercept = False
     X_df = materialize(ef, data)
     X = X_df.values.astype(float)
     S_list = [np.eye(X.shape[1])]
     S_list = _scale_penalty(X, S_list)
+    # re.smooth.spec sets C = empty (no absorb.cons). `by` is still honored:
+    # factor by → one block per level; numeric by → multiply X by by.
+    base_label = _smooth_label(call)
+    by_expr = _smooth_by_expr(call)
+    if by_expr is None:
+        return [SmoothBlock(label=base_label, term=term_vars,
+                            cls="re.smooth.spec", X=X, S=S_list)]
+    by_col = _eval_by_col(by_expr, data)
+    if _is_factor_like(by_col):
+        by_series = pd.Series(by_col).reset_index(drop=True)
+        levels = _factor_levels(by_series)
+        if isinstance(by_series.dtype, pd.CategoricalDtype) and by_series.dtype.ordered and len(levels) > 1:
+            levels = levels[1:]
+        return [
+            SmoothBlock(
+                label=f"{base_label}:{by_expr}{lev}", term=term_vars,
+                cls="re.smooth.spec",
+                X=X * (by_series == lev).to_numpy().astype(float)[:, None],
+                S=S_list,
+            )
+            for lev in levels
+        ]
+    by_arr = np.asarray(by_col, dtype=float)
     return [SmoothBlock(
-        label=_smooth_label(call),
-        term=term_vars,
+        label=f"{base_label}:{by_expr}", term=term_vars,
         cls="re.smooth.spec",
-        X=X,
-        S=S_list,
+        X=X * by_arr[:, None], S=S_list,
     )]
+
+
+def _absorb_sumzero(X: np.ndarray, S_list: list[np.ndarray]) -> tuple[np.ndarray, list[np.ndarray]]:
+    """Apply mgcv's default `absorb.cons=TRUE` sum-to-zero constraint.
+
+    C = colSums(X) (1×k).  Z = null-space basis via qr(t(C)).
+    X := X Z,  S_i := Z' S_i Z.  X loses one column, each S shrinks by one
+    dim on each side.
+    """
+    n, k = X.shape
+    if k == 0:
+        return X, list(S_list)
+    C = X.sum(axis=0).reshape(1, k)
+    Q, _ = np.linalg.qr(C.T, mode="complete")  # k × k; Q[:,0] aligned with C
+    Z = Q[:, 1:]
+    X_new = X @ Z
+    S_new = [Z.T @ S @ Z for S in S_list]
+    return X_new, S_new
+
+
+def _cr_F_matrix(knots: np.ndarray) -> np.ndarray:
+    """Natural-cubic-spline 'F' matrix: y'' at knots = F @ y.
+
+    F[0,:] = F[-1,:] = 0 (natural boundary). Interior rows solve the
+    standard tridiagonal y'' system.
+    """
+    nk = len(knots)
+    h = np.diff(knots)
+    B = np.zeros((nk - 2, nk - 2))
+    D = np.zeros((nk - 2, nk))
+    for i in range(nk - 2):
+        B[i, i] = (h[i] + h[i + 1]) / 3
+        if i > 0:
+            B[i, i - 1] = h[i] / 6
+        if i < nk - 3:
+            B[i, i + 1] = h[i + 1] / 6
+        D[i, i] = 1.0 / h[i]
+        D[i, i + 1] = -1.0 / h[i] - 1.0 / h[i + 1]
+        D[i, i + 2] = 1.0 / h[i + 1]
+    F = np.zeros((nk, nk))
+    F[1:nk - 1, :] = np.linalg.solve(B, D)
+    return F
+
+
+def _cr_basis(x: np.ndarray, knots: np.ndarray) -> np.ndarray:
+    """Evaluate the natural cubic regression spline basis at points `x`.
+
+    Returns (n, nk) matrix. Based on Wood (2017) §5.3.2. Each column acts
+    like a Lagrange indicator (column j is 1 at knot j, 0 at other knots).
+    """
+    nk = len(knots)
+    h = np.diff(knots)
+    F = _cr_F_matrix(knots)
+    # Bracket each x: j s.t. knots[j] <= x < knots[j+1]; clamp at both ends.
+    j = np.searchsorted(knots, x, side="right") - 1
+    j = np.clip(j, 0, nk - 2)
+    hj = h[j]
+    a_r = (x - knots[j]) / hj
+    a_l = 1.0 - a_r
+    c_l = (a_l ** 3 - a_l) * hj ** 2 / 6.0
+    c_r = (a_r ** 3 - a_r) * hj ** 2 / 6.0
+    nx = len(x)
+    X = np.zeros((nx, nk))
+    idx_n = np.arange(nx)
+    X[idx_n, j] += a_l
+    X[idx_n, j + 1] += a_r
+    # Add contributions via F for the second-derivative part.
+    X += c_l[:, None] * F[j, :] + c_r[:, None] * F[j + 1, :]
+    return X
+
+
+def _cr_penalty(knots: np.ndarray) -> np.ndarray:
+    """Natural-cubic-spline integrated-squared-second-derivative penalty.
+
+    S = F' T F where T is banded: T[j,j] picks up h[j-1]/3 + h[j]/3 at
+    interior, T[j,j+1] = h[j]/6.
+    """
+    nk = len(knots)
+    h = np.diff(knots)
+    F = _cr_F_matrix(knots)
+    T = np.zeros((nk, nk))
+    for j in range(nk - 1):
+        T[j, j] += h[j] / 3.0
+        T[j + 1, j + 1] += h[j] / 3.0
+        T[j, j + 1] += h[j] / 6.0
+        T[j + 1, j] += h[j] / 6.0
+    return F.T @ T @ F
+
+
+def _cr_default_k(call: Call) -> int:
+    """Pick basis dim k for a cr smooth: kwarg `k=` if given, else 10."""
+    k = call.kwargs.get("k")
+    if isinstance(k, Literal) and k.kind == "num":
+        return int(k.value)
+    return 10
+
+
+def _cr_is_fixed(call: Call) -> bool:
+    """Honor `fx = TRUE` ⇒ fixed / unpenalized."""
+    fx = call.kwargs.get("fx")
+    if isinstance(fx, Name) and fx.ident in ("TRUE", "T"):
+        return True
+    if isinstance(fx, Literal):
+        if fx.kind == "bool" and fx.value:
+            return True
+        if fx.kind == "num" and fx.value:
+            return True
+    return False
+
+
+def _build_cr_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """Build cubic regression spline (`bs="cr"`) smooth block.
+
+    Follows mgcv's smooth.construct.cr.smooth.spec: knots at quantiles of
+    unique(x), natural cubic basis, 2nd-deriv penalty, then absorb.cons
+    (sum-to-zero) and scale.penalty.
+    """
+    term = _smooth_term_vars(call)
+    if len(term) != 1:
+        raise ValueError("cr smooth must be 1D")
+    x = data[term[0]].to_numpy(dtype=float)
+    nk = _cr_default_k(call)
+    xu = pd.unique(pd.Series(x).dropna())
+    if len(xu) < nk:
+        raise ValueError(f"cr smooth: fewer unique x than knots ({len(xu)} < {nk})")
+    # R's default knots: quantile(unique(x), seq(0, 1, length=nk)), type 7.
+    # numpy.quantile default matches R's type 7.
+    knots = np.quantile(xu, np.linspace(0.0, 1.0, nk))
+    X = _cr_basis(x, knots)
+    if _cr_is_fixed(call):
+        S_list: list[np.ndarray] = []
+    else:
+        S_list = [_cr_penalty(knots)]
+    return _apply_by_and_absorb(call, data, X, S_list, "cr.smooth.spec", term)
+
+
+# ---- cc (cyclic cubic regression spline) -----------------------------------
+#
+# Periodic variant of `cr`: knot 1 and knot nk are identified, so at the seam
+# the value and the 2nd derivative match. Ported from mgcv's R code:
+# smooth.construct.cc.smooth.spec + Predict.matrix.cyclic.smooth + place.knots.
+# Basis has nk-1 columns pre-absorb.cons (cyclic identification removes one).
+
+
+def _cc_place_knots(x: np.ndarray, nk: int) -> np.ndarray:
+    """mgcv's `place.knots` for cc: evenly-spaced knots over range of unique x."""
+    xs = np.sort(np.unique(x))
+    n = len(xs)
+    if nk > n:
+        raise ValueError("more knots than unique data values is not allowed")
+    if nk < 2:
+        raise ValueError("too few knots")
+    if nk == 2:
+        return np.array([xs[0], xs[-1]], dtype=float)
+    delta = (n - 1) / (nk - 1)
+    i = np.arange(1, nk - 1)
+    lbi = np.floor(delta * i).astype(int) + 1  # 1-based into xs
+    frac = delta * i + 1 - lbi
+    # R uses xs[lbi] and x.shift[lbi] = xs[lbi+1] (0-based: xs[lbi-1] and xs[lbi]).
+    interior = xs[lbi - 1] * (1 - frac) + xs[lbi] * frac
+    knots = np.empty(nk, dtype=float)
+    knots[0] = xs[0]
+    knots[-1] = xs[-1]
+    knots[1:-1] = interior
+    return knots
+
+
+def _cc_getBD(knots: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Cyclic tridiagonal B and D, (nk-1) × (nk-1)."""
+    nk = len(knots)
+    h = np.diff(knots)  # length nk-1
+    n = nk - 1
+    B = np.zeros((n, n))
+    D = np.zeros((n, n))
+    # Row 1 (0-indexed 0): wraps to row n-1 on the left.
+    B[0, 0] = (h[n - 1] + h[0]) / 3.0
+    B[0, 1] = h[0] / 6.0
+    B[0, n - 1] = h[n - 1] / 6.0
+    D[0, 0] = -(1.0 / h[0] + 1.0 / h[n - 1])
+    D[0, 1] = 1.0 / h[0]
+    D[0, n - 1] = 1.0 / h[n - 1]
+    for i in range(1, n - 1):
+        B[i, i - 1] = h[i - 1] / 6.0
+        B[i, i] = (h[i - 1] + h[i]) / 3.0
+        B[i, i + 1] = h[i] / 6.0
+        D[i, i - 1] = 1.0 / h[i - 1]
+        D[i, i] = -(1.0 / h[i - 1] + 1.0 / h[i])
+        D[i, i + 1] = 1.0 / h[i]
+    # Row n (0-indexed n-1): wraps to row 0 on the right.
+    B[n - 1, n - 2] = h[n - 2] / 6.0
+    B[n - 1, n - 1] = (h[n - 2] + h[n - 1]) / 3.0
+    B[n - 1, 0] = h[n - 1] / 6.0
+    D[n - 1, n - 2] = 1.0 / h[n - 2]
+    D[n - 1, n - 1] = -(1.0 / h[n - 2] + 1.0 / h[n - 1])
+    D[n - 1, 0] = 1.0 / h[n - 1]
+    return B, D
+
+
+def _cc_cwrap(x0: float, x1: float, x: np.ndarray) -> np.ndarray:
+    """Fold x into [x0, x1] via periodic wrap (mgcv's `cwrap`)."""
+    h = x1 - x0
+    out = x.copy()
+    over = out > x1
+    if np.any(over):
+        out[over] = x0 + np.mod(out[over] - x1, h)
+    under = out < x0
+    if np.any(under):
+        out[under] = x1 - np.mod(x0 - out[under], h)
+    return out
+
+
+def _cc_basis(x: np.ndarray, knots: np.ndarray, BD: np.ndarray) -> np.ndarray:
+    """Evaluate cyclic cubic basis at x; returns (n_obs, nk-1)."""
+    nk = len(knots)
+    h = np.diff(knots)
+    x = _cc_cwrap(float(knots[0]), float(knots[-1]), x)
+    # Find j such that knot[j] is the smallest knot ≥ x (1-based; MIN j is 2).
+    # For x == knots[0], the loop leaves j=2 (since knots[2-1]==knots[1] >= x only if...).
+    # Use the same semantics as R's loop: start j=x (numeric copy), then overwrite.
+    j = np.full(x.shape, nk, dtype=int)  # 1-based
+    for i in range(nk, 1, -1):
+        mask = x <= knots[i - 1]
+        j[mask] = i
+    # For x strictly below knots[0] (shouldn't happen after cwrap), j stays nk
+    # but then j1 = nk-1 and wrap j=nk→1 handles it.
+    j1 = j - 1  # left bracket index, 1-based in [1, nk-1]
+    hj = j1 - 1  # 0-based index into h (length nk-1)
+    # Wrap j: j == nk → j = 1 (cyclic).
+    j_wrap = j.copy()
+    j_wrap[j_wrap == nk] = 1
+    # 0-based indices
+    j1_0 = j1 - 1
+    j_0 = j_wrap - 1
+    I = np.eye(nk - 1)
+    xk_right = knots[j1]  # knots[j1+1] 1-based → knots[j1] 0-based
+    xk_left = knots[j1 - 1]  # knots[j1] 1-based → knots[j1-1] 0-based
+    h_local = h[hj]
+    a_r = (xk_right - x) / h_local  # (knots[j1+1] - x)/h[hj]
+    a_l = (x - xk_left) / h_local  # (x - knots[j1])/h[hj]
+    c_r = (xk_right - x) ** 3 / (6.0 * h_local) - h_local * (xk_right - x) / 6.0
+    c_l = (x - xk_left) ** 3 / (6.0 * h_local) - h_local * (x - xk_left) / 6.0
+    X = (
+        BD[j1_0, :] * c_r[:, None]
+        + BD[j_0, :] * c_l[:, None]
+        + I[j1_0, :] * a_r[:, None]
+        + I[j_0, :] * a_l[:, None]
+    )
+    return X
+
+
+def _cc_default_k(call: Call) -> int:
+    k = call.kwargs.get("k")
+    if isinstance(k, Literal) and k.kind == "num":
+        return int(k.value)
+    return 10
+
+
+def _cc_is_fixed(call: Call) -> bool:
+    fx = call.kwargs.get("fx")
+    if isinstance(fx, Name) and fx.ident in ("TRUE", "T"):
+        return True
+    if isinstance(fx, Literal):
+        if fx.kind == "bool" and fx.value:
+            return True
+        if fx.kind == "num" and fx.value:
+            return True
+    return False
+
+
+def _build_cc_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    term = _smooth_term_vars(call)
+    if len(term) != 1:
+        raise ValueError("cc smooth must be 1D")
+    x = data[term[0]].to_numpy(dtype=float)
+    nk = _cc_default_k(call)
+    if nk < 4:
+        nk = 4
+    knots = _cc_place_knots(x, nk)
+    B, D = _cc_getBD(knots)
+    BD = np.linalg.solve(B, D)
+    X = _cc_basis(x, knots, BD)
+    if _cc_is_fixed(call):
+        S_list: list[np.ndarray] = []
+    else:
+        S = D.T @ BD
+        S_list = [S]
+    return _apply_by_and_absorb(call, data, X, S_list, "cc.smooth.spec", term)
+
+
+# ---- tp (thin-plate regression spline, Wood 2003) --------------------------
+#
+# Translated from mgcv/src/tprs.c (tprs_setup + eta_const + fast_eta + QT +
+# HQmult). Outline:
+#   1. Shift each covariate by its mean (`shift` = mean(x)).
+#   2. Collapse duplicate rows: Xu = unique rows of (n × d) input.
+#   3. Build E: E_ij = η(||Xu_i - Xu_j||) where η has closed form from mgcv.
+#   4. Build T: polynomial basis of null space (1, x, x^2, ..., x^(m-1) in 1D;
+#      generalized multivariate in higher d).
+#   5. Top-k eigendecomposition of E (by |eigenvalue|), then reorder DESCENDING
+#      by signed value — this matches mgcv's Lanczos output order.
+#   6. TU = T' U (M × k). QT-factorize TU via Householder reflections.
+#   7. Build X1 = U @ diag(v) @ Q, pad polynomial part with T.
+#   8. Build UZ: first nu rows = U @ Q for radial cols, last M rows = identity
+#      for polynomial cols.
+#   9. Build S = Q' @ diag(v) @ Q (zero out polynomial part).
+#   10. Rescale each X column so its RMS = 1 (equiv. to col-norm² = n),
+#       apply the same scaling to UZ and S.
+# Sign convention for U eigenvectors is not unique; we match R's eigen by
+# using np.linalg.eigh and then sign-normalizing each column (largest-abs
+# element positive). The per-column result is the same up to a sign flip.
+
+
+def _tp_eta_const(m: int, d: int) -> float:
+    """`eta_const` from mgcv/src/tprs.c — the irrelevant constant for TPS basis.
+
+    For d=1, m=2: returns 1/12 (verified empirically vs mgcv).
+    """
+    pi = math.pi
+    Ghalf = math.sqrt(pi)
+    d2 = d // 2
+    m2 = 2 * m
+    if m2 <= d:
+        raise ValueError("need 2m > d for thin-plate spline")
+    if d % 2 == 0:
+        f = 1.0 if (m + 1 + d2) % 2 == 0 else -1.0
+        for _ in range(m2 - 1):
+            f /= 2.0
+        for _ in range(d2):
+            f /= pi
+        for i in range(2, m):
+            f /= i
+        for i in range(2, m - d2 + 1):
+            f /= i
+    else:
+        f = Ghalf
+        kk = m - (d - 1) // 2
+        for i in range(kk):
+            f /= -0.5 - i
+        for _ in range(m):
+            f /= 4.0
+        for _ in range(d2):
+            f /= pi
+        f /= Ghalf
+        for i in range(2, m):
+            f /= i
+    return f
+
+
+def _tp_fast_eta(m: int, d: int, rsq: float, f0: float) -> float:
+    """`fast_eta` from mgcv/src/tprs.c. `rsq` is distance SQUARED."""
+    if rsq <= 0.0:
+        return 0.0
+    d2 = d // 2
+    f = f0
+    if d % 2 == 0:
+        f *= math.log(rsq) * 0.5
+        for _ in range(m - d2):
+            f *= rsq
+    else:
+        for _ in range(m - d2 - 1):
+            f *= rsq
+        f *= math.sqrt(rsq)
+    return f
+
+
+def _tp_null_space_dim(d: int, m: int) -> int:
+    """Dim of penalty null space = C(m+d-1, d).
+
+    If 2m ≤ d, mgcv bumps m up until 2m > d+1 (visual smoothness).
+    """
+    if 2 * m <= d:
+        m = 1
+        while 2 * m < d + 2:
+            m += 1
+    M = 1
+    for i in range(d):
+        M *= d + m - 1 - i
+    for i in range(2, d + 1):
+        M //= i
+    return M
+
+
+def _tp_default_m(d: int) -> int:
+    """Default wiggliness penalty order m for d-dim tp. mgcv uses m s.t.
+    2m > d+1 — for d=1 that's m=2, d=2 it's m=2, d=3 it's m=3, etc."""
+    m = 1
+    while 2 * m < d + 2:
+        m += 1
+    return m
+
+
+def _tp_order_m(call: Call, d: int) -> int:
+    """Resolve `m=` kwarg for s(): integer → used directly (if 2m>d); else default.
+    mgcv's rule: if 2m ≤ d, bump m up to smallest value with 2m > d+1.
+    Also accepts `m=c(m, ...)` and takes the first entry.
+    """
+    m_src = call.kwargs.get("m")
+    if isinstance(m_src, Literal) and m_src.kind == "num":
+        m = int(m_src.value)
+        if 2 * m <= d:
+            return _tp_default_m(d)
+        return m
+    if isinstance(m_src, Call) and m_src.fn == "c" and m_src.args:
+        first = m_src.args[0]
+        if isinstance(first, Literal) and first.kind == "num":
+            m = int(first.value)
+            if 2 * m <= d:
+                return _tp_default_m(d)
+            return m
+    return _tp_default_m(d)
+
+
+def _tp_drop_null(call: Call) -> bool:
+    """Detect `m=c(m, 0)` shrinkage — drop.null = M flag."""
+    m_src = call.kwargs.get("m")
+    if isinstance(m_src, Call) and m_src.fn == "c" and len(m_src.args) >= 2:
+        second = m_src.args[1]
+        if isinstance(second, Literal) and second.kind == "num" and int(second.value) == 0:
+            return True
+    return False
+
+
+def _tp_gen_poly_powers(M: int, m: int, d: int) -> np.ndarray:
+    """`gen_tps_poly_powers` — sequence of M polynomial exponent tuples
+    (each of length d, sum < m) spanning the null space."""
+    out = np.zeros((M, d), dtype=int)
+    idx = [0] * d
+    for i in range(M):
+        out[i, :] = idx
+        s = sum(idx)
+        if s < m - 1:
+            idx[0] += 1
+        else:
+            s -= idx[0]
+            idx[0] = 0
+            for j in range(1, d):
+                idx[j] += 1
+                s += 1
+                if s == m:
+                    s -= idx[j]
+                    idx[j] = 0
+                else:
+                    break
+    return out
+
+
+def _tp_T(X: np.ndarray, m: int, d: int) -> np.ndarray:
+    """`tpsT` — the polynomial null-space basis evaluated row-wise on X (n × d).
+
+    Returns (n, M) where M = null_space_dim(d, m). Col j corresponds to the
+    polynomial ∏_k x_k^{pi[j,k]}.
+    """
+    M = _tp_null_space_dim(d, m)
+    pi_pow = _tp_gen_poly_powers(M, m, d)
+    n = X.shape[0]
+    T = np.ones((n, M), dtype=float)
+    for j in range(M):
+        for k in range(d):
+            pk = pi_pow[j, k]
+            if pk > 0:
+                T[:, j] *= X[:, k] ** pk
+    return T
+
+
+def _tp_E(Xu: np.ndarray, m: int, d: int) -> np.ndarray:
+    """`tpsE` — full η matrix on unique rows Xu (nu × d).
+
+    E_ij = η(||Xu_i - Xu_j||) with mgcv's fast_eta convention (r passed as r²).
+    """
+    nu = Xu.shape[0]
+    eta0 = _tp_eta_const(m, d)
+    E = np.zeros((nu, nu))
+    for i in range(nu):
+        for j in range(i):
+            diff = Xu[i] - Xu[j]
+            rsq = float(np.dot(diff, diff))
+            v = _tp_fast_eta(m, d, rsq, eta0)
+            E[i, j] = E[j, i] = v
+    return E
+
+
+def _tp_qt_factor(A_in: np.ndarray) -> np.ndarray:
+    """`QT(Q, A, fullQ=0)` — produces HH vector storage Z (n × m).
+
+    A is n × m with n ≤ m. Z stores, in each row, the scaled Householder vector
+    u_i (I - u_i u_i') such that A Q = [0, T] where Q = H_0 H_1 … H_{n-1}.
+    """
+    A = A_in.astype(float, copy=True)
+    n, m = A.shape
+    Z = np.zeros((n, m))
+    for i in range(n):
+        row = A[i]
+        cu = m - i
+        mx = float(np.max(np.abs(row[:cu]))) if cu > 0 else 0.0
+        if mx > 0.0:
+            row[:cu] /= mx
+        lsq = float(np.sqrt(np.sum(row[:cu] ** 2)))
+        if row[cu - 1] < 0:
+            lsq = -lsq
+        row[cu - 1] += lsq
+        if lsq != 0:
+            g = 1.0 / (lsq * row[cu - 1])
+        else:
+            g = 0.0
+        lsq *= mx
+        for j in range(i + 1, n):
+            x = float(np.dot(row[:cu], A[j, :cu])) * g
+            A[j, :cu] -= x * row[:cu]
+        g_sqrt = math.sqrt(g) if g > 0 else 0.0
+        Z[i, :cu] = row[:cu] * g_sqrt
+        Z[i, cu:] = 0.0
+        # A[i] becomes [0,…,0, -lsq, untouched trailing]; only used implicitly.
+    return Z
+
+
+def _tp_hqmult_right(C_in: np.ndarray, Z: np.ndarray, transposed: bool = False) -> np.ndarray:
+    """`HQmult(C, Z, p=0, t=transposed)`.
+
+    p=0 (post-mult), t=0: C := C @ H_0 @ H_1 @ … @ H_{r-1}  (ascending order).
+    p=0, t=1:             C := C @ H_{r-1} @ … @ H_0         (descending).
+    Each H_k = I - u_k u_k' with u_k = Z[k, :].
+    """
+    C = C_in.astype(float, copy=True)
+    nhh = Z.shape[0]
+    order = range(nhh - 1, -1, -1) if transposed else range(nhh)
+    for k in order:
+        u = Z[k]
+        Cu = C @ u
+        C -= np.outer(Cu, u)
+    return C
+
+
+def _tp_hqmult_left_transposed(C_in: np.ndarray, Z: np.ndarray) -> np.ndarray:
+    """`HQmult(C, Z, p=1, t=1)` — C := Q' @ C where Q = H_0 … H_{r-1}.
+
+    Since each H_k is symmetric, Q' = H_{r-1}' … H_0' = H_{r-1} … H_0, so
+    the loop applies H_0 first from the left, then H_1, etc. (ascending).
+    """
+    C = C_in.astype(float, copy=True)
+    nhh = Z.shape[0]
+    for k in range(nhh):
+        u = Z[k]
+        uC = u @ C
+        C -= np.outer(u, uC)
+    return C
+
+
+def _tp_default_k(call: Call, d: int, m: int) -> int:
+    """k = bs.dim: user-supplied `k=` kwarg, else mgcv's default (M + 8 for
+    d=1, M + 27 for d=2, M + 100 for d=3; only d=1,2,3 relevant here).
+    M here is computed from the resolved m (not the default m).
+    """
+    ksrc = call.kwargs.get("k")
+    if isinstance(ksrc, Literal) and ksrc.kind == "num":
+        return int(ksrc.value)
+    M = _tp_null_space_dim(d, m)
+    default = (8, 27, 100)[min(d, 3) - 1]
+    return M + default
+
+
+def _tp_is_fixed(call: Call) -> bool:
+    fx = call.kwargs.get("fx")
+    if isinstance(fx, Name) and fx.ident in ("TRUE", "T"):
+        return True
+    if isinstance(fx, Literal):
+        if fx.kind == "bool" and fx.value:
+            return True
+        if fx.kind == "num" and fx.value:
+            return True
+    return False
+
+
+def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """Build thin-plate regression spline (`bs="tp"`, the default) block.
+
+    Exact port of mgcv/src/tprs.c::tprs_setup (case `n_knots < k`, which is
+    the default when user passes no `knots=`). Matches mgcv's output for
+    `absorb.cons=TRUE, scale.penalty=TRUE` after our standard post-processing.
+    """
+    term = _smooth_term_vars(call)
+    d = len(term)
+    # Build (n × d) matrix of covariates, shifted by column mean.
+    x_full = np.column_stack([data[v].to_numpy(dtype=float) for v in term])
+    shift = x_full.mean(axis=0)
+    x_c = x_full - shift
+    n = x_c.shape[0]
+
+    m = _tp_order_m(call, d)
+    M = _tp_null_space_dim(d, m)
+    k = _tp_default_k(call, d, m)
+    if k < M + 1:
+        k = M + 1
+
+    # Collapse to unique rows (Xu). Preserve an index mapping from data rows
+    # to their position in Xu.
+    Xu, yxindex = np.unique(x_c, axis=0, return_inverse=True)
+    nu = Xu.shape[0]
+    if nu < k:
+        raise ValueError(f"tp smooth: fewer unique covariate rows than k ({nu} < {k})")
+
+    E = _tp_E(Xu, m, d)
+    T_mat = _tp_T(Xu, m, d)
+
+    # Top-k eigendecomposition of E, then reorder descending by signed value.
+    # mgcv's Lanczos returns this ordering: largest positive first, then
+    # decreasing down through all positives, then remaining negatives (least
+    # negative first, most negative last) — equivalently, sorted descending.
+    vals, vecs = np.linalg.eigh(E)
+    ord_mag = np.argsort(-np.abs(vals))[:k]
+    v_top = vals[ord_mag]
+    U_top = vecs[:, ord_mag]
+    # Sort descending by signed value.
+    ord_sign = np.argsort(-v_top)
+    v_k = v_top[ord_sign]
+    U = U_top[:, ord_sign]
+    # Canonical sign: make the largest-|·| entry of each col positive. mgcv's
+    # Lanczos uses a different but equally-arbitrary convention; column signs
+    # may flip vs mgcv's exact output (validator is sign-tolerant).
+    for j in range(k):
+        idx = int(np.argmax(np.abs(U[:, j])))
+        if U[idx, j] < 0:
+            U[:, j] = -U[:, j]
+
+    # TU = T' U, QT-factorize, apply to U, T, S.
+    TU = T_mat.T @ U
+    Z_hh = _tp_qt_factor(TU)
+
+    # X1 on unique rows: first (k-M) cols = U diag(v) applied with Q,
+    # last M cols = polynomial T.
+    X1 = U * v_k  # col-wise scaling
+    X1 = _tp_hqmult_right(X1, Z_hh, transposed=False)
+    X1[:, k - M:] = 0.0
+    X1[:, k - M:k - M + M] = T_mat
+    X_raw = X1[yxindex, :]  # map unique → full data rows
+
+    # UZ: (nu + M) × k. Radial block = U @ Q on rows 0..nu-1. Poly block on
+    # last M rows is the identity (diagonal on the last M cols).
+    UZ = np.zeros((nu + M, k))
+    UZ[:nu, :] = U
+    UZ[:nu, :] = _tp_hqmult_right(UZ[:nu, :], Z_hh, transposed=False)
+    UZ[:nu, k - M:] = 0.0
+    for i in range(M):
+        UZ[(nu + M) - i - 1, k - i - 1] = 1.0
+
+    # Penalty S: Q' diag(v) Q, zero-pad last M rows/cols (polynomial part
+    # is unpenalized).
+    if _tp_is_fixed(call):
+        S_list: list[np.ndarray] = []
+    else:
+        S = np.diag(v_k).astype(float)
+        S = _tp_hqmult_right(S, Z_hh, transposed=False)
+        S = _tp_hqmult_left_transposed(S, Z_hh)
+        S[-M:, :] = 0.0
+        S[:, -M:] = 0.0
+        S = (S + S.T) / 2.0
+        S_list = [S]
+
+    # Rescale each X column so its sum-of-squares = n (= mgcv's "rms=1").
+    # Apply same factor to UZ cols and to S rows+cols. After this, we have
+    # the pre-absorb.cons smooth; still need scale.penalty + absorb.cons.
+    w = np.sqrt(np.sum(X_raw ** 2, axis=0) / n)
+    w = np.where(w == 0, 1.0, w)
+    X_raw = X_raw / w
+    S_list = [S / w[:, None] / w[None, :] for S in S_list]
+
+    if _tp_drop_null(call):
+        # `m=c(m, 0)`: drop the last M (null-space) columns, center remaining,
+        # and skip absorb.cons entirely.
+        keep = k - M
+        X_raw = X_raw[:, :keep]
+        X_raw = X_raw - X_raw.mean(axis=0, keepdims=True)
+        S_list = [S[:keep, :keep] for S in S_list]
+        S_list = [(S + S.T) / 2.0 for S in S_list]
+        S_list = _scale_penalty(X_raw, S_list)
+        return [SmoothBlock(
+            label=_smooth_label(call), term=term,
+            cls="tprs.smooth", X=X_raw, S=S_list,
+        )]
+
+    return _apply_by_and_absorb(call, data, X_raw, S_list, "tprs.smooth", term)
 
 
 def materialize_smooths(
@@ -2184,6 +2987,12 @@ def materialize_smooths(
         bs = _smooth_bs(call)
         if bs == "re":
             out.append(_build_re_smooth(call, data))
+        elif bs == "cr":
+            out.append(_build_cr_smooth(call, data))
+        elif bs == "cc":
+            out.append(_build_cc_smooth(call, data))
+        elif bs == "tp":
+            out.append(_build_tp_smooth(call, data))
         else:
             raise NotImplementedError(
                 f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
