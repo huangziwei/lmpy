@@ -3548,14 +3548,17 @@ def _tp_rlanczos(
     return D_out, U_out
 
 
-def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
-    """Build thin-plate regression spline (`bs="tp"`, the default) block.
+def _tp_raw(
+    call: Call, data: pd.DataFrame, term: list[str],
+) -> tuple[np.ndarray, list[np.ndarray], int, int, int]:
+    """Bare `smooth.construct.tp.smooth.spec` output: no scale.penalty,
+    no absorb.cons, no drop_null. Returns `(X_raw, S_list, M, k, rank)`
+    where `rank = k - M`.
 
-    Exact port of mgcv/src/tprs.c::tprs_setup (case `n_knots < k`, which is
-    the default when user passes no `knots=`). Matches mgcv's output for
-    `absorb.cons=TRUE, scale.penalty=TRUE` after our standard post-processing.
+    Separated from `_build_tp_smooth` so that `fs` smooths (which
+    reparameterize the bare tp output before duplicating across factor
+    levels) can reuse the same code with a caller-provided `term` list.
     """
-    term = _smooth_term_vars(call)
     d = len(term)
     # Build (n × d) matrix of covariates, shifted by column mean.
     x_full = np.column_stack([data[v].to_numpy(dtype=float) for v in term])
@@ -3678,6 +3681,19 @@ def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     X_raw = X_raw / w
     S_list = [S / w[:, None] / w[None, :] for S in S_list]
 
+    return X_raw, S_list, M, k, k - M
+
+
+def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """Build thin-plate regression spline (`bs="tp"`, the default) block.
+
+    Exact port of mgcv/src/tprs.c::tprs_setup (case `n_knots < k`, which is
+    the default when user passes no `knots=`). Matches mgcv's output for
+    `absorb.cons=TRUE, scale.penalty=TRUE` after our standard post-processing.
+    """
+    term = _smooth_term_vars(call)
+    X_raw, S_list, M, k, _rank = _tp_raw(call, data, term)
+
     if _tp_drop_null(call):
         # `m=c(m, 0)`: drop the last M (null-space) columns, center remaining,
         # and skip absorb.cons entirely.
@@ -3693,6 +3709,143 @@ def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
         )]
 
     return _apply_by_and_absorb(call, data, X_raw, S_list, "tprs.smooth", term)
+
+
+# ---- fs: factor-smooth interaction ------------------------------------------
+#
+# mgcv's `smooth.construct.fs.smooth.spec` builds one base smooth on the
+# non-factor terms, reparameterizes it via nat.param, then duplicates that
+# basis block-wise across factor levels. Penalties: one block-diagonal range
+# penalty plus one single-entry penalty per null-space dimension. Sets
+# `side.constrain = FALSE` and `C = matrix(0, 0, ncol(X))` so smoothCon
+# skips absorb.cons entirely. scale.penalty still runs on the final block.
+
+
+def _nat_param(
+    X: np.ndarray, S: np.ndarray, rank: int, type_: int = 1, unit_fnorm: bool = True,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Port of mgcv's `nat.param(X, S, rank, type=1, unit.fnorm=TRUE)`.
+
+    QR-decomposes X and eigendecomposes R^-T S R^-1. For type=1 rescales so
+    the penalty becomes the identity on its range. unit_fnorm rescales so
+    the penalized and unpenalized blocks each have unit Frobenius norm.
+
+    Returns `(X_new, D, P)` where X_new = X @ P is the reparameterized
+    design matrix, D is the diagonal of the transformed penalty's range
+    block (length `rank`), and P is the parameter-transform matrix.
+    """
+    Q, R = np.linalg.qr(X, mode="reduced")
+    # RSR = R^-T @ S @ R^-1.
+    Y = np.linalg.solve(R.T, S)
+    RSR = np.linalg.solve(R.T, Y.T).T
+    RSR = 0.5 * (RSR + RSR.T)
+    w, V = np.linalg.eigh(RSR)
+    order = np.argsort(-w)  # descending
+    w = w[order]
+    V = V[:, order]
+
+    D = np.clip(w[:rank].copy(), 0.0, None)
+    X_new = Q @ V
+    P = np.linalg.solve(R, V)
+    p = X_new.shape[1]
+
+    if type_ == 1:
+        E = np.concatenate([np.sqrt(D), np.ones(p - rank)])
+        E_safe = np.where(E > 1e-14, E, 1.0)
+        X_new = X_new / E_safe
+        P = P / E_safe
+        D = np.ones(rank)
+
+    if unit_fnorm:
+        if rank > 0:
+            scale = 1.0 / np.sqrt(np.mean(X_new[:, :rank] ** 2))
+            X_new[:, :rank] *= scale
+            P[:, :rank] *= scale
+            D = D * scale ** 2
+        if rank < p:
+            scalef = 1.0 / np.sqrt(np.mean(X_new[:, rank:] ** 2))
+            X_new[:, rank:] *= scalef
+            P[:, rank:] *= scalef
+
+    return X_new, D, P
+
+
+def _fs_find_factor(term: list[str], data: pd.DataFrame) -> tuple[str | None, list[str]]:
+    """Split a term list into (factor_var | None, non_factor_vars).
+
+    Returns `(None, term)` when no term is factor-like — mgcv falls through
+    to the base smooth in that case (smooth.r line 2025-2028)."""
+    fterm: str | None = None
+    others: list[str] = []
+    for v in term:
+        col = data[v]
+        if _is_factor_like(col):
+            if fterm is not None:
+                raise ValueError("fs smooths can only have one factor argument")
+            fterm = v
+        else:
+            others.append(v)
+    return fterm, others
+
+
+def _build_fs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """`bs="fs"` — factor-smooth interaction.
+
+    Default base smooth is `tp` (`xt$bs="tp"` in mgcv; alternative bases
+    require `xt=list(bs=...)` which is not yet parsed here).
+
+    Fallthrough: mgcv's fs.smooth.spec checks for a factor among the terms;
+    if none is found it reclasses the object as the base smooth and
+    returns that constructor's output (smooth.r line 2025-2028). We mirror
+    that by dispatching to `_build_tp_smooth` on the full term list.
+    """
+    term = _smooth_term_vars(call)
+    fterm, others = _fs_find_factor(term, data)
+    if fterm is None:
+        return _build_tp_smooth(call, data)
+
+    # Build base tp smooth on the non-factor terms — bare output, no
+    # scale.penalty, no absorb.cons.
+    Xb, Sb_list, M, k, rank = _tp_raw(call, data, others)
+    null_d = k - rank
+    Sb = Sb_list[0]
+
+    # nat.param(type=1) — make the base penalty an identity on its range.
+    Xr, D, _P = _nat_param(Xb, Sb, rank=rank, type_=1, unit_fnorm=True)
+    p = Xr.shape[1]
+
+    # Factor levels in alphabetic order (R's factor() default).
+    fac_col = data[fterm]
+    flev = _factor_levels(fac_col)
+    nf = len(flev)
+    n = Xr.shape[0]
+
+    # Duplicate block-wise across levels.
+    X = np.zeros((n, p * nf))
+    fac_arr = pd.Series(fac_col).reset_index(drop=True)
+    for j, lev in enumerate(flev):
+        mask = (fac_arr == lev).to_numpy().astype(float)
+        X[:, j * p : (j + 1) * p] = Xr * mask[:, None]
+
+    # Penalty 1: range — diag of [D, 0...0] replicated nf times.
+    range_block = np.concatenate([D, np.zeros(null_d)])
+    S_range = np.diag(np.tile(range_block, nf))
+
+    # Penalties 2..null_d+1: one per null-space dimension. Each is
+    # diag(replicated e_vec) where e_vec has a single 1 at position rank+i.
+    S_list: list[np.ndarray] = [S_range]
+    for i in range(null_d):
+        um = np.zeros(p)
+        um[rank + i] = 1.0
+        S_list.append(np.diag(np.tile(um, nf)))
+
+    # scale.penalty runs on the final (duplicated) X and each S.
+    S_list = _scale_penalty(X, S_list)
+
+    return [SmoothBlock(
+        label=_smooth_label(call), term=term,
+        cls="fs.interaction", X=X, S=S_list,
+    )]
 
 
 def materialize_smooths(
@@ -3733,6 +3886,8 @@ def materialize_smooths(
             out.append(_build_bs_smooth(call, data))
         elif bs == "gp":
             out.append(_build_gp_smooth(call, data))
+        elif bs == "fs":
+            out.append(_build_fs_smooth(call, data))
         else:
             raise NotImplementedError(
                 f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
