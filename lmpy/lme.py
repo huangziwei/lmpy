@@ -26,7 +26,7 @@ from scipy.optimize import minimize
 from .formula import materialize_bars
 from .utils import prepare_design
 
-__all__ = ["lme"]
+__all__ = ["lme", "Profile"]
 
 
 def _bar_sizes(cnms: dict) -> list[int]:
@@ -170,49 +170,28 @@ class lme:
         yty = float(y @ y)
         log2pi = float(np.log(2.0 * np.pi))
 
-        def build_Lt(theta: np.ndarray) -> np.ndarray:
-            out = np.zeros(template.shape, dtype=float)
-            out[nz_mask] = theta[theta_pos]
-            return out
-
-        def objective(theta: np.ndarray) -> float:
-            Lt = build_Lt(theta)
-            ZL = Z @ Lt.T                    # n×q,  Z @ Λ
-            M = ZL.T @ ZL + eye_q
-            try:
-                Lz = np.linalg.cholesky(M)
-            except np.linalg.LinAlgError:
-                return 1e15
-            cu = solve_triangular(Lz, ZL.T @ y, lower=True)
-            RZX = solve_triangular(Lz, ZL.T @ X, lower=True)
-            XtX_eff = XtX - RZX.T @ RZX
-            try:
-                Rx = np.linalg.cholesky(XtX_eff)
-            except np.linalg.LinAlgError:
-                return 1e15
-            cb = solve_triangular(Rx, Xty - RZX.T @ cu, lower=True)
-            rss = yty - float(cu @ cu) - float(cb @ cb)
-            if rss <= 0:
-                return 1e15
-            log_det_Lz = float(np.log(np.diag(Lz)).sum())
-            if REML:
-                log_det_Rx = float(np.log(np.diag(Rx)).sum())
-                df = n - p
-                return (
-                    2.0 * log_det_Lz + 2.0 * log_det_Rx
-                    + df * (1.0 + log2pi + np.log(rss / df))
-                )
-            return 2.0 * log_det_Lz + n * (1.0 + log2pi + np.log(rss / n))
+        # Cache pieces profile() and other post-fit methods reuse.
+        self._template = template
+        self._nz_mask = nz_mask
+        self._theta_pos = theta_pos
+        self._eye_q = eye_q
+        self._XtX = XtX
+        self._Xty = Xty
+        self._yty = yty
+        self._log2pi = log2pi
 
         diag_set = set(_theta_diag_idx(bar_sizes))
+        self._diag_set = diag_set
         bounds = [
             (0.0, None) if i in diag_set else (None, None)
             for i in range(len(re.theta))
         ]
+        self._theta_bounds = bounds
 
         theta0 = re.theta.astype(float).copy()
         res = minimize(
-            objective, theta0, method="L-BFGS-B", bounds=bounds,
+            lambda th: self._ml_deviance(th) if not REML else self._reml_deviance(th),
+            theta0, method="L-BFGS-B", bounds=bounds,
             options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 1000},
         )
         theta_hat = res.x
@@ -220,7 +199,7 @@ class lme:
         self._optim = res
 
         # ------------- recover β̂, σ̂, SE(β̂) at the optimum ------------------
-        Lt = build_Lt(theta_hat)
+        Lt = self._build_Lt(theta_hat)
         ZL = Z @ Lt.T
         M = ZL.T @ ZL + eye_q
         Lz = np.linalg.cholesky(M)
@@ -287,6 +266,244 @@ class lme:
             self.df_resid = n - self.npar
             self.AIC = self.deviance + 2.0 * self.npar
             self.BIC = self.deviance + np.log(n) * self.npar
+
+    # ---- deviance building blocks --------------------------------------
+    #
+    # These are used both by __init__ (for the initial ML/REML fit) and by
+    # profile() (for the per-grid-point re-optimization).
+
+    def _build_Lt(self, theta: np.ndarray) -> np.ndarray:
+        """Fill the integer template with θ values to get Λᵀ."""
+        out = np.zeros(self._template.shape, dtype=float)
+        out[self._nz_mask] = theta[self._theta_pos]
+        return out
+
+    def _chol_block(
+        self, theta: np.ndarray, *,
+        y: np.ndarray | None = None, X: np.ndarray | None = None,
+        XtX: np.ndarray | None = None, Xty: np.ndarray | None = None,
+        yty: float | None = None,
+    ) -> tuple[float, float, float] | None:
+        """Core Cholesky step. Returns ``(rss, log|Lz|, log|Rx|)`` at β̂_θ,
+        or ``None`` if the factorization fails.
+
+        With defaults this uses the original ``X``/``y`` cached on the fit.
+        Overrides let ``profile()`` plug in modified designs (e.g. ``y``
+        adjusted by a fixed β_j, or ``X`` with a column removed)."""
+        y = self.y if y is None else y
+        X = self.X.to_numpy() if X is None else X
+        XtX = self._XtX if XtX is None else XtX
+        Xty = self._Xty if Xty is None else Xty
+        yty = self._yty if yty is None else yty
+        Lt = self._build_Lt(theta)
+        ZL = self.Z @ Lt.T
+        M = ZL.T @ ZL + self._eye_q
+        try:
+            Lz = np.linalg.cholesky(M)
+        except np.linalg.LinAlgError:
+            return None
+        cu = solve_triangular(Lz, ZL.T @ y, lower=True)
+        if X.shape[1] > 0:
+            RZX = solve_triangular(Lz, ZL.T @ X, lower=True)
+            XtX_eff = XtX - RZX.T @ RZX
+            try:
+                Rx = np.linalg.cholesky(XtX_eff)
+            except np.linalg.LinAlgError:
+                return None
+            cb = solve_triangular(Rx, Xty - RZX.T @ cu, lower=True)
+            rss = yty - float(cu @ cu) - float(cb @ cb)
+            log_det_Rx = float(np.log(np.diag(Rx)).sum())
+        else:
+            rss = yty - float(cu @ cu)
+            log_det_Rx = 0.0
+        if rss <= 0:
+            return None
+        return rss, float(np.log(np.diag(Lz)).sum()), log_det_Rx
+
+    def _ml_deviance(
+        self, theta: np.ndarray, *,
+        sigma_fix: float | None = None,
+        y: np.ndarray | None = None, X: np.ndarray | None = None,
+        XtX: np.ndarray | None = None, Xty: np.ndarray | None = None,
+        yty: float | None = None,
+    ) -> float:
+        """ML deviance at this θ. Defaults to σ profiled out (σ̂² = rss/n);
+        pass ``sigma_fix`` to hold σ at a specific value instead."""
+        n = len(self.y) if y is None else len(y)
+        r = self._chol_block(
+            theta, y=y, X=X, XtX=XtX, Xty=Xty, yty=yty,
+        )
+        if r is None:
+            return 1e15
+        rss, log_det_Lz, _ = r
+        if sigma_fix is None:
+            return 2.0 * log_det_Lz + n * (1.0 + self._log2pi + np.log(rss / n))
+        s2 = sigma_fix ** 2
+        return 2.0 * log_det_Lz + n * (self._log2pi + np.log(s2)) + rss / s2
+
+    def _reml_deviance(self, theta: np.ndarray) -> float:
+        """REML ``-2 log L_REML`` at this θ. β profiles out, then σ."""
+        n, p = self.n, self.p
+        r = self._chol_block(theta)
+        if r is None:
+            return 1e15
+        rss, log_det_Lz, log_det_Rx = r
+        df = n - p
+        return (
+            2.0 * log_det_Lz + 2.0 * log_det_Rx
+            + df * (1.0 + self._log2pi + np.log(rss / df))
+        )
+
+    # ---- profile likelihood --------------------------------------------
+
+    def _refit_theta(self, obj_fn, theta_start: np.ndarray) -> tuple[float, np.ndarray]:
+        """Re-optimize θ against ``obj_fn(theta) → deviance``."""
+        res = minimize(
+            obj_fn, theta_start, method="L-BFGS-B", bounds=self._theta_bounds,
+            options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 1000},
+        )
+        return float(res.fun), res.x
+
+    def _dev_with_beta_fixed(
+        self, j: int, beta_j_tgt: float, theta_start: np.ndarray,
+    ) -> tuple[float, np.ndarray]:
+        """Min ML deviance with β_j = ``beta_j_tgt``. Trick: subtract
+        ``x_j · β_j_tgt`` from y and drop column j — the remaining fit has
+        the same functional form."""
+        X_full = self.X.to_numpy()
+        x_j = X_full[:, j]
+        X_rest = np.delete(X_full, j, axis=1)
+        y_adj = self.y - x_j * beta_j_tgt
+        XtX_rest = X_rest.T @ X_rest
+        Xty_rest = X_rest.T @ y_adj
+        yty_adj = float(y_adj @ y_adj)
+        return self._refit_theta(
+            lambda th: self._ml_deviance(
+                th, y=y_adj, X=X_rest,
+                XtX=XtX_rest, Xty=Xty_rest, yty=yty_adj,
+            ),
+            theta_start,
+        )
+
+    def _dev_with_sigma_fixed(
+        self, sigma_tgt: float, theta_start: np.ndarray,
+    ) -> tuple[float, np.ndarray]:
+        """Min ML deviance with σ = ``sigma_tgt`` (β profiles out)."""
+        return self._refit_theta(
+            lambda th: self._ml_deviance(th, sigma_fix=sigma_tgt),
+            theta_start,
+        )
+
+    def _dev_with_sd_fixed(
+        self, slot_i: int, sd_tgt: float,
+        sigma_start: float, theta_start: np.ndarray,
+    ) -> tuple[float, np.ndarray]:
+        """Min ML deviance with σ_i = σ · θ[slot_i] pinned at ``sd_tgt``.
+
+        Scalar-bar case: the bar has one θ entry, so pinning ``σ · θ[slot_i]
+        = sd_tgt`` is a single nonlinear constraint. We re-parameterize as
+        ``(σ, θ_rest)`` with ``θ[slot_i] = sd_tgt / σ`` and minimize jointly."""
+        other = [k for k in range(len(self._theta_bounds)) if k != slot_i]
+        theta_rest0 = np.array([theta_start[k] for k in other])
+
+        def obj(x):
+            sigma = x[0]
+            if sigma <= 0:
+                return 1e15
+            theta = np.zeros(len(self._theta_bounds))
+            theta[slot_i] = sd_tgt / sigma
+            for k, slot in enumerate(other):
+                theta[slot] = x[1 + k]
+            return self._ml_deviance(theta, sigma_fix=sigma)
+
+        x0 = np.concatenate([[sigma_start], theta_rest0])
+        bounds = [(1e-8, None)] + [self._theta_bounds[k] for k in other]
+        res = minimize(
+            obj, x0, method="L-BFGS-B", bounds=bounds,
+            options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 1000},
+        )
+        # Reconstruct θ at the optimum for warm-start of neighboring points.
+        theta_opt = np.zeros(len(self._theta_bounds))
+        sigma_opt = res.x[0]
+        theta_opt[slot_i] = sd_tgt / sigma_opt
+        for k, slot in enumerate(other):
+            theta_opt[slot] = res.x[1 + k]
+        return float(res.fun), theta_opt
+
+    def profile(self, n_grid: int = 41) -> "Profile":
+        """Compute profile-likelihood curves for σ_i, σ, and each β_j.
+
+        For each parameter we fix it at ``n_grid`` values centered on the
+        MLE, re-minimize the ML deviance over the remaining parameters, and
+        record ``ζ = sign(v − v̂) · √(d(v) − d̂)``. The result is a
+        :class:`Profile` carrying one DataFrame per parameter plus the MLEs.
+
+        For REML fits we first re-fit by ML, per lme4's convention (the LRT
+        statistic requires ML). Only scalar bars ``(1|g)`` are supported in
+        this first port.
+        """
+        if any(c > 1 for c in self._bar_sizes):
+            raise NotImplementedError(
+                "profile() currently requires scalar bars (1|g); "
+                "vector bars like (1+x|g) need a different parameterization."
+            )
+        if self.REML:
+            return lme(self.formula, self.data, REML=False).profile(n_grid=n_grid)
+
+        d_hat = self.deviance
+        theta_hat = self.theta.copy()
+        sigma_hat = self.sigma
+
+        data: dict[str, pd.DataFrame] = {}
+        estimate: dict[str, float] = {}
+
+        # Grid widths are picked to comfortably cover |ζ| ≤ 3 (so the
+        # 99% CI cutoff at ±2.576 is inside the grid). β uses Wald SE as a
+        # scale; σ and σ_i get multiplicative ranges.
+
+        # -- σ_i (one per scalar bar) ---------------------------------------
+        slot_offsets = np.cumsum([0] + self._bar_sizes[:-1])
+        for i, bar_key in enumerate(self.sd_re):
+            sd_i = float(self.sd_re[bar_key][0])
+            label = f".sig{i + 1:02d}"
+            estimate[label] = sd_i
+            grid = np.linspace(1e-3 * sd_i, 3.5 * sd_i, n_grid)
+            slot_i = int(slot_offsets[i])
+            zetas = np.empty(n_grid)
+            theta_warm = theta_hat.copy()
+            sigma_warm = sigma_hat
+            for k, v in enumerate(grid):
+                d_k, theta_warm = self._dev_with_sd_fixed(
+                    slot_i, v, sigma_warm, theta_warm,
+                )
+                zetas[k] = np.sign(v - sd_i) * np.sqrt(max(0.0, d_k - d_hat))
+            data[label] = pd.DataFrame({"value": grid, "zeta": zetas})
+
+        # -- σ ----------------------------------------------------------------
+        estimate[".sigma"] = sigma_hat
+        log_grid = np.linspace(-0.6, 0.6, n_grid) + np.log(sigma_hat)
+        sigma_grid = np.exp(log_grid)
+        zetas = np.empty(n_grid)
+        theta_warm = theta_hat.copy()
+        for k, s in enumerate(sigma_grid):
+            d_k, theta_warm = self._dev_with_sigma_fixed(s, theta_warm)
+            zetas[k] = np.sign(s - sigma_hat) * np.sqrt(max(0.0, d_k - d_hat))
+        data[".sigma"] = pd.DataFrame({"value": sigma_grid, "zeta": zetas})
+
+        # -- β_j --------------------------------------------------------------
+        for j, name in enumerate(self.column_names):
+            beta_j = float(self.bhat.iloc[0, j])
+            se_j = float(self.se_bhat.iloc[0, j])
+            estimate[name] = beta_j
+            grid = np.linspace(beta_j - 4 * se_j, beta_j + 4 * se_j, n_grid)
+            zetas = np.empty(n_grid)
+            theta_warm = theta_hat.copy()
+            for k, b in enumerate(grid):
+                d_k, theta_warm = self._dev_with_beta_fixed(j, b, theta_warm)
+                zetas[k] = np.sign(b - beta_j) * np.sqrt(max(0.0, d_k - d_hat))
+            data[name] = pd.DataFrame({"value": grid, "zeta": zetas})
+
+        return Profile(data, estimate)
 
     # ---- lmer-style printing --------------------------------------------
 
@@ -425,3 +642,98 @@ class lme:
         out.append("Fixed effects:")
         out.append(self._fixef_table().round(digits).to_string())
         print("\n".join(out))
+
+
+def _invert_zeta(vals: np.ndarray, zetas: np.ndarray, target: float) -> float:
+    """Linearly interpolate the ζ-curve to find where ζ(v) = target.
+
+    Returns ``NaN`` if ``target`` falls outside the observed ζ range — we
+    prefer a missing bound to an extrapolated one. Sorts by ζ first so the
+    interpolation works even when the curve isn't evaluated on a
+    monotone-in-v grid.
+    """
+    if target < np.nanmin(zetas) or target > np.nanmax(zetas):
+        return float("nan")
+    order = np.argsort(zetas)
+    return float(np.interp(target, zetas[order], vals[order]))
+
+
+class Profile:
+    """Profile-likelihood output from :meth:`lme.profile`.
+
+    Attributes
+    ----------
+    data : dict[str, pandas.DataFrame]
+        Per-parameter table with columns ``value`` and ``zeta``. Keys are
+        ``.sig01``, ``.sig02``, … for variance-component SDs, ``.sigma``
+        for the residual SD, and the R-canonical fixed-effect names
+        (``(Intercept)``, ``MachineB``, …).
+    estimate : dict[str, float]
+        MLE for each profiled parameter, keyed the same way.
+    """
+
+    def __init__(self, data: dict[str, pd.DataFrame], estimate: dict[str, float]):
+        self.data = data
+        self.estimate = estimate
+
+    def confint(self, level: float = 0.95) -> pd.DataFrame:
+        """Profile-based confidence intervals at ``level`` (default 95%).
+
+        Inverts each ζ-curve at ±Φ⁻¹((1+level)/2). A bound is ``NaN`` when
+        the curve doesn't cross the threshold within the grid — this
+        typically happens for variance components near zero (see book
+        Fig. 1.8's flattening on the left of σ₁)."""
+        from scipy.stats import norm
+
+        z = float(norm.ppf(0.5 + level / 2))
+        lo_lbl = f"{100 * (1 - level) / 2:.1f}%"
+        hi_lbl = f"{100 * (0.5 + level / 2):.1f}%"
+        rows: dict[str, list[float]] = {}
+        for name, df in self.data.items():
+            v = df["value"].to_numpy()
+            s = df["zeta"].to_numpy()
+            rows[name] = [_invert_zeta(v, s, -z), _invert_zeta(v, s, +z)]
+        return pd.DataFrame(rows, index=[lo_lbl, hi_lbl]).T
+
+    def plot(
+        self, absolute: bool = False, figsize: tuple[float, float] | None = None,
+        levels: tuple[float, ...] = (0.50, 0.80, 0.90, 0.95, 0.99),
+    ):
+        """Profile zeta plot — the Pythonic replacement for R's
+        ``xyplot(profile(...))``. One subplot per parameter; vertical
+        gray lines mark the CI cutoffs for each level in ``levels``.
+
+        With ``absolute=True`` plots ``|ζ|`` (matches book Fig. 1.6)."""
+        import matplotlib.pyplot as plt
+        from scipy.stats import norm
+
+        names = list(self.data.keys())
+        n = len(names)
+        fig, axes = plt.subplots(
+            1, n, figsize=figsize or (3.2 * n, 3.0), sharey=False,
+        )
+        if n == 1:
+            axes = [axes]
+
+        for ax, name in zip(axes, names):
+            df = self.data[name]
+            v = df["value"].to_numpy()
+            s = df["zeta"].to_numpy()
+            y = np.abs(s) if absolute else s
+            ax.plot(v, y, "o-", ms=3, lw=1)
+            if not absolute:
+                ax.axhline(0, color="k", lw=0.4)
+            for lvl in levels:
+                z = float(norm.ppf(0.5 + lvl / 2))
+                for tgt in (-z, z):
+                    x0 = _invert_zeta(v, s, tgt)
+                    if np.isfinite(x0):
+                        ax.axvline(x0, color="gray", alpha=0.4, lw=0.5)
+            ax.set_title(name)
+            ax.set_xlabel(name)
+        axes[0].set_ylabel("|ζ|" if absolute else "ζ")
+        fig.tight_layout()
+        return fig
+
+    def __repr__(self) -> str:
+        return f"Profile({list(self.data)})"
