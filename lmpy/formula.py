@@ -2768,6 +2768,138 @@ def _cp_penalty(np_cols: int, p_ord: int) -> np.ndarray:
     return D.T @ D
 
 
+# ---- bs (mgcv's B-spline wrapper, derivative-based penalty) ----------------
+#
+# Port of mgcv's smooth.construct.bs.smooth.spec. Cubic-by-default B-spline
+# basis with an integrated-squared-mth-derivative penalty ∫ (f^(m_j))² dx,
+# where f is the spline and m can specify MULTIPLE penalty orders
+# (m = c(basis_order, m2_1, m2_2, ...)). Each m2 produces one penalty.
+#
+# Penalty assembly (per m2): f^(m2) is a piecewise polynomial of degree
+# pord = m[0] - m2 on each interval of the interior knots k0. Evaluate the
+# basis derivative at pord+1 evenly-spaced points per interval (sharing
+# endpoints across neighbors) and use the Vandermonde/monomial-integral
+# trick to get a local quadrature weight matrix W1; sum over intervals,
+# scaled by h[i]/2. Then S = D^T W D.
+
+
+def _bs_order_m(call: Call) -> list[int]:
+    """Resolve p.order for bs: returns [basis_order, m2_1, m2_2, ...].
+    Defaults per mgcv: scalar m → (m, max(0, m-1)); NA-handling → (3, 2)."""
+    m_src = call.kwargs.get("m")
+    vals = _eval_c_vec_ints(m_src) if m_src is not None else None
+    if not vals:
+        return [3, 2]
+    if len(vals) == 1:
+        return [vals[0], max(0, vals[0] - 1)]
+    return list(vals)
+
+
+def _bs_default_k(call: Call, m0: int) -> int:
+    k = call.kwargs.get("k")
+    if isinstance(k, Literal) and k.kind == "num":
+        return int(k.value)
+    return max(10, m0)
+
+
+def _bs_knots_eval(x: np.ndarray, m0: int, k: int) -> np.ndarray:
+    """mgcv's default bs knot vector: nk = k - m0 + 1 interior + m0 extension
+    on each side. Evenly spaced."""
+    nk = k - m0 + 1
+    if nk <= 0:
+        raise ValueError(f"basis dimension {k} too small for b-spline order {m0}")
+    xl = float(np.min(x))
+    xu = float(np.max(x))
+    xr = xu - xl
+    xl -= xr * 0.001
+    xu += xr * 0.001
+    dx = (xu - xl) / (nk - 1)
+    return np.linspace(xl - dx * m0, xu + dx * m0, nk + 2 * m0)
+
+
+def _bs_design(x: np.ndarray, knots: np.ndarray, m0: int, deriv: int = 0) -> np.ndarray:
+    """B-spline of order m0+1 (degree m0) evaluated at x (or its `deriv`-th
+    derivative). Matches `splines::spline.des(knots, x, m0+1, derivs=deriv)`."""
+    from scipy.interpolate import BSpline
+    if deriv == 0:
+        return BSpline.design_matrix(x, knots, m0).toarray()
+    nb = len(knots) - (m0 + 1)
+    out = np.zeros((len(x), nb))
+    for i in range(nb):
+        c = np.zeros(nb)
+        c[i] = 1.0
+        spl = BSpline(knots, c, m0, extrapolate=False)
+        out[:, i] = np.nan_to_num(spl(x, nu=deriv), nan=0.0)
+    return out
+
+
+def _bs_penalty_W1(pord: int) -> np.ndarray:
+    """Local quadrature weight matrix for ∫_{-1}^{1} p(t)^2 dt, where p is a
+    polynomial of degree pord represented by its values at pord+1 evenly-
+    spaced points in [-1,1]. Returns a (pord+1)×(pord+1) SPD matrix."""
+    pts = np.linspace(-1, 1, pord + 1)
+    V = np.stack([pts ** j for j in range(pord + 1)], axis=1)  # V[i,j] = pts[i]^j
+    P = np.linalg.inv(V)
+    H = np.zeros((pord + 1, pord + 1))
+    for i in range(pord + 1):
+        for j in range(pord + 1):
+            s = i + j
+            if s % 2 == 0:
+                H[i, j] = 2.0 / (s + 1)
+    return P.T @ H @ P
+
+
+def _bs_penalty(knots: np.ndarray, m0: int, m2: int) -> np.ndarray:
+    """Integrated-squared-m2-derivative penalty for the bs basis with order m0+1."""
+    nk = len(knots) - 2 * m0
+    # Interior knots: k0 = knots[m0 : m0 + nk]
+    k0 = knots[m0 : m0 + nk]
+    h = np.diff(k0)  # length nk-1
+    pord = m0 - m2
+    if pord < 0:
+        raise ValueError("requested non-existent derivative in B-spline penalty")
+    n_basis = len(knots) - (m0 + 1)
+
+    if pord == 0:
+        # integrand is a step function; midpoint quadrature
+        k1 = 0.5 * (k0[:-1] + k0[1:])
+        D = _bs_design(k1, knots, m0, deriv=m2)
+        D_scaled = np.sqrt(h)[:, None] * D
+        return D_scaled.T @ D_scaled
+
+    # pord > 0: pord+1 evenly spaced points per interval, shared endpoints
+    # Build k1 by cumulative step over each interval.
+    h1 = np.repeat(h / pord, pord)
+    k1 = np.cumsum(np.concatenate([[k0[0]], h1]))
+    # Evaluate the m2-th derivative of each basis at k1 → (len(k1), n_basis)
+    D = _bs_design(k1, knots, m0, deriv=m2)
+
+    W1 = _bs_penalty_W1(pord)  # (pord+1, pord+1)
+    n_quad = len(k1)
+    W = np.zeros((n_quad, n_quad))
+    # Each interval i contributes (h[i]/2) * W1 to rows/cols [i*pord .. i*pord+pord]
+    for i in range(nk - 1):
+        a = i * pord
+        b = a + pord + 1
+        W[a:b, a:b] += (h[i] / 2.0) * W1
+
+    return D.T @ W @ D
+
+
+def _build_bs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    term = _smooth_term_vars(call)
+    if len(term) != 1:
+        raise ValueError('bs="bs" only handles 1D smooths')
+    x = data[term[0]].to_numpy(dtype=float)
+    m = _bs_order_m(call)
+    m0 = m[0]
+    bs_dim = _bs_default_k(call, m0)
+    knots = _bs_knots_eval(x, m0, bs_dim)
+    X = _bs_design(x, knots, m0, deriv=0)
+    S_list = [_bs_penalty(knots, m0, m2) for m2 in m[1:]]
+    return _apply_by_and_absorb(call, data, X, S_list, "Bspline.smooth", term)
+
+
 def _build_cp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     term = _smooth_term_vars(call)
     if len(term) != 1:
@@ -3425,6 +3557,8 @@ def materialize_smooths(
             out.append(_build_ps_smooth(call, data))
         elif bs == "cp":
             out.append(_build_cp_smooth(call, data))
+        elif bs == "bs":
+            out.append(_build_bs_smooth(call, data))
         else:
             raise NotImplementedError(
                 f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
