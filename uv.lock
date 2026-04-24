@@ -158,11 +158,8 @@ name = "lmpy"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "formulae" },
-    { name = "formulaic" },
     { name = "matplotlib" },
     { name = "numpy" },
-    { name = "pandas" },
     { name = "polars" },
     { name = "pyarrow" },
     { name = "scikit-sparse" },
@@ -170,6 +167,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+bench = [
+    { name = "formulae" },
+    { name = "formulaic" },
+    { name = "pandas" },
+]
 dev = [
     { name = "pytest" },
     { name = "pyyaml" },
@@ -177,11 +179,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "formulae", specifier = ">=0.5.4" },
-    { name = "formulaic", specifier = ">=1.1.1" },
+    { name = "formulae", marker = "extra == 'bench'", specifier = ">=0.5.4" },
+    { name = "formulaic", marker = "extra == 'bench'", specifier = ">=1.1.1" },
     { name = "matplotlib", specifier = ">=3.10.0" },
     { name = "numpy", specifier = ">=2.2.2" },
-    { name = "pandas", specifier = ">=2.2.3" },
+    { name = "pandas", marker = "extra == 'bench'", specifier = ">=2.0.0" },
     { name = "polars", specifier = ">=1.20.0" },
     { name = "pyarrow", specifier = ">=24.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
@@ -189,7 +191,7 @@ requires-dist = [
     { name = "scikit-sparse", specifier = ">=0.5.0" },
     { name = "scipy", specifier = ">=1.15.1" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["dev", "bench"]
 
 [[package]]
 name = "matplotlib"

@@ -977,6 +977,10 @@ def _factor_from_series(series: pl.Series, label: str, ordered_hint: bool = Fals
             codes = np.where(null_mask, -1, codes).astype(int)
         else:
             codes = codes.astype(int)
+        # Dtype convention: pl.Enum signals R's ordered factor (poly contrasts,
+        # drop-first in s(…, by=…)); pl.Categorical signals an unordered factor
+        # (treatment contrasts, all-levels in by). Polars has no native ordered-
+        # factor dtype, so we repurpose the Enum/Categorical split to carry it.
         ordered = (dt == pl.Enum) or ordered_hint
         return _FactorBlock(codes=codes, levels=levels, ordered=ordered, label=label)
     # R's factor() uses locale-aware sort(unique(x)) on strings, but numeric
@@ -2192,11 +2196,20 @@ def _eval_by_col(by_expr: str, data: pl.DataFrame) -> pl.Series | np.ndarray:
         col_name, op, s_dq, s_sq, num = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)
         if col_name not in data.columns:
             raise KeyError(f"by=: column {col_name!r} not in data")
+        col = data[col_name]
         if num is not None:
-            lit = float(num)
+            # R's `factor == 1` coerces the factor levels to match the integer
+            # literal (numeric levels round-trip as strings on our polars side,
+            # so compare as strings; Polars categoricals carry string levels).
+            if col.dtype in (pl.Categorical, pl.Enum, pl.String, pl.Utf8):
+                n_num = float(num)
+                n_int = int(n_num)
+                lit = str(n_int) if n_num == n_int else str(n_num)
+            else:
+                lit = float(num)
         else:
             lit = s_dq if s_dq is not None else s_sq
-        arr = data[col_name].to_numpy()
+        arr = col.to_numpy()
         mask = (arr == lit) if op == "==" else (arr != lit)
         return mask.astype(bool)
 
@@ -2258,11 +2271,15 @@ def _apply_by_and_absorb(
         if by_col.dtype == pl.Enum and len(levels) > 1:
             levels = levels[1:]
         by_arr = by_col.to_numpy()
+        # mgcv sets `sm$C = colSums(sm$X)` once on the full (pre-by) X, then
+        # applies the same Householder Q to every per-level X_lev. Without
+        # this each level's absorb uses colSums(X_lev) → a different Z, and
+        # the resulting subspaces diverge from mgcv's.
         blocks: list[SmoothBlock] = []
         for lev in levels:
             mask = (by_arr == lev).astype(float)
             X_lev = X * mask[:, None]
-            X2, S2 = _absorb_sumzero(X_lev, S_list)
+            X2, S2 = _absorb_sumzero(X_lev, S_list, C_source=X)
             label = f"{base_label}:{by_expr}{lev}"
             blocks.append(SmoothBlock(label=label, term=term, cls=cls, X=X2, S=S2))
         return blocks
@@ -2359,7 +2376,11 @@ def _build_re_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     )]
 
 
-def _absorb_sumzero(X: np.ndarray, S_list: list[np.ndarray]) -> tuple[np.ndarray, list[np.ndarray]]:
+def _absorb_sumzero(
+    X: np.ndarray,
+    S_list: list[np.ndarray],
+    C_source: np.ndarray | None = None,
+) -> tuple[np.ndarray, list[np.ndarray]]:
     """Apply mgcv's default `absorb.cons=TRUE` sum-to-zero constraint.
 
     Mirrors mgcv `smoothCon`: C = colMeans(X) (1×k). If every entry of C is
@@ -2370,11 +2391,17 @@ def _absorb_sumzero(X: np.ndarray, S_list: list[np.ndarray]) -> tuple[np.ndarray
     drops the *last* nonzero column, leaving the exact-zero columns in place.
     Without this branch, floating-point noise on the near-zero columns causes
     a rotation that swaps columns in the output (fixtures mgcv_0066, _0182).
+
+    `C_source`: optional matrix whose column means define the constraint.
+    For by=factor, mgcv sets `sm$C = colSums(sm$X)` once from the pre-by X,
+    then applies the same Householder Q to every `by.dum * X` block. Callers
+    that want that behaviour pass the pre-by X as C_source so each per-level
+    absorb uses the shared constraint instead of each block's own colSums.
     """
     n, k = X.shape
     if k == 0:
         return X, list(S_list)
-    C = X.mean(axis=0)
+    C = (C_source if C_source is not None else X).mean(axis=0)
     indi = np.flatnonzero(C != 0)  # exact inequality, matching mgcv
     nx = len(indi)
     if nx == k:
@@ -3932,6 +3959,34 @@ def _fs_find_factor(term: list[str], data: pl.DataFrame) -> tuple[str | None, li
     return fterm, others
 
 
+def _canonicalize_fs_null_basis(Xr: np.ndarray, rank: int) -> np.ndarray:
+    """Rotate the null-space columns of Xr to a LAPACK-independent basis.
+
+    mgcv's `nat.param(type=1)` leaves the null eigenspace of RSR spanned by
+    whatever orthonormal basis its LAPACK returns. For degenerate eigenspaces
+    that choice varies between LAPACK builds (R's netlib vs scipy's
+    Accelerate), so Xr's last `null_d` columns are implementation-dependent.
+    Rotate them by the principal components of the centered null columns —
+    a deterministic, data-driven basis computable from any LAPACK's nat.param
+    output (the 2×2 / small eigendecomp of `Xn^T Xn` is stable across libs).
+    Sign convention: largest-magnitude entry of each column is positive.
+    """
+    p = Xr.shape[1]
+    null_d = p - rank
+    if null_d == 0:
+        return Xr
+    Xn = Xr[:, rank:] - Xr[:, rank:].mean(axis=0, keepdims=True)
+    _w, V_n = np.linalg.eigh(Xn.T @ Xn)  # ascending; largest eig last
+    Xn_rot = Xr[:, rank:] @ V_n
+    for c in range(null_d):
+        m = int(np.argmax(np.abs(Xn_rot[:, c])))
+        if Xn_rot[m, c] < 0:
+            Xn_rot[:, c] = -Xn_rot[:, c]
+    out = Xr.copy()
+    out[:, rank:] = Xn_rot
+    return out
+
+
 def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`bs="fs"` — factor-smooth interaction.
 
@@ -3956,6 +4011,9 @@ def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
 
     # nat.param(type=1) — make the base penalty an identity on its range.
     Xr, D, _P = _nat_param(Xb, Sb, rank=rank, type_=1, unit_fnorm=True)
+    # mgcv inherits its LAPACK's rotation of the degenerate null eigenspace;
+    # re-rotate to a canonical basis so lmpy's output is deterministic.
+    Xr = _canonicalize_fs_null_basis(Xr, rank)
     p = Xr.shape[1]
 
     # Factor levels in alphabetic order (R's factor() default).
@@ -3992,6 +4050,32 @@ def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     )]
 
 
+def _xz_kr_contrast(X: np.ndarray, m: list[int], inner_p: int) -> np.ndarray:
+    """Port of mgcv's `XZKr(X, m)` (smooth.r:3747) — Kronecker sum-to-zero.
+
+    Postmultiplies X by a Kronecker product of sum-to-zero contrasts
+    `rbind(diag(m[i]-1), -1)` per factor, with a trailing inner identity of
+    size `inner_p`. In mgcv, `inner_p = ncol(X) / prod(m)` so this is the
+    base-smooth dimension after all factor blocks have been accounted for.
+    Column layout is [level ⊗ inner]: the outer factor indices cycle slowest.
+    """
+    X = np.asarray(X, dtype=float).copy()
+    n = X.shape[0]
+    # Replicate mgcv's in-place reshape-then-contract loop.
+    for mi in m:
+        L = X.size // mi
+        X = X.reshape(L, mi, order="F")
+        # For each factor: contrast = last block is subtracted from every
+        # non-last block, then the last block is dropped. After this the
+        # factor dimension is mi-1 and we transpose so the next factor
+        # populates the trailing axis.
+        X = (X[:, :mi - 1] - X[:, mi - 1:mi]).T
+    p = inner_p
+    X = X.reshape(X.size // p, p, order="F")
+    X = X.T  # matches mgcv's trailing `X <- t(X); dim(X) <- c(length(X)/n, n)`
+    return X.reshape(X.size // n, n, order="F").T
+
+
 def _build_sz_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`bs="sz"` — zero-center nested smooth.
 
@@ -4003,20 +4087,119 @@ def _build_sz_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     base smooth and returns that constructor's output. We mirror that by
     dispatching to `_build_tp_smooth` on the full term list.
 
-    The factor-present path duplicates the base basis across factor levels
-    via tensor.prod.model.matrix and applies a sum-to-zero-per-level
-    constraint (`C = c(0, nf)` in mgcv). That path is not yet implemented;
-    no current fixture exercises it because CSV-loaded factor columns are
-    int64, which is not `is.factor()`.
+    Factor-present path: build the base tp smooth on the non-factor terms
+    (`_tp_raw`, *before* scale.penalty and absorb.cons — mgcv calls the
+    constructor directly, not via smoothCon). Duplicate the base X block-wise
+    across factor levels, build one block-diagonal penalty per level (one S
+    per `prod(nf)` block unless `id=` is set), then apply the Kronecker
+    sum-to-zero contrast (`XZKr` — drops the last-level block and subtracts
+    it from each other level). scale.penalty runs on the pre-contrast X.
     """
     term = _smooth_term_vars(call)
-    fterm, _others = _fs_find_factor(term, data)
+    fterm, others = _fs_find_factor(term, data)
     if fterm is None:
         return _build_tp_smooth(call, data)
-    raise NotImplementedError(
-        "sz smooth with a categorical factor term is not yet supported "
-        "(requires sum-to-zero-per-level constraint handling)"
-    )
+
+    # Collect all factor terms in the order they appear in the call (mgcv
+    # preserves `object$term` order). `_fs_find_factor` returns the first
+    # factor; gather the full list for the multi-factor tensor case.
+    ftermlist: list[str] = []
+    otherlist: list[str] = []
+    for t in term:
+        if data[t].dtype in (pl.Categorical, pl.Enum):
+            ftermlist.append(t)
+        else:
+            otherlist.append(t)
+    # Factor-only case: mgcv reclasses to `re.smooth.spec`. Not exercised
+    # by current fixtures — defer until we see one.
+    if not otherlist:
+        raise NotImplementedError(
+            "sz smooth with only factor terms (→ re fallback) not supported"
+        )
+
+    # Base smooth: tp on non-factor terms, raw constructor output.
+    Xb, Sb_list, M, k, rank = _tp_raw(call, data, otherlist)
+    if len(Sb_list) != 1:
+        raise NotImplementedError("sz with multiply-penalized base basis not supported")
+    S_base = Sb_list[0]
+    p0 = Xb.shape[1]
+    n = Xb.shape[0]
+
+    # Factor level lists and sizes (R's factor levels = Categorical categories).
+    flev: list[list] = []
+    nf: list[int] = []
+    fac_arrs: list[np.ndarray] = []
+    for ft in ftermlist:
+        fcol = data[ft]
+        lv = _factor_levels(fcol)
+        flev.append(lv)
+        nf.append(len(lv))
+        fac_arrs.append(fcol.to_numpy())
+
+    total_levels = int(np.prod(nf))
+    p_full = p0 * total_levels
+
+    # Build the expanded X via tensor.prod.model.matrix with factor indicator
+    # matrices: X[i, (a1, a2, ..., b)] = prod_j 1{fac_j[i]==lev_j[a_j]} * Xb[i, b].
+    # Column layout matches mgcv's: outermost factor index cycles slowest.
+    X = np.zeros((n, p_full))
+    # Enumerate all factor-index combinations in row-major over factors.
+    def _iter_factor_indices():
+        if not nf:
+            yield ()
+            return
+        idx = [0] * len(nf)
+        while True:
+            yield tuple(idx)
+            # Increment — last dim fastest.
+            for d in range(len(nf) - 1, -1, -1):
+                idx[d] += 1
+                if idx[d] < nf[d]:
+                    break
+                idx[d] = 0
+            else:
+                return
+
+    for blk_pos, combo in enumerate(_iter_factor_indices()):
+        mask = np.ones(n, dtype=float)
+        for j, a in enumerate(combo):
+            mask *= (fac_arrs[j] == flev[j][a]).astype(float)
+        X[:, blk_pos * p0 : (blk_pos + 1) * p0] = Xb * mask[:, None]
+
+    # Build penalties. mgcv's sz:
+    #   if id is NULL: one penalty per prod(nf) block (prod(nf) penalties).
+    #   else: single penalty = sum of block-diagonal S_base across all blocks.
+    has_id = call.kwargs.get("id") is not None
+    S_list: list[np.ndarray] = []
+    if has_id:
+        S_combined = np.zeros((p_full, p_full))
+        for b in range(total_levels):
+            S_combined[b * p0 : (b + 1) * p0, b * p0 : (b + 1) * p0] += S_base
+        S_list.append(S_combined)
+    else:
+        for b in range(total_levels):
+            S_b = np.zeros((p_full, p_full))
+            S_b[b * p0 : (b + 1) * p0, b * p0 : (b + 1) * p0] = S_base
+            S_list.append(S_b)
+
+    # scale.penalty runs on the duplicated X and each S (mgcv applies it
+    # before the Kronecker constraint — XZKr rescales column norms but
+    # `scale.penalty=TRUE` matches on the pre-contrast `sm$X`).
+    S_list = [(S + S.T) / 2.0 for S in S_list]
+    S_list = _scale_penalty(X, S_list)
+
+    # Kronecker sum-to-zero: absorb.cons with C = c(0, nf). XZKr drops the
+    # last-level block per factor and subtracts it from each non-last block.
+    X_out = _xz_kr_contrast(X, nf, p0)
+    S_out: list[np.ndarray] = []
+    for S in S_list:
+        S_k = _xz_kr_contrast(_xz_kr_contrast(S, nf, p0).T, nf, p0).T
+        S_out.append(S_k)
+
+    label = _smooth_label(call)
+    return [SmoothBlock(
+        label=label, term=term, cls="sz.interaction", X=X_out, S=S_out,
+    )]
 
 
 # ---- ad (adaptive P-spline) -------------------------------------------------

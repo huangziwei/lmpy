@@ -20,7 +20,45 @@ import pytest
 from scipy.io import mmread
 
 from conftest import FIXTURE_ROOT, fixture_meta, fixtures_by_kind, load_dataset
-from lmpy.formula import expand, materialize_smooths, parse
+from lmpy.formula import (
+    _canonicalize_fs_null_basis,
+    _factor_levels,
+    _fs_find_factor,
+    expand,
+    materialize_smooths,
+    parse,
+)
+
+
+def _canonicalize_fs_reference(X_ref, r_meta, data):
+    """Apply lmpy's canonical null-basis rotation to mgcv's fs X output.
+
+    mgcv's raw fs X uses whatever null-basis its LAPACK chose (R's netlib
+    dsyevr). Extract the per-level template Xr from X_ref's block structure,
+    rotate Xr's null cols by the canonical W (same rule used in lmpy), then
+    rebuild the block-duplicated X. See `_canonicalize_fs_null_basis`.
+    """
+    term = r_meta["term"] if isinstance(r_meta["term"], list) else [r_meta["term"]]
+    fterm, _others = _fs_find_factor(term, data)
+    assert fterm is not None, f"fs.interaction needs a factor term; got {term}"
+    flev = _factor_levels(data[fterm])
+    p = r_meta["bs_dim"]
+    null_d = r_meta["n_penalties"] - 1
+    rank = p - null_d
+
+    fac_arr = data[fterm].to_numpy()
+    Xr = np.zeros((X_ref.shape[0], p))
+    for j, lev in enumerate(flev):
+        mask = fac_arr == lev
+        Xr[mask, :] = X_ref[mask, j * p : (j + 1) * p]
+
+    Xr_canonical = _canonicalize_fs_null_basis(Xr, rank)
+
+    X_new = np.zeros_like(X_ref)
+    for j, lev in enumerate(flev):
+        mask = (fac_arr == lev).astype(float)
+        X_new[:, j * p : (j + 1) * p] = Xr_canonical * mask[:, None]
+    return X_new
 
 MGCV_FIXTURES = fixtures_by_kind("mgcv")
 
@@ -70,6 +108,21 @@ def test_mgcv_smooths_match_R(fx_id: str):
                 f"smooth #{i} block {k}: X shape got {blk.X.shape} want {X_ref.shape}"
             )
 
+            # fs.interaction: null eigenspace rotation is LAPACK-dependent
+            # (R's netlib vs scipy's Accelerate). lmpy canonicalizes its own
+            # output inside `_build_fs_smooth`; apply the same rotation to
+            # R's reference per-level block so the comparison is basis-agnostic.
+            # The row-sums of X (and thus scale.penalty's maXX = max|row-sum|^2)
+            # change with the null rotation, so rescale each S_ref by the ratio
+            # maXX(canonical)/maXX(R) — lmpy's penalty values end up consistent
+            # with the canonical basis.
+            S_scale = 1.0
+            if r_meta["class"] == "fs.smooth.spec":
+                maXX_R = float(np.abs(X_ref).sum(axis=1).max()) ** 2
+                X_ref = _canonicalize_fs_reference(X_ref, r_meta, data)
+                maXX_canon = float(np.abs(X_ref).sum(axis=1).max()) ** 2
+                S_scale = maXX_canon / maXX_R if maXX_R > 0 else 1.0
+
             # mgcv's Lanczos uses an arbitrary per-eigenvector sign convention;
             # lmpy's np.linalg.eigh uses its own. Match each column up to sign,
             # then apply the same flip to S.
@@ -93,7 +146,7 @@ def test_mgcv_smooths_match_R(fx_id: str):
             for j, S_got in enumerate(blk.S, start=1):
                 S_ref = np.asarray(
                     mmread(fx / f"smooth_{i}_{k}_S_{j}.mtx").todense(), dtype=float
-                )
+                ) * S_scale
                 assert S_got.shape == S_ref.shape, (
                     f"smooth #{i} block {k} S_{j}: got {S_got.shape} want {S_ref.shape}"
                 )
