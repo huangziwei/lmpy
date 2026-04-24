@@ -3644,9 +3644,14 @@ def _tp_rlanczos(
     b = np.zeros(n)
     err = np.full(n, 1e300)
 
-    # Scratch buffers reused each iteration.
+    # Scratch buffer for aj / bj reductions. Keeps the np.sum(u*v) pairwise
+    # reduction (not BLAS dot) so the tridiagonal T_j entries are deterministic
+    # between runs — the wine dataset (n=47, mgcv_0020) has near-degenerate
+    # eigenvalues where a 1 ULP shift rotates eigenvectors within a degenerate
+    # subspace and breaks fixture comparison. CGS2 above is tolerant of that
+    # because reorth is already O(eps) off anyway; a[j] / b[j] directly feed
+    # the eigendecomp, so stability matters more there.
     buf = np.empty(n)
-    scaled = np.empty(n)
 
     d_sorted: np.ndarray | None = None
     v_eig: np.ndarray | None = None
@@ -3662,13 +3667,10 @@ def _tp_rlanczos(
         aj = float(buf.sum())
         a[j] = aj
         if j == 0:
-            np.multiply(qj, aj, out=scaled)
-            np.subtract(z, scaled, out=z)
+            z -= aj * qj
         else:
-            np.multiply(qj, aj, out=scaled)
-            np.subtract(z, scaled, out=z)
-            np.multiply(Q[j - 1], b[j - 1], out=scaled)
-            np.subtract(z, scaled, out=z)
+            z -= aj * qj
+            z -= b[j - 1] * Q[j - 1]
             # Reorthogonalize via classical Gram-Schmidt, twice (CGS2).
             # mgcv's C code uses sequential MGS-twice; CGS2 has a different
             # arithmetic trajectory but achieves machine-precision orthogonality
