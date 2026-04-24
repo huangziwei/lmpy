@@ -2930,6 +2930,17 @@ def _tp_rlanczos(
     if kk_fc < f_check:
         f_check = kk_fc
 
+    # Apple Accelerate's BLAS ddot / dnrm2 pick different summation kernels
+    # across process invocations, giving bit-different results run-to-run.
+    # That perturbs a_j / b_j just enough to rotate eigenvectors within near-
+    # degenerate subspaces of T_j, making X non-deterministic. np.sum(a*b)
+    # goes through a fixed pairwise reduction and is process-deterministic.
+    def _ddot(u, v):
+        return float(np.sum(u * v))
+
+    def _dnrm2(v):
+        return float(np.sqrt(np.sum(v * v)))
+
     # mgcv's LCG-seeded start vector. The specific constants (106, 1283, 6075)
     # and the `jran=1` seed are load-bearing — changing them would pick a
     # different basis within degenerate subspaces.
@@ -2939,7 +2950,7 @@ def _tp_rlanczos(
     for i in range(n):
         jran = (jran * ia + ic) % im_mod
         q0[i] = jran / im_mod - 0.5
-    q0 /= np.linalg.norm(q0)
+    q0 /= _dnrm2(q0)
     q: list[np.ndarray] = [q0]
 
     a = np.zeros(n)
@@ -2955,7 +2966,7 @@ def _tp_rlanczos(
         # but the numerical difference vs a dense matmul is within the
         # 1e-5 basis-equivalence tolerance we test against).
         z = A @ q[j]
-        aj = float(q[j] @ z)
+        aj = _ddot(q[j], z)
         a[j] = aj
         if j == 0:
             z = z - aj * q[0]
@@ -2967,9 +2978,9 @@ def _tp_rlanczos(
             # sequential.
             for _ in range(2):
                 for i_o in range(j + 1):
-                    xx = float(q[i_o] @ z)
+                    xx = _ddot(q[i_o], z)
                     z = z - xx * q[i_o]
-        bj = float(np.linalg.norm(z))
+        bj = _dnrm2(z)
         b[j] = bj
         if j < n - 1:
             if bj > 0.0:
