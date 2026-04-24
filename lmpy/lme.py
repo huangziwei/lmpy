@@ -23,7 +23,8 @@ import pandas as pd
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
 
-from .formula import Name, expand, materialize, materialize_bars, parse
+from .formula import materialize_bars
+from .utils import prepare_design
 
 __all__ = ["lme"]
 
@@ -129,31 +130,23 @@ class lme:
         self.formula = formula
         self.REML = REML
 
-        f_parsed = parse(formula)
-        if not isinstance(f_parsed.lhs, Name):
-            raise NotImplementedError(
-                f"lme requires a single-name response (y ~ ...); got LHS={f_parsed.lhs!r}"
-            )
-        response = f_parsed.lhs.ident
-        ef = expand(f_parsed, data_columns=list(data.columns))
-        if not ef.bars:
+        d = prepare_design(formula, data)
+        if not d.expanded.bars:
             raise ValueError(
                 f"lme requires at least one random-effect bar; got formula={formula!r}"
             )
-
-        # NA-omit. Both materialize and materialize_bars dropna over the
-        # same set of RHS-referenced columns, so calling them on the same
-        # input keeps X (DataFrame, with index) and Z (ndarray) row-aligned.
-        data = data.dropna(subset=[response])
-        X_df = materialize(ef, data)
-        re = materialize_bars(ef, data)
-        y = data.loc[X_df.index, response].to_numpy(dtype=float)
+        # materialize_bars is called on d.data (response-NA-cleaned) so it
+        # applies the same NA-omit policy as materialize() did for X — the
+        # resulting Z stays row-aligned with X.
+        re = materialize_bars(d.expanded, d.data)
+        X_df = d.X
+        y = d.y.to_numpy(dtype=float)
         X = X_df.to_numpy(dtype=float)
         Z = re.Z
         n, p = X.shape
         q = Z.shape[1]
 
-        self.data = data
+        self.data = d.data
         self.X = X_df
         self.y = y
         self.Z = Z

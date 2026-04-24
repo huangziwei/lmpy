@@ -1,4 +1,3 @@
-from .lm import lm, data, AIC, anova
+from .lm import lm, anova
 from .lme import lme
-
-# from .glm import glm
+from .utils import AIC, data

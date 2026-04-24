@@ -7,9 +7,10 @@ from scipy.linalg import cholesky, lu, qr, solve_triangular
 from scipy.optimize import minimize
 from scipy.stats import f, norm, t
 
-from .formula import Name, expand, materialize, parse
+from .formula import materialize
+from .utils import prepare_design, significance_code
 
-__all__ = ["lm", "data"]
+__all__ = ["lm", "anova"]
 
 
 class lm:
@@ -27,19 +28,10 @@ class lm:
         self.weights = weights
         self.method = method
 
-        # design matrix — parse → expand → materialize via lmpy.formula.
-        # NA-omit: materialize drops rows with NAs in any RHS-referenced
-        # column; we drop response NAs separately so they're symmetric.
-        f_parsed = parse(formula)
-        if not isinstance(f_parsed.lhs, Name):
-            raise NotImplementedError(
-                f"only single-name response (y ~ ...) is supported; got LHS={f_parsed.lhs!r}"
-            )
-        response = f_parsed.lhs.ident
-        self._expanded = expand(f_parsed, data_columns=list(data.columns))
-        data_clean = data.dropna(subset=[response])
-        self.X = materialize(self._expanded, data_clean)
-        self.y = data_clean.loc[self.X.index, [response]]
+        d = prepare_design(formula, data)
+        self._expanded = d.expanded
+        self.X = d.X
+        self.y = d.y.to_frame()
 
         self.column_names = self.X.columns
         self.feature_names = (
@@ -70,6 +62,10 @@ class lm:
             if "(Intercept)" in self.column_names
             else self.n - self.df_model
         )
+
+        # total parameter count (p fixed + 1 residual variance), for the
+        # generic AIC() comparison table and AIC/BIC formulas below.
+        self.npar = self.p + 1
 
         ##############
         # Estimation #
@@ -377,14 +373,12 @@ class lm:
         )
 
     def compute_AIC(self):
-        # add 1 to p to keep consistent with R
+        # npar = p + 1 (residual variance) — matches R, see
         # https://stackoverflow.com/q/37917437
-        return -2 * self.loglike + 2 * (self.p + 1)
+        return -2 * self.loglike + 2 * self.npar
 
     def compute_BIC(self):
-        # add 1 to p to keep consistent with R
-        # https://stackoverflow.com/q/37917437
-        return -2 * self.loglike + np.log(self.n) * (self.p + 1)
+        return -2 * self.loglike + np.log(self.n) * self.npar
 
     def predict(self, new=None, interval=None, alpha=0.05):
         return self.compute_yhat(Xnew=new, interval=interval, alpha=alpha)
@@ -746,26 +740,8 @@ def _sse(X, y):
     return res.x, res.fun
 
 
-#########
-# Utils #
-#########
-
-
-def AIC(*ms):
-
-    aic = [m.AIC for m in ms]
-    df = [m.p + 1 for m in ms]
-    formuli = [m.formula for m in ms]
-
-    df = pd.DataFrame.from_dict({"formula": formuli, "df": df, "AIC": aic}).set_index(
-        "formula"
-    )
-
-    print(df.to_string(formatters={"AIC": "{:.2f}".format}))
-
-
 def anova(m0, m1):
-
+    """F-test ANOVA table comparing two nested LM fits."""
     models = [m0, m1]
 
     docstring = "Analysis of Variance Table\n\n"
@@ -801,48 +777,3 @@ def anova(m0, m1):
     print(df.to_string(formatters={"RSS": "{:.3f}".format}))
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
-
-
-def significance_code(p_values):
-
-    sig = []
-    for p in p_values:
-
-        if p < 0.001:
-            sig.append("***")
-        elif p < 0.01:
-            sig.append("**")
-        elif p < 0.05:
-            sig.append("*")
-        elif p < 0.1:
-            sig.append(".")
-        else:
-            sig.append(" ")
-
-    return sig
-
-
-def data(name, package="R", save_to="./data", overwrite=False):
-
-    import os
-    import urllib.request
-
-    import polars as pl
-
-    datapath = save_to + f"/{package}/"
-
-    if not os.path.exists(save_to):
-        os.makedirs(save_to)
-
-    if not os.path.exists(datapath):
-        os.makedirs(datapath)
-
-    if os.path.exists(datapath + f"{name}.csv") is True and overwrite is False:
-        pass
-    else:
-        print(f"Downloading {name} (from {package})...")
-        url = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}.csv"
-        urllib.request.urlretrieve(url, datapath + f"{name}.csv")
-
-    df = pl.read_csv(datapath + f"{name}.csv", null_values="NA").to_pandas()
-    return df
