@@ -2432,14 +2432,16 @@ def _cr_is_fixed(call: Call) -> bool:
     return False
 
 
-def _build_cr_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
-    """Build cubic regression spline (`bs="cr"`) smooth block.
+def _cr_raw(
+    call: Call, data: pd.DataFrame, term: list[str] | None = None,
+) -> tuple[np.ndarray, list[np.ndarray], np.ndarray]:
+    """Bare cr output (X, S_list, knots) — no scale.penalty, no absorb.cons.
 
-    Follows mgcv's smooth.construct.cr.smooth.spec: knots at quantiles of
-    unique(x), natural cubic basis, 2nd-deriv penalty, then absorb.cons
-    (sum-to-zero) and scale.penalty.
+    Used by te/ti/t2 which build their own reparameterization/absorb on top
+    of the marginal bases.
     """
-    term = _smooth_term_vars(call)
+    if term is None:
+        term = _smooth_term_vars(call)
     if len(term) != 1:
         raise ValueError("cr smooth must be 1D")
     x = data[term[0]].to_numpy(dtype=float)
@@ -2451,10 +2453,19 @@ def _build_cr_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     # numpy.quantile default matches R's type 7.
     knots = np.quantile(xu, np.linspace(0.0, 1.0, nk))
     X = _cr_basis(x, knots)
-    if _cr_is_fixed(call):
-        S_list: list[np.ndarray] = []
-    else:
-        S_list = [_cr_penalty(knots)]
+    S_list = [] if _cr_is_fixed(call) else [_cr_penalty(knots)]
+    return X, S_list, knots
+
+
+def _build_cr_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """Build cubic regression spline (`bs="cr"`) smooth block.
+
+    Follows mgcv's smooth.construct.cr.smooth.spec: knots at quantiles of
+    unique(x), natural cubic basis, 2nd-deriv penalty, then absorb.cons
+    (sum-to-zero) and scale.penalty.
+    """
+    term = _smooth_term_vars(call)
+    X, S_list, _knots = _cr_raw(call, data, term)
     return _apply_by_and_absorb(call, data, X, S_list, "cr.smooth.spec", term)
 
 
@@ -3724,16 +3735,70 @@ def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
 def _nat_param(
     X: np.ndarray, S: np.ndarray, rank: int, type_: int = 1, unit_fnorm: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Port of mgcv's `nat.param(X, S, rank, type=1, unit.fnorm=TRUE)`.
+    """Port of mgcv's `nat.param(X, S, rank, type, unit.fnorm)`.
 
-    QR-decomposes X and eigendecomposes R^-T S R^-1. For type=1 rescales so
-    the penalty becomes the identity on its range. unit_fnorm rescales so
-    the penalized and unpenalized blocks each have unit Frobenius norm.
+    type=1: QR on X, then eigendecompose R^-T S R^-1; rescale so the
+    penalty is identity on its range.
+    type=3: eigendecompose S directly; rescale columns by sqrt(eigenvalue)
+    (range) or by a col-norm match (null). Null-space eigenvectors are
+    post-rotated so the final column is closest to a constant vector.
 
-    Returns `(X_new, D, P)` where X_new = X @ P is the reparameterized
-    design matrix, D is the diagonal of the transformed penalty's range
-    block (length `rank`), and P is the parameter-transform matrix.
-    """
+    Returns `(X_new, D, P)`: X_new = X @ P; D is the range diagonal of the
+    transformed penalty (length `rank`); P is the parameter-transform."""
+    p = X.shape[1]
+
+    if type_ == 3:
+        S_sym = 0.5 * (S + S.T)
+        # Use LAPACK's `syevr` (MRRR) driver — for degenerate null-spaces
+        # the eigenvector basis is LAPACK-choice-dependent, and `evr` is
+        # what R's default eigen() resolves to for symmetric matrices.
+        # numpy's linalg.eigh uses `evd` (D&C), which gives a different
+        # rotation of the same null space.
+        from scipy.linalg import eigh as _sla_eigh
+        w, V = _sla_eigh(S_sym, driver="evr")
+        idx = np.argsort(-w)  # descending to match R's eigen()
+        w = w[idx]
+        V = V[:, idx]
+        null_exists = rank < p
+        E = np.ones(p)
+        if rank > 0:
+            E[:rank] = np.sqrt(np.clip(w[:rank], 0.0, None))
+        X_rot = X @ V
+        col_norm = np.sum(X_rot ** 2, axis=0) / (E ** 2)
+        av_norm = float(np.mean(col_norm[:rank])) if rank > 0 else 1.0
+        if null_exists:
+            E[rank:] = np.sqrt(col_norm[rank:] / av_norm)
+        E_safe = np.where(E > 1e-14, E, 1.0)
+        X_new = X_rot / E_safe
+        P = V / E_safe
+        # Re-rotate null space so the constant vector is the final column.
+        if null_exists and rank < p - 1:
+            ind = np.arange(rank, p)
+            rind = np.arange(p - 1, rank - 1, -1)  # reversed
+            Xn = X_new[:, ind]
+            n_rows = Xn.shape[0]
+            Xn_c = Xn - Xn.mean(axis=0, keepdims=True)
+            w_n, V_n = np.linalg.eigh(Xn_c.T @ Xn_c)
+            o = np.argsort(-w_n)
+            V_n = V_n[:, o]
+            X_new[:, rind] = X_new[:, ind] @ V_n
+            P[:, rind] = P[:, ind] @ V_n
+        D = np.zeros(rank)
+        if unit_fnorm:
+            if rank > 0:
+                scale = 1.0 / np.sqrt(np.mean(X_new[:, :rank] ** 2))
+                X_new[:, :rank] *= scale
+                P[:, :rank] *= scale
+                D = np.full(rank, scale ** 2)
+            if null_exists:
+                scalef = 1.0 / np.sqrt(np.mean(X_new[:, rank:] ** 2))
+                X_new[:, rank:] *= scalef
+                P[:, rank:] *= scalef
+        else:
+            if rank > 0:
+                D = np.ones(rank)
+        return X_new, D, P
+
     Q, R = np.linalg.qr(X, mode="reduced")
     # RSR = R^-T @ S @ R^-1.
     Y = np.linalg.solve(R.T, S)
@@ -3747,7 +3812,6 @@ def _nat_param(
     D = np.clip(w[:rank].copy(), 0.0, None)
     X_new = Q @ V
     P = np.linalg.solve(R, V)
-    p = X_new.shape[1]
 
     if type_ == 1:
         E = np.concatenate([np.sqrt(D), np.ones(p - rank)])
@@ -4116,6 +4180,483 @@ def _build_ad_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     return _apply_by_and_absorb(call, data, X, S_list, "pspline.smooth", term)
 
 
+# ---- te / ti / t2 (tensor-product smooths) ---------------------------------
+#
+# Port of mgcv's te()/ti()/t2() specifications and their constructors at
+# smooth.r:359-711 (wrappers) and smooth.r:741-887 (tensor.smooth.spec),
+# plus t2 pieces at smooth.r:911+.
+#
+# te:  margins built raw (no marginal absorb.cons); Khatri-Rao X;
+#      Kronecker-lifted penalties; outer absorb.cons.
+# ti:  like te but inter=TRUE — each margin is centered (absorb.cons) first
+#      (subject to `mc` kwarg), and the outer absorb.cons is skipped.
+# t2:  Wood's alternative: split each margin into null + range, form
+#      block-structured X and list of block-ridge penalties.
+
+
+def _te_parse_vec(val, n: int, default, cast) -> list:
+    """Parse a te-style kwarg that may be scalar or c(...). Returns a
+    length-n list. `default` is the scalar fallback; `cast` converts each
+    value."""
+    if val is None:
+        return [default] * n
+    if isinstance(val, Call) and val.fn == "c":
+        vals = [cast(a) for a in val.args]
+        if len(vals) == 1:
+            return vals * n
+        if len(vals) == n:
+            return vals
+        raise ValueError(f"c(...) length {len(vals)} doesn't match margin count {n}")
+    return [cast(val)] * n
+
+
+def _te_cast_int(node) -> int:
+    if isinstance(node, Literal) and node.kind == "num":
+        return int(node.value)
+    if isinstance(node, UnaryOp) and node.op == "-":
+        return -_te_cast_int(node.operand)
+    raise ValueError(f"expected integer literal, got {node!r}")
+
+
+def _te_cast_str(node) -> str:
+    if isinstance(node, Literal) and node.kind == "str":
+        return str(node.value)
+    raise ValueError(f"expected string literal, got {node!r}")
+
+
+def _te_cast_bool(node) -> bool:
+    if isinstance(node, Name) and node.ident in ("TRUE", "T", "FALSE", "F"):
+        return node.ident in ("TRUE", "T")
+    if isinstance(node, Literal):
+        if node.kind == "bool":
+            return bool(node.value)
+        if node.kind == "num":
+            return bool(node.value)
+    raise ValueError(f"expected boolean, got {node!r}")
+
+
+def _te_parse_margins(call: Call, data: pd.DataFrame) -> list[dict]:
+    """Parse a te/ti/t2 call into a list of margin specs.
+
+    Each margin spec is a dict `{term, bs, k, m, fx}` describing what to
+    pass to the underlying marginal smooth constructor.
+    """
+    term = _smooth_term_vars(call)
+    dim = len(term)
+    # d: number of covariates per margin. Default is c(1, ..., 1).
+    d_src = call.kwargs.get("d")
+    if d_src is None:
+        d_list = [1] * dim
+    else:
+        d_list = _te_parse_vec(d_src, dim, 1, _te_cast_int)
+        if sum(d_list) != dim:
+            raise ValueError(f"te d= must sum to dim ({sum(d_list)} != {dim})")
+    n_bases = len(d_list)
+
+    k_list = _te_parse_vec(call.kwargs.get("k"), n_bases, 5, _te_cast_int)
+    bs_list = _te_parse_vec(call.kwargs.get("bs"), n_bases, "cr", _te_cast_str)
+    fx_list = _te_parse_vec(call.kwargs.get("fx"), n_bases, False, _te_cast_bool)
+    # m is parsed as-is per margin (default NA → None here); each margin's
+    # constructor handles its own default.
+    m_src = call.kwargs.get("m")
+    if m_src is None:
+        m_list: list = [None] * n_bases
+    elif isinstance(m_src, Call) and m_src.fn == "c":
+        if len(m_src.args) == 1:
+            m_list = [m_src.args[0]] * n_bases
+        elif len(m_src.args) == n_bases:
+            m_list = list(m_src.args)
+        else:
+            raise ValueError(f"m= length {len(m_src.args)} doesn't match margin count {n_bases}")
+    else:
+        m_list = [m_src] * n_bases
+
+    # Promote bs=cr/cs/ps/cp to tp for multi-d margins.
+    for i in range(n_bases):
+        if d_list[i] > 1 and bs_list[i] in ("cr", "cs", "ps", "cp"):
+            bs_list[i] = "tp"
+
+    specs = []
+    j = 0
+    for i in range(n_bases):
+        j1 = j + d_list[i]
+        specs.append(dict(
+            term=term[j:j1], bs=bs_list[i], k=k_list[i],
+            m=m_list[i], fx=fx_list[i],
+        ))
+        j = j1
+    return specs
+
+
+def _te_make_margin_call(spec: dict) -> Call:
+    """Build a synthetic `s(term..., k=..., bs=..., m=..., fx=...)` Call
+    for a single margin so we can reuse the existing bs-specific raw
+    helpers."""
+    args: list = [Name(ident=t) for t in spec["term"]]
+    kwargs: dict = {}
+    kwargs["k"] = Literal(value=spec["k"], kind="num")
+    kwargs["bs"] = Literal(value=spec["bs"], kind="str")
+    if spec["m"] is not None:
+        kwargs["m"] = spec["m"]
+    if spec["fx"]:
+        kwargs["fx"] = Name(ident="TRUE")
+    return Call(fn="s", args=args, kwargs=kwargs)
+
+
+def _te_build_margin_raw(
+    spec: dict, data: pd.DataFrame,
+) -> tuple[np.ndarray, list[np.ndarray], object, bool]:
+    """Build the bare margin (no absorb.cons) — returns
+    `(X, S_list, predict, noterp)`. `noterp=True` signals that this basis
+    is already "nicely parameterised" and the tensor constructor should
+    skip the np=TRUE SVD reparameterization (matches mgcv's `noterp`
+    attribute on cr / cc / cs).
+    """
+    mcall = _te_make_margin_call(spec)
+    bs = spec["bs"]
+    term = spec["term"]
+    if bs == "cr":
+        X, S_list, knots = _cr_raw(mcall, data, term)
+        def _predict(x_new: np.ndarray) -> np.ndarray:
+            return _cr_basis(np.asarray(x_new, dtype=float), knots)
+        return X, S_list, _predict, True
+    if bs == "tp":
+        # No fixture exercises tp margins in te/ti yet — tp prediction
+        # needs the stored UZ transform and shift, which _tp_raw discards.
+        raise NotImplementedError("te/ti with bs='tp' margins not yet supported")
+    raise NotImplementedError(f"te/ti margin with bs={bs!r} not yet supported")
+
+
+def _te_build_margin_centered(
+    spec: dict, data: pd.DataFrame,
+) -> tuple[np.ndarray, list[np.ndarray], object, bool]:
+    """Build a centered margin (absorb.cons applied), returning
+    `(X, S_list, predict, noterp)`. Equivalent to
+    `smoothCon(..., absorb.cons=TRUE)[[1]]` but keeps the Z matrix so
+    `predict(x_new)` evaluates the raw basis at new points and applies
+    the same sum-to-zero rotation.
+    """
+    mcall = _te_make_margin_call(spec)
+    bs = spec["bs"]
+    term = spec["term"]
+    if bs == "cr":
+        X_raw, S_raw, knots = _cr_raw(mcall, data, term)
+        S_sym = [(S + S.T) / 2.0 for S in S_raw]
+        S_scaled = _scale_penalty(X_raw, S_sym)
+        C = X_raw.mean(axis=0)
+        Q, _ = np.linalg.qr(C.reshape(-1, 1), mode="complete")
+        Z = Q[:, 1:]
+        X = X_raw @ Z
+        S_list = [Z.T @ S @ Z for S in S_scaled]
+        def _predict(x_new: np.ndarray) -> np.ndarray:
+            return _cr_basis(np.asarray(x_new, dtype=float), knots) @ Z
+        return X, S_list, _predict, True
+    raise NotImplementedError(f"ti/t2 centered margin with bs={bs!r} not yet supported")
+
+
+def _te_reparam_margin(X: np.ndarray, S_list: list[np.ndarray], x_vals: np.ndarray,
+                       predict_basis) -> tuple[np.ndarray, list[np.ndarray], np.ndarray | None]:
+    """Reparameterize a margin to spread basis evenly in x (matches mgcv's
+    `np=TRUE` path at smooth.r:796-822).
+
+    Evaluates `predict_basis(knt)` at `knt = seq(min(x), max(x), length=np)`
+    where `np = ncol(X)`, SVDs that matrix, and applies `XP = V D^-1 U^T` so
+    that `X_new = X @ XP`, `S_new = XP^T @ S @ XP`. Returns None for XP if
+    the matrix is too ill-conditioned.
+    """
+    np_cols = X.shape[1]
+    knt = np.linspace(float(np.min(x_vals)), float(np.max(x_vals)), np_cols)
+    P = predict_basis(knt)
+    U, d, Vt = np.linalg.svd(P, full_matrices=False)
+    if d[-1] / d[0] < float(np.finfo(float).eps) ** 0.66:
+        return X, S_list, None
+    XP = Vt.T @ (U.T / d[:, None])  # V @ diag(1/d) @ U^T
+    X_new = X @ XP
+    S_new = [XP.T @ S @ XP for S in S_list]
+    return X_new, S_new, XP
+
+
+def _tensor_prod_X(Xm: list[np.ndarray]) -> np.ndarray:
+    """Row-wise Kronecker / Khatri-Rao product of margin X matrices.
+    Matches mgcv's `tensor.prod.model.matrix`: ith row = X[0][i,] %x% X[1][i,] %x% ...
+    (margin 0 outermost)."""
+    n = Xm[0].shape[0]
+    out = Xm[0]
+    for Xk in Xm[1:]:
+        p_out = out.shape[1]
+        p_k = Xk.shape[1]
+        out = (out[:, :, None] * Xk[:, None, :]).reshape(n, p_out * p_k)
+    return out
+
+
+def _tensor_prod_S(Sm: list[np.ndarray]) -> list[np.ndarray]:
+    """Kronecker-lift each marginal penalty over the tensor basis.
+    Matches mgcv's `tensor.prod.penalties`: S_i lifts to `I_1 ⊗ ... ⊗ S_i ⊗ ... ⊗ I_m`.
+    """
+    m = len(Sm)
+    dims = [S.shape[0] for S in Sm]
+    out: list[np.ndarray] = []
+    for i in range(m):
+        M = Sm[i] if i == 0 else np.eye(dims[0])
+        for j in range(1, m):
+            M = np.kron(M, Sm[i] if i == j else np.eye(dims[j]))
+        # Symmetrize (mgcv does this too).
+        if M.shape[0] == M.shape[1]:
+            M = 0.5 * (M + M.T)
+        out.append(M)
+    return out
+
+
+def _build_te_smooth(call: Call, data: pd.DataFrame, *, inter: bool = False,
+                     mc: list[bool] | None = None) -> list[SmoothBlock]:
+    """`te(...)` / `ti(...)` constructor.
+
+    Shared code path, differentiated by:
+      - `inter=False` (te): raw margins, outer absorb.cons applied.
+      - `inter=True` (ti): centered margins (per `mc`), no outer absorb.cons.
+    """
+    specs = _te_parse_margins(call, data)
+    n_bases = len(specs)
+
+    if inter:
+        if mc is None:
+            mc_list = [True] * n_bases
+        else:
+            # mgcv accepts 0/1 or FALSE/TRUE; length 1 recycles.
+            if len(mc) == 1:
+                mc_list = [bool(mc[0])] * n_bases
+            elif len(mc) == n_bases:
+                mc_list = [bool(v) for v in mc]
+            else:
+                raise ValueError(f"mc= length {len(mc)} doesn't match margin count {n_bases}")
+    else:
+        mc_list = [False] * n_bases
+
+    np_flag = call.kwargs.get("np")
+    do_np = True
+    if np_flag is not None:
+        do_np = _te_cast_bool(np_flag)
+
+    Xm: list[np.ndarray] = []
+    Sm: list[np.ndarray] = []
+    for i, spec in enumerate(specs):
+        if mc_list[i]:
+            Xi, Si_list, predict_i, noterp_i = _te_build_margin_centered(spec, data)
+        else:
+            Xi, Si_list, predict_i, noterp_i = _te_build_margin_raw(spec, data)
+        if len(Si_list) != 1:
+            raise ValueError(f"te margin {i} has {len(Si_list)} penalties; only one allowed")
+        S_i = Si_list[0]
+
+        # np=TRUE SVD reparam, skipped for margins that opt out (cr/cc/cs set
+        # noterp=TRUE — their basis is already "nicely parameterised").
+        if do_np and len(spec["term"]) == 1 and not noterp_i:
+            x_vals = data[spec["term"][0]].to_numpy(dtype=float)
+            Xi, S_list_new, _XP = _te_reparam_margin(Xi, [S_i], x_vals, predict_i)
+            S_i = S_list_new[0]
+
+        # Scale each marginal penalty by its largest eigenvalue.
+        eigs = np.linalg.eigvalsh(0.5 * (S_i + S_i.T))
+        top = float(eigs[-1])
+        if top > 0:
+            S_i = S_i / top
+
+        Xm.append(Xi)
+        Sm.append(S_i)
+
+    X = _tensor_prod_X(Xm)
+    S_list = _tensor_prod_S(Sm)
+
+    # fx: drop margins whose fx=TRUE.
+    for i in reversed(range(n_bases)):
+        if specs[i]["fx"]:
+            del S_list[i]
+
+    cls = "tensor.smooth"
+    label = _smooth_label(call)
+    term_all = _smooth_term_vars(call)
+
+    if inter:
+        # Skip outer absorb.cons (C = matrix(0,0,0)).
+        S_list = _scale_penalty(X, S_list)
+        return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list)]
+
+    # te: outer absorb.cons.
+    return _apply_by_and_absorb(call, data, X, S_list, cls, term_all)
+
+
+def _build_ti_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """`ti(...)` — like te but each margin is centered (absorb.cons
+    applied) before the tensor, and the outer absorb.cons is skipped.
+
+    The `mc` kwarg selects which margins get centered (default: all)."""
+    mc_src = call.kwargs.get("mc")
+    if mc_src is None:
+        mc_vals = None
+    elif isinstance(mc_src, Call) and mc_src.fn == "c":
+        mc_vals = [_te_cast_int(a) != 0 for a in mc_src.args]
+    else:
+        mc_vals = [_te_cast_int(mc_src) != 0]
+    return _build_te_smooth(call, data, inter=True, mc=mc_vals)
+
+
+def _t2_margin_raw_and_rank(
+    spec: dict, data: pd.DataFrame,
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Build a t2 margin (no absorb.cons) and return `(X, S, rank)`.
+    The marginal penalty rank determines the range/null split used by
+    `t2.model.matrix`."""
+    mcall = _te_make_margin_call(spec)
+    bs = spec["bs"]
+    term = spec["term"]
+    if bs == "cr":
+        X, S_list, _knots = _cr_raw(mcall, data, term)
+        S = 0.5 * (S_list[0] + S_list[0].T)
+        # cr null.space.dim = 2 for un-shrunk cr.
+        rank = X.shape[1] - 2
+        return X, S, rank
+    if bs == "tp":
+        X, S_list, _M, _k, rank = _tp_raw(mcall, data, term)
+        S = 0.5 * (S_list[0] + S_list[0].T)
+        return X, S, rank
+    raise NotImplementedError(f"t2 margin with bs={bs!r} not yet supported")
+
+
+def _t2_model_matrix(
+    Xm: list[np.ndarray], ranks: list[int],
+) -> tuple[np.ndarray, list[int]]:
+    """Port of mgcv's `t2.model.matrix` with `full=FALSE, ord=NULL`.
+
+    Each margin's X is split into range (first `rank[i]` cols) and null
+    (remaining cols). Builds all Kronecker combinations and returns
+    `(X, sub_cols)` where `sub_cols` is the column count per sub-block
+    with the trailing all-null block dropped (that block is unpenalized).
+    """
+    n = Xm[0].shape[0]
+
+    def _row_kron(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+        pa, pb = A.shape[1], B.shape[1]
+        return (A[:, :, None] * B[:, None, :]).reshape(n, pa * pb)
+
+    r0 = ranks[0]
+    Z0 = Xm[0][:, :r0]
+    null0_exists = r0 < Xm[0].shape[1]
+    blocks: list[np.ndarray] = [Z0]
+    if null0_exists:
+        blocks.append(Xm[0][:, r0:])
+    no_null = not null0_exists
+
+    for i in range(1, len(Xm)):
+        ri = ranks[i]
+        Zi = Xm[i][:, :ri]
+        null_i_exists = ri < Xm[i].shape[1]
+        if not null_i_exists:
+            no_null = True
+        Ni = Xm[i][:, ri:] if null_i_exists else None
+        new_blocks: list[np.ndarray] = []
+        # Range products first: X1[ii] * Zi for all ii.
+        for Xii in blocks:
+            new_blocks.append(_row_kron(Xii, Zi))
+        # Then null products: X1[ii] * Ni for all ii (if null exists).
+        if null_i_exists:
+            for Xii in blocks:
+                new_blocks.append(_row_kron(Xii, Ni))
+        blocks = new_blocks
+
+    sub_cols = [B.shape[1] for B in blocks]
+    X = np.concatenate(blocks, axis=1)
+    if not no_null:
+        # Trailing block is the pure null×null×... tail — unpenalized.
+        sub_cols = sub_cols[:-1]
+    return X, sub_cols
+
+
+def _build_t2_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """`t2(...)` — Wood's alternative tensor product.
+
+    Each margin is reparameterized by `nat.param(type=3, unit.fnorm=TRUE)`
+    so its penalty becomes diag([1..1, 0..0]) with range (rank) first, then
+    null. `t2.model.matrix(full=FALSE)` builds sub-blocks via all Kronecker
+    combinations; each penalized sub-block gets a simple identity ridge.
+    The tensor's null space is then constrained by a single row C
+    (smooth.r:1117-1120) before scaling and constraint absorption.
+    """
+    specs = _te_parse_margins(call, data)
+    n_bases = len(specs)
+
+    Xm: list[np.ndarray] = []
+    ranks: list[int] = []
+    for spec in specs:
+        Xi_raw, Si, ri = _t2_margin_raw_and_rank(spec, data)
+        Xi_np, _D, _P = _nat_param(Xi_raw, Si, rank=ri, type_=3, unit_fnorm=True)
+        Xm.append(Xi_np)
+        ranks.append(ri)
+
+    X, sub_cols = _t2_model_matrix(Xm, ranks)
+    nsc = len(sub_cols)
+    p = X.shape[1]
+
+    # Penalties: simple ridge on each sub-block.
+    cx = [0]
+    for s in sub_cols:
+        cx.append(cx[-1] + s)
+    S_list: list[np.ndarray] = []
+    for j in range(nsc):
+        D = np.zeros(p)
+        D[cx[j]:cx[j + 1]] = 1.0
+        S_list.append(np.diag(D))
+
+    # fx handling: drop penalties for margins marked fx (mgcv only has per-margin fx,
+    # but applies it per-sub-block by index — no fixture exercises it here).
+    for i in reversed(range(n_bases)):
+        if specs[i]["fx"]:
+            raise NotImplementedError("t2 with fx=TRUE not yet supported")
+
+    # Tensor null-space constraint (smooth.r:1117-1120). Rank of the null is
+    # p - sum(sub_cols). Build C = [0_{nup}, colSums(X[:, nup:])] as 1×p.
+    nup = sum(sub_cols)
+    null_dim = p - nup
+    cls = "t2.smooth"
+    label = _smooth_label(call)
+    term_all = _smooth_term_vars(call)
+
+    if null_dim == 0:
+        # No null space, no identifiability constraint needed.
+        S_list = _scale_penalty(X, S_list)
+        return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list)]
+
+    if null_dim == 1:
+        # Fix the single null-space parameter to zero — drop its column (smooth.r:1118).
+        keep = np.ones(p, dtype=bool)
+        keep[-1] = False
+        X = X[:, keep]
+        S_list = [S[np.ix_(keep, keep)] for S in S_list]
+        S_list = _scale_penalty(X, S_list)
+        return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list)]
+
+    # Partial absorb.cons (smooth.r:4076-4100): C has zero cols on the range
+    # space, so only the null-space cols of X / S get rotated. QR is on the
+    # nx×1 slice cN = colSums(X_N); Z' = Q[:, 1:] spans the null of cN within
+    # the null-space coordinates. Range-space cols pass through unchanged.
+    S_list = _scale_penalty(X, S_list)
+    X_R = X[:, :nup]
+    X_N = X[:, nup:]
+    cN = X_N.sum(axis=0).reshape(-1, 1)
+    Qn, _ = np.linalg.qr(cN, mode="complete")
+    Zn = Qn[:, 1:]
+    X = np.concatenate([X_R, X_N @ Zn], axis=1)
+    S_list_new: list[np.ndarray] = []
+    for S in S_list:
+        S_RR = S[:nup, :nup]
+        S_RN = S[:nup, nup:] @ Zn
+        S_NR = Zn.T @ S[nup:, :nup]
+        S_NN = Zn.T @ S[nup:, nup:] @ Zn
+        top = np.concatenate([S_RR, S_RN], axis=1)
+        bot = np.concatenate([S_NR, S_NN], axis=1)
+        S_list_new.append(np.concatenate([top, bot], axis=0))
+    return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list_new)]
+
+
 def materialize_smooths(
     expanded: ExpandedFormula, data: pd.DataFrame,
 ) -> list[list[SmoothBlock]]:
@@ -4137,6 +4678,16 @@ def materialize_smooths(
 
     out: list[list[SmoothBlock]] = []
     for call in expanded.smooths:
+        # Tensor-product smooths dispatch by the top-level fn (te/ti/t2),
+        # not by `bs=` (which in their case describes each margin's basis).
+        if call.fn in ("te", "ti", "t2"):
+            if call.fn == "te":
+                out.append(_build_te_smooth(call, data))
+            elif call.fn == "ti":
+                out.append(_build_ti_smooth(call, data))
+            else:
+                out.append(_build_t2_smooth(call, data))
+            continue
         bs = _smooth_bs(call)
         if bs == "re":
             out.append(_build_re_smooth(call, data))
