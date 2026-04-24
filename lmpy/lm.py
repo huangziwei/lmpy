@@ -3,10 +3,11 @@ from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from formulaic import model_matrix
 from scipy.linalg import cholesky, lu, qr, solve_triangular
 from scipy.optimize import minimize
 from scipy.stats import f, norm, t
+
+from .formula import Name, expand, materialize, parse
 
 __all__ = ["lm", "data"]
 
@@ -26,13 +27,24 @@ class lm:
         self.weights = weights
         self.method = method
 
-        # design matrix
-        self.y, self.X = model_matrix(formula, data)
+        # design matrix — parse → expand → materialize via lmpy.formula.
+        # NA-omit: materialize drops rows with NAs in any RHS-referenced
+        # column; we drop response NAs separately so they're symmetric.
+        f_parsed = parse(formula)
+        if not isinstance(f_parsed.lhs, Name):
+            raise NotImplementedError(
+                f"only single-name response (y ~ ...) is supported; got LHS={f_parsed.lhs!r}"
+            )
+        response = f_parsed.lhs.ident
+        self._expanded = expand(f_parsed, data_columns=list(data.columns))
+        data_clean = data.dropna(subset=[response])
+        self.X = materialize(self._expanded, data_clean)
+        self.y = data_clean.loc[self.X.index, [response]]
 
         self.column_names = self.X.columns
         self.feature_names = (
             self.column_names[1:]
-            if "Intercept" in self.column_names
+            if "(Intercept)" in self.column_names
             else self.column_names
         )
 
@@ -50,12 +62,12 @@ class lm:
         self.W = W = np.eye(n) if weights is None else np.diag(weights)
 
         # model degree of freedom
-        self.df_model = self.p - 1 if "Intercept" in self.column_names else self.p
+        self.df_model = self.p - 1 if "(Intercept)" in self.column_names else self.p
 
         # residual degrees of freedom (n - p)
         self.df_residuals = (
             self.n - self.df_model - 1
-            if "Intercept" in self.column_names
+            if "(Intercept)" in self.column_names
             else self.n - self.df_model
         )
 
@@ -241,7 +253,7 @@ class lm:
         if Xnew is None:
             X = self.X.values
         else:
-            X = self.X.model_spec.get_model_matrix(Xnew).values
+            X = materialize(self._expanded, Xnew).values
         # compute predicted or fitted values ŷ = Xβ̂
         bhat = self.bhat.values.T
         yhat = X @ bhat
@@ -270,7 +282,7 @@ class lm:
         if Xnew is None:
             X = self.X.values
         else:
-            X = self.X.model_spec.get_model_matrix(Xnew).values
+            X = materialize(self._expanded, Xnew).values
 
         sigma = self.sigma
         sigma_squared = self.sigma_squared
@@ -295,7 +307,7 @@ class lm:
         if Xnew is None:
             X = self.X.values
         else:
-            X = self.X.model_spec.get_model_matrix(Xnew).values
+            X = materialize(self._expanded, Xnew).values
 
         sigma = self.sigma
         sigma_squared = self.sigma_squared
@@ -332,7 +344,7 @@ class lm:
 
         y = self.y.values
 
-        if "Intercept" in self.column_names:
+        if "(Intercept)" in self.column_names:
             tss = np.sum((y - y.mean()) ** 2)
             # Eq: r2 = 1 - RSS / TSS = 1 -  sum((ŷ - yi)**2) / sum((y - ȳ)**2)
             r_squared = (1 - self.rss / tss).squeeze()
@@ -406,9 +418,9 @@ class lm:
         if cor is True:
 
             docstring += f"\n\nCorrelation of Coefficients:\n"
-            if "Intercept" in self.column_names:
+            if "(Intercept)" in self.column_names:
                 docstring += (
-                    self.X.drop("Intercept", axis=1)
+                    self.X.drop("(Intercept)", axis=1)
                     .corr()
                     .to_string(
                         formatters={col: "{:.2f}".format for col in self.X.columns}

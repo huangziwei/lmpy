@@ -20,25 +20,9 @@ from conftest import load_dataset
 from lmpy import lm
 
 
-def _resolve_col(m, name):
-    """Resolve a coefficient column; accepts a string or list of candidates.
-
-    Why: factor and I() column names diverge across backends (formulaic
-    'group[T.trt1]' vs R/formula.py 'grouptrt1'). A list lets the same
-    test survive the formulaic→formula.py migration.
-    """
-    if isinstance(name, str):
-        if name in m.bhat.columns:
-            return name
-        raise KeyError(f"{name!r} not in {list(m.bhat.columns)!r}")
-    for n in name:
-        if n in m.bhat.columns:
-            return n
-    raise KeyError(f"None of {list(name)!r} in {list(m.bhat.columns)!r}")
-
-
-def _assert_coef(m, name, est, se=None, tval=None, pval=None):
-    col = _resolve_col(m, name)
+def _assert_coef(m, col, est, se=None, tval=None, pval=None):
+    if col not in m.bhat.columns:
+        raise KeyError(f"{col!r} not in {list(m.bhat.columns)!r}")
     np.testing.assert_allclose(m.bhat[col].iloc[0], est, atol=5e-3)
     if se is not None:
         np.testing.assert_allclose(m.se_bhat[col].iloc[0], se, atol=5e-3)
@@ -98,7 +82,7 @@ def test_faraway_2_6_gala():
         fstats=15.6994, f_pvalue=6.837893e-07,
         loglike=-162.5350, AIC=339.0700, BIC=348.8784,
     )
-    _assert_coef(m, "Intercept",  7.068, 19.154,  0.369, 0.715)
+    _assert_coef(m, "(Intercept)",  7.068, 19.154,  0.369, 0.715)
     _assert_coef(m, "Area",      -0.024,  0.022, -1.068, 0.296)
     _assert_coef(m, "Adjacent",  -0.075,  0.018, -4.226, 0.000)
     _assert_coef(m, "Elevation",  0.319,  0.054,  5.953, 0.000)
@@ -116,13 +100,13 @@ def test_faraway_2_10_odor():
         fstats=1.8361, f_pvalue=0.20,
         loglike=-72.7155, AIC=155.4310, BIC=158.9713,
     )
-    _assert_coef(m, "Intercept",  15.200,  9.298,  1.635, 0.130)
+    _assert_coef(m, "(Intercept)",  15.200,  9.298,  1.635, 0.130)
     _assert_coef(m, "temp",      -12.125, 12.732, -0.952, 0.361)
     _assert_coef(m, "gas",       -17.000, 12.732, -1.335, 0.209)
     _assert_coef(m, "pack",      -21.375, 12.732, -1.679, 0.121)
 
     # cor=True path: odor is an orthogonal design — feature corr ≈ I.
-    feats = [c for c in m.X.columns if c != "Intercept"]
+    feats = [c for c in m.X.columns if c != "(Intercept)"]
     corr = m.X[feats].corr().values
     np.testing.assert_allclose(corr, np.eye(len(feats)), atol=1e-2)
 
@@ -210,7 +194,7 @@ def test_wood_1_5_sperm_main_effects():
         fstats=5.0562, f_pvalue=0.03,
         loglike=-93.3673, AIC=194.7346, BIC=197.5668,
     )
-    _assert_coef(m, "Intercept",     357.418,  88.082,  4.058, 0.002)
+    _assert_coef(m, "(Intercept)",     357.418,  88.082,  4.058, 0.002)
     _assert_coef(m, "time.ipc",        1.942,   0.907,  2.141, 0.053)
     _assert_coef(m, "prop.partner", -339.560, 126.253, -2.690, 0.020)
 
@@ -226,12 +210,8 @@ def test_wood_1_5_sperm_interaction_with_I():
         fstats=6.5888, f_pvalue=0.01,
         loglike=-92.3937, AIC=192.7874, BIC=195.6196,
     )
-    _assert_coef(
-        m,
-        ["I(prop.partner * time.ipc)", "I(prop.partner*time.ipc)", "prop.partner*time.ipc"],
-        -5.478, 1.741, -3.146, 0.008,
-    )
-    _assert_coef(m, "Intercept", 140.470, 64.063, 2.193, 0.049)
+    _assert_coef(m, "I(prop.partner * time.ipc)", -5.478, 1.741, -3.146, 0.008)
+    _assert_coef(m, "(Intercept)", 140.470, 64.063, 2.193, 0.049)
     _assert_coef(m, "time.ipc",    5.618,  1.549, 3.626, 0.003)
 
 
@@ -261,9 +241,9 @@ def test_wood_1_6_4_plantgrowth():
         fstats=4.8461, f_pvalue=0.02,
         loglike=-26.8095, AIC=61.6190, BIC=67.2238,
     )
-    _assert_coef(pgm1, "Intercept", 5.032, 0.197, 25.527, 0.000)
-    _assert_coef(pgm1, ["group[T.trt1]", "grouptrt1"], -0.371, 0.279, -1.331, 0.194)
-    _assert_coef(pgm1, ["group[T.trt2]", "grouptrt2"],  0.494, 0.279,  1.772, 0.088)
+    _assert_coef(pgm1, "(Intercept)", 5.032, 0.197, 25.527, 0.000)
+    _assert_coef(pgm1, "grouptrt1", -0.371, 0.279, -1.331, 0.194)
+    _assert_coef(pgm1, "grouptrt2",  0.494, 0.279,  1.772, 0.088)
 
     _assert_summary(
         pgm0, n=30, p=1, df_residuals=29, sigma=0.701,
@@ -271,7 +251,7 @@ def test_wood_1_6_4_plantgrowth():
         fstats=None, f_pvalue=None,
         loglike=-31.4104, AIC=66.8208, BIC=69.6232,
     )
-    _assert_coef(pgm0, "Intercept", 5.073, 0.128, 39.627, 0.0)
+    _assert_coef(pgm0, "(Intercept)", 5.073, 0.128, 39.627, 0.0)
 
     # anova(pgm0, pgm1)
     np.testing.assert_allclose(pgm0.rss, 14.258, atol=5e-3)
@@ -296,7 +276,7 @@ def test_gelman_3_4_kidiq_two_predictors():
         fstats=58.7241, f_pvalue=2.793258e-23,
         loglike=-1871.9945, AIC=3751.9890, BIC=3768.2812,
     )
-    _assert_coef(m, "Intercept", 25.732, 5.875, 4.380, 0.000)
+    _assert_coef(m, "(Intercept)", 25.732, 5.875, 4.380, 0.000)
     _assert_coef(m, "mom.hs",     5.950, 2.212, 2.690, 0.007)
     _assert_coef(m, "mom.iq",     0.564, 0.061, 9.309, 0.000)
 
@@ -311,7 +291,7 @@ def test_gelman_3_5_kidiq_iq_only():
         fstats=108.6428, f_pvalue=7.661950e-23,
         loglike=-1875.6079, AIC=3757.2158, BIC=3769.4349,
     )
-    _assert_coef(m, "Intercept", 25.80, 5.917,  4.360, 0.0)
+    _assert_coef(m, "(Intercept)", 25.80, 5.917,  4.360, 0.0)
     _assert_coef(m, "mom.iq",     0.61, 0.059, 10.423, 0.0)
 
 
@@ -325,7 +305,7 @@ def test_gelman_3_5_kidiq_interaction():
         fstats=42.8389, f_pvalue=3.066596e-24,
         loglike=-1867.5429, AIC=3745.0857, BIC=3765.4510,
     )
-    _assert_coef(m, "Intercept",   -11.482, 13.758, -0.835, 0.404)
+    _assert_coef(m, "(Intercept)",   -11.482, 13.758, -0.835, 0.404)
     _assert_coef(m, "mom.hs",       51.268, 15.338,  3.343, 0.001)
     _assert_coef(m, "mom.iq",        0.969,  0.148,  6.531, 0.000)
     _assert_coef(m, "mom.hs:mom.iq", -0.484, 0.162, -2.985, 0.003)
@@ -337,9 +317,8 @@ def test_gelman_3_5_kidiq_interaction():
 
 
 def test_breheny_airquality():
-    # n=111 < 153 implies NA-row dropping based on referenced columns
-    # (Ozone has 37 NAs, Solar.R has 7). Currently handled by formulaic;
-    # the migration will need formula.py / lm.py to preserve this.
+    # NA-omit: Ozone has 37 NAs, Solar.R has 7. R-style na.omit on referenced
+    # columns leaves 111 rows.
     df = load_dataset("R", "airquality")
     m = lm("Ozone ~ Solar.R + Wind + Temp", data=df)
 
@@ -349,7 +328,7 @@ def test_breheny_airquality():
         fstats=54.8337, f_pvalue=1.508994e-21,
         loglike=-494.3586, AIC=998.7171, BIC=1012.2648,
     )
-    _assert_coef(m, "Intercept", -64.342, 23.055, -2.791, 0.006)
+    _assert_coef(m, "(Intercept)", -64.342, 23.055, -2.791, 0.006)
     _assert_coef(m, "Solar.R",     0.060,  0.023,  2.580, 0.011)
     _assert_coef(m, "Wind",       -3.334,  0.654, -5.094, 0.000)
     _assert_coef(m, "Temp",        1.652,  0.254,  6.516, 0.000)
