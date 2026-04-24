@@ -239,6 +239,10 @@ class lme:
         self.sigma = sigma
         self.sigma_squared = sigma2
 
+        # Fitted values ŷ = Xβ̂ + Z Λ û and residuals ε̂ = y − ŷ
+        self.fitted = X @ beta + ZL @ self._u
+        self.residuals = y - self.fitted
+
         # Var(β̂) = σ̂² (XᵀX_eff)⁻¹ = σ̂² R_x⁻ᵀ R_x⁻¹
         Rx_inv = solve_triangular(Rx, np.eye(p), lower=True)
         var_beta = sigma2 * (Rx_inv ** 2).sum(axis=0)
@@ -398,9 +402,21 @@ class lme:
     def __str__(self) -> str:
         return self.__repr__()
 
+    def _scaled_residuals_lines(self) -> list[str]:
+        scaled = self.residuals / self.sigma
+        qs = np.quantile(scaled, [0.0, 0.25, 0.5, 0.75, 1.0])
+        labels = ["Min", "1Q", "Median", "3Q", "Max"]
+        vals = [f"{v:.4f}" for v in qs]
+        widths = [max(len(l), len(v)) for l, v in zip(labels, vals)]
+        hdr = " ".join(l.rjust(w) for l, w in zip(labels, widths))
+        row = " ".join(v.rjust(w) for v, w in zip(vals, widths))
+        return ["Scaled residuals:", hdr, row]
+
     def summary(self, digits: int = 4) -> None:
         out = [self._header(), f"Formula: {self.formula}", ""]
         out.extend(self._fit_criterion_lines())
+        out.append("")
+        out.extend(self._scaled_residuals_lines())
         out.append("")
         out.append("Random effects:")
         out.extend(self._re_table_lines(include_variance=True))
