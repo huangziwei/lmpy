@@ -10,7 +10,7 @@ from scipy.stats import f, norm, t
 from .formula import materialize
 from .utils import prepare_design, significance_code
 
-__all__ = ["lm", "anova"]
+__all__ = ["lm"]
 
 
 class lm:
@@ -740,40 +740,3 @@ def _sse(X, y):
     return res.x, res.fun
 
 
-def anova(m0, m1):
-    """F-test ANOVA table comparing two nested LM fits."""
-    models = [m0, m1]
-
-    docstring = "Analysis of Variance Table\n\n"
-    for i, model in enumerate(models):
-        docstring += f"model {i}: {model.formula}\n"
-
-    df0 = m0.df_residuals
-    df1 = m1.df_residuals
-
-    rss0 = m0.rss
-    rss1 = m1.rss
-
-    fstat = ((rss0 - rss1) / (df0 - df1)) / (rss1 / df1)
-    f_p_value = f.sf(fstat, df0 - df1, df1)
-    res = significance_code([f_p_value])[0]
-
-    df_model = ["", f"{df0-df1:.0f}"]
-    SoS = ["", f"{np.sum((m1.yhat.values - m1.y.values.mean())**2):.3f}"]
-
-    df = pd.DataFrame.from_dict(
-        {
-            "Res.Df": [df0, df1],
-            "RSS": [rss0, rss1],
-            "Df": df_model,
-            "Sum of Sq": SoS,
-            "F": ["", f"{fstat:.3f}"],
-            "Pr(>F)": ["", f"{f_p_value:.3f}"],
-            " ": ["", res],
-        }
-    )
-
-    print(docstring)
-    print(df.to_string(formatters={"RSS": "{:.3f}".format}))
-    print("---")
-    print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")

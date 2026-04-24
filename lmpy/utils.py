@@ -7,10 +7,11 @@ Includes:
   models specialize as they see fit.
 * ``data`` — fetches a CSV from this repo's ``datasets/`` tree
   (downloading on first access).
-* ``AIC`` — model-comparison table that prints AIC + parameter count for
-  each model, keyed by formula.
 * ``significance_code`` — R-style ``***``/``**``/``*``/``.`` formatter
   for p-values.
+
+Model-comparison helpers (``anova``, ``AIC``, ``BIC``) live in
+``lmpy.compare``.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ import pandas as pd
 
 from .formula import ExpandedFormula, Name, expand, materialize, parse
 
-__all__ = ["Design", "prepare_design", "data", "AIC", "significance_code"]
+__all__ = ["Design", "prepare_design", "data", "significance_code"]
 
 
 @dataclass(slots=True)

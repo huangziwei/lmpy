@@ -1,3 +1,4 @@
-from .lm import lm, anova
+from .compare import AIC, BIC, anova
+from .lm import lm
 from .lme import lme
-from .utils import AIC, data
+from .utils import data
