@@ -27,8 +27,15 @@ import timeit
 import traceback
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 import yaml
+
+try:
+    import pandas as pd
+    _HAS_PANDAS = True
+except ImportError:
+    pd = None
+    _HAS_PANDAS = False
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -59,7 +66,8 @@ VERSIONS = {
     "lmpy": _version("lmpy"),
     "formulaic": _version("formulaic"),
     "formulae": _version("formulae"),
-    "pandas": _version("pandas"),
+    "polars": _version("polars"),
+    "pandas": _version("pandas") if _HAS_PANDAS else "not installed",
     "numpy": _version("numpy"),
 }
 
@@ -93,7 +101,8 @@ def load_suite() -> list[dict]:
     return out
 
 
-_df_cache: dict[str, pd.DataFrame] = {}
+_pd_cache: dict = {}
+_pl_cache: dict[str, pl.DataFrame] = {}
 
 
 def _split_csv_row(line: str) -> list[tuple[str, bool]]:
@@ -158,8 +167,13 @@ def _detect_quoted_columns(path, max_rows: int = 200) -> set[str]:
     return {h for h, q in zip(header, quoted) if q and h}
 
 
-def load_df(dataset: str) -> pd.DataFrame:
-    if dataset not in _df_cache:
+def load_df_pd(dataset: str):
+    if not _HAS_PANDAS:
+        raise RuntimeError(
+            "pandas is required to benchmark formulaic/formulae; "
+            "install pandas or pass --libs lmpy"
+        )
+    if dataset not in _pd_cache:
         pkg, name = dataset.split("/", 1)
         path = DATASETS / pkg / f"{name}.csv"
         quoted = _detect_quoted_columns(path)
@@ -169,14 +183,35 @@ def load_df(dataset: str) -> pd.DataFrame:
         # mirror that so `s(x0)` on a quoted-int column hits the factor path.
         for c in quoted:
             df[c] = df[c].astype("category")
-        _df_cache[dataset] = df
-    return _df_cache[dataset]
+        _pd_cache[dataset] = df
+    return _pd_cache[dataset]
 
 
-def scale(df: pd.DataFrame, factor: int) -> pd.DataFrame:
+def load_df_pl(dataset: str) -> pl.DataFrame:
+    if dataset not in _pl_cache:
+        pkg, name = dataset.split("/", 1)
+        path = DATASETS / pkg / f"{name}.csv"
+        quoted = _detect_quoted_columns(path)
+        schema_overrides = {c: pl.String for c in quoted} if quoted else None
+        df = pl.read_csv(path, null_values="NA", schema_overrides=schema_overrides)
+        if quoted:
+            df = df.with_columns([
+                pl.col(c).cast(pl.Categorical) for c in quoted if c in df.columns
+            ])
+        _pl_cache[dataset] = df
+    return _pl_cache[dataset]
+
+
+def scale_pd(df, factor: int):
     if factor <= 1:
         return df
     return pd.concat([df] * factor, ignore_index=True)
+
+
+def scale_pl(df: pl.DataFrame, factor: int) -> pl.DataFrame:
+    if factor <= 1:
+        return df
+    return pl.concat([df] * factor)
 
 
 # ---- per-library callables -------------------------------------------------
@@ -187,35 +222,34 @@ def scale(df: pd.DataFrame, factor: int) -> pd.DataFrame:
 # to parametric when the full pipeline hits data-insufficiency (e.g. a smooth
 # that needs more unique covariate rows than the fixture data provides).
 
-def _lmpy(formula_str: str, df: pd.DataFrame, kind: str, scope: str = "full"):
-    import polars as pl
-    df_pl = pl.from_pandas(df)
+def _lmpy(formula_str: str, df: pl.DataFrame, kind: str, scope: str = "full"):
     f = parse(formula_str)
-    ex = expand(f, list(df_pl.columns))
-    X = materialize(ex, df_pl)
+    ex = expand(f, list(df.columns))
+    X = materialize(ex, df)
     if scope == "parametric":
         return X
     if kind == "lme4" and ex.bars:
-        materialize_bars(ex, df_pl)
+        materialize_bars(ex, df)
     elif kind == "mgcv" and ex.smooths:
-        materialize_smooths(ex, df_pl)
+        materialize_smooths(ex, df)
     return X
 
 
-def _formulaic(formula_str: str, df: pd.DataFrame, kind: str, scope: str = "full"):
+def _formulaic(formula_str: str, df, kind: str, scope: str = "full"):
     from formulaic import Formula
     return Formula(formula_str).get_model_matrix(df)
 
 
-def _formulae(formula_str: str, df: pd.DataFrame, kind: str, scope: str = "full"):
+def _formulae(formula_str: str, df, kind: str, scope: str = "full"):
     from formulae import design_matrices
     return design_matrices(formula_str, df)
 
 
-LIBS: list[tuple[str, callable]] = [
-    ("lmpy", _lmpy),
-    ("formulaic", _formulaic),
-    ("formulae", _formulae),
+# Each lib's native DataFrame flavor: lmpy → polars, formulaic/formulae → pandas.
+LIBS: list[tuple[str, callable, str]] = [
+    ("lmpy", _lmpy, "pl"),
+    ("formulaic", _formulaic, "pd"),
+    ("formulae", _formulae, "pd"),
 ]
 
 
@@ -274,7 +308,7 @@ def time_one(fn, *args, reps: int, warmup: int) -> dict:
     }
 
 
-def bench_cell(lib: str, fn, fx: dict, df: pd.DataFrame, reps: int, warmup: int) -> dict:
+def bench_cell(lib: str, fn, fx: dict, df, reps: int, warmup: int) -> dict:
     row = {
         "library": lib,
         "version": VERSIONS.get(lib, "?"),
@@ -339,7 +373,8 @@ def run(out: Path, limit: int | None, reps: int, warmup: int, scales: list[int],
     SUITE_OUT.parent.mkdir(parents=True, exist_ok=True)
     SUITE_OUT.write_text(json.dumps(suite, indent=2))
 
-    selected = [(name, fn) for name, fn in LIBS if not libs or name in libs]
+    selected = [(name, fn, flavor) for name, fn, flavor in LIBS
+                if not libs or name in libs]
 
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", newline="") as fh:
@@ -355,11 +390,17 @@ def run(out: Path, limit: int | None, reps: int, warmup: int, scales: list[int],
         total = len(suite) * len(selected) * len(scales)
         i = 0
         t0 = time.time()
+        needs_pd = any(flavor == "pd" for _, _, flavor in selected)
+        needs_pl = any(flavor == "pl" for _, _, flavor in selected)
         for fx in suite:
-            base_df = load_df(fx["dataset"])
+            base_pd = load_df_pd(fx["dataset"]) if needs_pd else None
+            base_pl = load_df_pl(fx["dataset"]) if needs_pl else None
             for s in scales:
-                df = scale(base_df, s)
-                for name, fn in selected:
+                df_pd = scale_pd(base_pd, s) if needs_pd else None
+                df_pl = scale_pl(base_pl, s) if needs_pl else None
+                n_rows = len(df_pl) if df_pl is not None else len(df_pd)
+                for name, fn, flavor in selected:
+                    df = df_pl if flavor == "pl" else df_pd
                     i += 1
                     row = bench_cell(name, fn, fx, df, reps=reps, warmup=warmup)
                     row["scale"] = s
@@ -370,7 +411,7 @@ def run(out: Path, limit: int | None, reps: int, warmup: int, scales: list[int],
                     t_str = f"{row['min_s']:.2e}" if isinstance(row["min_s"], float) else "-"
                     print(
                         f"[{i:4d}/{total}] {name:10s} {fx['kind']:5s} "
-                        f"{fx['id']:10s} s={s:<3} n={len(df):<6} "
+                        f"{fx['id']:10s} s={s:<3} n={n_rows:<6} "
                         f"{tag:11s} {t_str}  [{elapsed:5.1f}s]",
                         flush=True,
                     )
