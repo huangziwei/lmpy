@@ -22,11 +22,49 @@ import numpy as np
 import pandas as pd
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
+from sksparse.cholmod import (
+    CholmodError,
+    cho_factor,
+    csc_array,
+    eye_array,
+)
 
 from .formula import materialize_bars
 from .utils import prepare_design
 
 __all__ = ["lme", "Profile"]
+
+
+def _sparse_Lt_spec(
+    template: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Precompute the CSC structure of Λᵀ from the integer template.
+
+    Returns ``(theta_pos, indices, indptr)`` such that for any θ vector,
+    ``csc_array((theta[theta_pos], indices, indptr), shape=template.shape)``
+    reconstructs Λᵀ. Because the structure is fixed, CHOLMOD can reuse the
+    symbolic analysis across every deviance evaluation.
+    """
+    q = template.shape[0]
+    indptr = np.empty(q + 1, dtype=np.int32)
+    indptr[0] = 0
+    indices_parts: list[np.ndarray] = []
+    theta_pos_parts: list[np.ndarray] = []
+    for j in range(q):
+        col = template[:, j]
+        nz_rows = np.nonzero(col)[0]
+        indices_parts.append(nz_rows.astype(np.int32))
+        theta_pos_parts.append((col[nz_rows] - 1).astype(np.int64))
+        indptr[j + 1] = indptr[j] + nz_rows.size
+    indices = (
+        np.concatenate(indices_parts) if indices_parts
+        else np.zeros(0, dtype=np.int32)
+    )
+    theta_pos = (
+        np.concatenate(theta_pos_parts) if theta_pos_parts
+        else np.zeros(0, dtype=np.int64)
+    )
+    return theta_pos, indices, indptr
 
 
 def _bar_sizes(cnms: dict) -> list[int]:
@@ -161,10 +199,18 @@ class lme:
         self.n_groups = {g: len(levs) for g, levs in re.flist_levels.items()}
 
         # ------------- profiled-deviance optimization ----------------------
+        #
+        # Z and Λᵀ are stored sparse (CSC). The hot step — the Cholesky of
+        # ``M = Λ Zᵀ Z Λᵀ + I`` — goes through ``sksparse.cholmod`` (CHOLMOD
+        # with AMD reordering). The symbolic factor is computed once on the
+        # first factorization and reused by ``factor.factorize(M_new)`` every
+        # subsequent call; only the numeric re-factor runs inside the
+        # optimizer loop. Without this, InstEval-class fits (q ≈ 4k) sit in
+        # dense Cholesky for O(q³) flops per deviance eval.
         template = re.Lambdat
-        nz_mask = template > 0
-        theta_pos = template[nz_mask] - 1  # 0-indexed θ position per nz cell
-        eye_q = np.eye(q)
+        lt_theta_pos, lt_indices, lt_indptr = _sparse_Lt_spec(template)
+        Z_sp = csc_array(Z)
+        eye_q_sp = eye_array(q, format="csc")
         XtX = X.T @ X
         Xty = X.T @ y
         yty = float(y @ y)
@@ -172,9 +218,13 @@ class lme:
 
         # Cache pieces profile() and other post-fit methods reuse.
         self._template = template
-        self._nz_mask = nz_mask
-        self._theta_pos = theta_pos
-        self._eye_q = eye_q
+        self._lt_theta_pos = lt_theta_pos
+        self._lt_indices = lt_indices
+        self._lt_indptr = lt_indptr
+        self._lt_shape = template.shape
+        self._Z_sp = Z_sp
+        self._eye_q_sp = eye_q_sp
+        self._chol_factor = None
         self._XtX = XtX
         self._Xty = Xty
         self._yty = yty
@@ -199,19 +249,34 @@ class lme:
         self._optim = res
 
         # ------------- recover β̂, σ̂, SE(β̂) at the optimum ------------------
-        Lt = self._build_Lt(theta_hat)
-        ZL = Z @ Lt.T
-        M = ZL.T @ ZL + eye_q
-        Lz = np.linalg.cholesky(M)
-        cu = solve_triangular(Lz, ZL.T @ y, lower=True)
-        RZX = solve_triangular(Lz, ZL.T @ X, lower=True)
-        XtX_eff = XtX - RZX.T @ RZX
+        #
+        # Same Cholesky-based profile-deviance math as ``_chol_block``, but
+        # we also keep β̂ and û here (the deviance loop discards them).
+        # ``F⁻¹ = M⁻¹`` lets us evaluate ``cu' cu`` and ``RZX' RZX`` as inner
+        # products against ``M⁻¹(ZLᵀy)`` and ``M⁻¹(ZLᵀX)`` without ever
+        # materializing ``cu`` or ``RZX``.
+        Lt = self._build_Lt_sparse(theta_hat)
+        ZL = Z_sp @ Lt.T
+        M = (ZL.T @ ZL + eye_q_sp).tocsc()
+        if self._chol_factor is None:
+            self._chol_factor = cho_factor(M)
+        else:
+            self._chol_factor.factorize(M)
+        F = self._chol_factor
+
+        ZLty = np.asarray(ZL.T @ y).ravel()
+        ZLtX = np.asarray(ZL.T @ X)
+        M_inv_ZLty = F.solve(ZLty)
+        M_inv_ZLtX = F.solve(ZLtX)
+        cu_sq = float(ZLty @ M_inv_ZLty)
+        XtX_eff = XtX - ZLtX.T @ M_inv_ZLtX
         Rx = np.linalg.cholesky(XtX_eff)
-        cb = solve_triangular(Rx, Xty - RZX.T @ cu, lower=True)
+        rhs = Xty - ZLtX.T @ M_inv_ZLty
+        cb = solve_triangular(Rx, rhs, lower=True)
         beta = solve_triangular(Rx.T, cb, lower=False)
-        rss = yty - float(cu @ cu) - float(cb @ cb)
-        # spherical random-effect coefficients (kept for diagnostics)
-        self._u = solve_triangular(Lz.T, cu - RZX @ beta, lower=False)
+        rss = yty - cu_sq - float(cb @ cb)
+        # spherical random-effect coefficients u = M⁻¹(ZLᵀy − ZLᵀX β)
+        self._u = F.solve(ZLty - ZLtX @ beta)
 
         sigma2 = rss / (n - p) if REML else rss / n
         sigma = float(np.sqrt(sigma2))
@@ -272,11 +337,17 @@ class lme:
     # These are used both by __init__ (for the initial ML/REML fit) and by
     # profile() (for the per-grid-point re-optimization).
 
-    def _build_Lt(self, theta: np.ndarray) -> np.ndarray:
-        """Fill the integer template with θ values to get Λᵀ."""
-        out = np.zeros(self._template.shape, dtype=float)
-        out[self._nz_mask] = theta[self._theta_pos]
-        return out
+    def _build_Lt_sparse(self, theta: np.ndarray) -> csc_array:
+        """Build Λᵀ as a CSC sparse matrix from the precomputed structure.
+
+        The sparsity pattern is fixed by the integer template, so we just
+        swap the numeric entries on each call. Same pattern every call is
+        what lets CHOLMOD reuse the symbolic analysis."""
+        data = np.asarray(theta, dtype=float)[self._lt_theta_pos]
+        return csc_array(
+            (data, self._lt_indices, self._lt_indptr),
+            shape=self._lt_shape, copy=False,
+        )
 
     def _chol_block(
         self, theta: np.ndarray, *,
@@ -289,36 +360,47 @@ class lme:
 
         With defaults this uses the original ``X``/``y`` cached on the fit.
         Overrides let ``profile()`` plug in modified designs (e.g. ``y``
-        adjusted by a fixed β_j, or ``X`` with a column removed)."""
+        adjusted by a fixed β_j, or ``X`` with a column removed).
+
+        ``log|Lz|`` is computed as ½·``factor.logdet()`` since
+        ``Lz Lzᵀ = M`` means ``|M| = |Lz|²``."""
         y = self.y if y is None else y
         X = self.X.to_numpy() if X is None else X
         XtX = self._XtX if XtX is None else XtX
         Xty = self._Xty if Xty is None else Xty
         yty = self._yty if yty is None else yty
-        Lt = self._build_Lt(theta)
-        ZL = self.Z @ Lt.T
-        M = ZL.T @ ZL + self._eye_q
+        Lt = self._build_Lt_sparse(theta)
+        ZL = self._Z_sp @ Lt.T
+        M = (ZL.T @ ZL + self._eye_q_sp).tocsc()
         try:
-            Lz = np.linalg.cholesky(M)
-        except np.linalg.LinAlgError:
+            if self._chol_factor is None:
+                self._chol_factor = cho_factor(M)
+            else:
+                self._chol_factor.factorize(M)
+        except CholmodError:
             return None
-        cu = solve_triangular(Lz, ZL.T @ y, lower=True)
+        F = self._chol_factor
+        ZLty = np.asarray(ZL.T @ y).ravel()
+        M_inv_ZLty = F.solve(ZLty)
+        cu_sq = float(ZLty @ M_inv_ZLty)
+        log_det_Lz = 0.5 * F.logdet()
         if X.shape[1] > 0:
-            RZX = solve_triangular(Lz, ZL.T @ X, lower=True)
-            XtX_eff = XtX - RZX.T @ RZX
+            ZLtX = np.asarray(ZL.T @ X)
+            M_inv_ZLtX = F.solve(ZLtX)
+            XtX_eff = XtX - ZLtX.T @ M_inv_ZLtX
             try:
                 Rx = np.linalg.cholesky(XtX_eff)
             except np.linalg.LinAlgError:
                 return None
-            cb = solve_triangular(Rx, Xty - RZX.T @ cu, lower=True)
-            rss = yty - float(cu @ cu) - float(cb @ cb)
+            cb = solve_triangular(Rx, Xty - ZLtX.T @ M_inv_ZLty, lower=True)
+            rss = yty - cu_sq - float(cb @ cb)
             log_det_Rx = float(np.log(np.diag(Rx)).sum())
         else:
-            rss = yty - float(cu @ cu)
+            rss = yty - cu_sq
             log_det_Rx = 0.0
         if rss <= 0:
             return None
-        return rss, float(np.log(np.diag(Lz)).sum()), log_det_Rx
+        return rss, log_det_Lz, log_det_Rx
 
     def _ml_deviance(
         self, theta: np.ndarray, *,
