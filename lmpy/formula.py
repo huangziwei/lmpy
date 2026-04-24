@@ -2608,6 +2608,185 @@ def _build_cc_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     return _apply_by_and_absorb(call, data, X, S_list, "cc.smooth.spec", term)
 
 
+# ---- ps (P-spline, Eilers & Marx) ------------------------------------------
+#
+# Port of mgcv's smooth.construct.ps.smooth.spec:
+#   m = (basis_order, penalty_order), default (2, 2). Basis is B-spline of
+#   order m[0]+2 (= degree m[0]+1) on `k` evenly-spaced knots covering the
+#   data range, with m[0]+1 extension knots on each side. Penalty is
+#   D_{m[1]}^T D_{m[1]} where D is the m[1]-th-order finite-difference matrix.
+
+
+def _eval_c_vec_ints(node) -> list[int] | None:
+    """Parse `c(a, b, ...)` or a bare numeric literal into a list of ints.
+    Returns None if the node isn't a recognizable numeric literal/vector.
+    """
+    if isinstance(node, Literal) and node.kind == "num":
+        return [int(node.value)]
+    if isinstance(node, Call) and node.fn == "c":
+        out: list[int] = []
+        for a in node.args:
+            if isinstance(a, Literal) and a.kind == "num":
+                out.append(int(a.value))
+            else:
+                return None
+        return out
+    return None
+
+
+def _ps_order_m(call: Call) -> tuple[int, int]:
+    """Resolve p.order: m=c(basis_order, penalty_order). Single scalar → both.
+    Default (2, 2)."""
+    m_src = call.kwargs.get("m")
+    vals = _eval_c_vec_ints(m_src) if m_src is not None else None
+    if not vals:
+        return (2, 2)
+    if len(vals) == 1:
+        return (vals[0], vals[0])
+    return (vals[0], vals[1])
+
+
+def _ps_default_k(call: Call, m0: int) -> int:
+    k = call.kwargs.get("k")
+    if isinstance(k, Literal) and k.kind == "num":
+        return int(k.value)
+    return max(10, m0 + 1)
+
+
+def _ps_knots(x: np.ndarray, m0: int, k: int) -> np.ndarray:
+    """mgcv's evenly-spaced P-spline knot vector.
+    nk interior knots + m0+1 extension on each side → nk + 2*m0 + 2 knots total.
+    """
+    nk = k - m0
+    if nk <= 0:
+        raise ValueError(f"basis dimension {k} too small for B-spline order {m0}")
+    xl = float(np.min(x))
+    xu = float(np.max(x))
+    xr = xu - xl
+    xl -= xr * 0.001
+    xu += xr * 0.001
+    dx = (xu - xl) / (nk - 1)
+    return np.linspace(xl - dx * (m0 + 1), xu + dx * (m0 + 1), nk + 2 * m0 + 2)
+
+
+def _ps_basis(x: np.ndarray, knots: np.ndarray, m0: int) -> np.ndarray:
+    """B-spline basis of degree m0+1 evaluated at x (matches splines::spline.des)."""
+    from scipy.interpolate import BSpline
+    return BSpline.design_matrix(x, knots, m0 + 1).toarray()
+
+
+def _ps_penalty(k: int, m1: int) -> np.ndarray:
+    """D^T D where D is the m1-th-order finite-difference matrix on R^k."""
+    D = np.eye(k)
+    if m1 > 0:
+        D = np.diff(D, n=m1, axis=0)
+    return D.T @ D
+
+
+def _build_ps_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    term = _smooth_term_vars(call)
+    if len(term) != 1:
+        raise ValueError('bs="ps" only handles 1D smooths')
+    x = data[term[0]].to_numpy(dtype=float)
+    m = _ps_order_m(call)
+    k = _ps_default_k(call, m[0])
+    knots = _ps_knots(x, m[0], k)
+    X = _ps_basis(x, knots, m[0])
+    S = _ps_penalty(k, m[1])
+    return _apply_by_and_absorb(call, data, X, [S], "pspline.smooth", term)
+
+
+# ---- cp (cyclic P-spline) --------------------------------------------------
+#
+# Port of mgcv's smooth.construct.cp.smooth.spec. Same (basis order, penalty
+# order) parsing as ps, but:
+#   - knots are evenly spaced on [min x, max x] with nk = bs.dim + 1 points,
+#     no boundary padding — the left-extension for evaluation is built inside
+#     `_cp_basis` (cSplineDes equivalent).
+#   - basis has `bs.dim` columns (nk - 1) after the cyclic wrap.
+#   - penalty is the mth-order difference of diag(np + m) with the first m
+#     columns added back onto the last m (closing the loop).
+
+
+def _cp_default_k(call: Call, m0: int) -> int:
+    k = call.kwargs.get("k")
+    if isinstance(k, Literal) and k.kind == "num":
+        return int(k.value)
+    return max(10, m0)
+
+
+def _cp_basis(x: np.ndarray, knots: np.ndarray, ord_: int) -> np.ndarray:
+    """`cSplineDes(x, knots, ord=ord_)` — cyclic B-spline basis.
+    Evaluates each basis function via `BSpline.basis_element` so that we can
+    sample points where the left-padded basis is only partially defined;
+    points above `xc` get an additive contribution from the wrapped x.
+    """
+    from scipy.interpolate import BSpline
+    nk = len(knots)
+    if ord_ < 2:
+        raise ValueError("order too low")
+    if nk < ord_:
+        raise ValueError("too few knots")
+    k1 = float(knots[0])
+    kn = float(knots[-1])
+    # Left-pad by (ord-1) knots that mirror the last (ord-1) interior gaps.
+    pad_src = knots[nk - ord_ : nk - 1]
+    t = np.concatenate([k1 - (kn - pad_src), knots])
+    nb = len(t) - ord_
+
+    def _eval(xv: np.ndarray) -> np.ndarray:
+        out = np.zeros((len(xv), nb))
+        for i in range(nb):
+            loc = t[i : i + ord_ + 1]
+            if loc[0] == loc[-1]:
+                continue
+            be = BSpline.basis_element(loc, extrapolate=False)
+            v = be(xv)
+            out[:, i] = np.nan_to_num(v, nan=0.0)
+        return out
+
+    X1 = _eval(x)
+    xc = float(knots[nk - ord_])
+    ind = x > xc
+    if np.any(ind):
+        x_w = x[ind] - kn + k1
+        X1[ind] += _eval(x_w)
+    return X1
+
+
+def _cp_penalty(np_cols: int, p_ord: int) -> np.ndarray:
+    """Cyclic mth-order difference penalty: diff the identity m times, then
+    fold the first m columns onto the last m to close the loop."""
+    De = np.eye(np_cols + p_ord)
+    if p_ord > 0:
+        for _ in range(p_ord):
+            De = np.diff(De, axis=0)
+        D = De[:, p_ord:].copy()
+        D[:, np_cols - p_ord : np_cols] += De[:, :p_ord]
+    else:
+        D = De
+    return D.T @ D
+
+
+def _build_cp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    term = _smooth_term_vars(call)
+    if len(term) != 1:
+        raise ValueError('bs="cp" only handles 1D smooths')
+    x = data[term[0]].to_numpy(dtype=float)
+    m = _ps_order_m(call)
+    bs_dim = _cp_default_k(call, m[0])
+    nk = bs_dim + 1
+    if nk <= m[0]:
+        raise ValueError(f"basis dim {bs_dim} too small for b-spline order {m[0]}")
+    knots = np.linspace(float(np.min(x)), float(np.max(x)), nk)
+    ord_ = m[0] + 2
+    X = _cp_basis(x, knots, ord_)
+    if m[1] > X.shape[1] - 1:
+        raise ValueError("penalty order too high for basis dimension")
+    S = _cp_penalty(X.shape[1], m[1])
+    return _apply_by_and_absorb(call, data, X, [S], "cpspline.smooth", term)
+
+
 # ---- tp (thin-plate regression spline, Wood 2003) --------------------------
 #
 # Translated from mgcv/src/tprs.c (tprs_setup + eta_const + fast_eta + QT +
@@ -3242,6 +3421,10 @@ def materialize_smooths(
             out.append(_build_cc_smooth(call, data))
         elif bs == "tp":
             out.append(_build_tp_smooth(call, data))
+        elif bs == "ps":
+            out.append(_build_ps_smooth(call, data))
+        elif bs == "cp":
+            out.append(_build_cp_smooth(call, data))
         else:
             raise NotImplementedError(
                 f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
