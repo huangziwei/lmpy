@@ -268,15 +268,16 @@ class lme:
         ZLtX = np.asarray(ZL.T @ X)
         M_inv_ZLty = F.solve(ZLty)
         M_inv_ZLtX = F.solve(ZLtX)
-        cu_sq = float(ZLty @ M_inv_ZLty)
-        XtX_eff = XtX - ZLtX.T @ M_inv_ZLtX
+        # See _chol_block for why this reach uses einsum instead of @.
+        cu_sq = float(np.einsum("i,i->", ZLty, M_inv_ZLty))
+        XtX_eff = XtX - np.einsum("ij,ik->jk", ZLtX, M_inv_ZLtX)
         Rx = np.linalg.cholesky(XtX_eff)
-        rhs = Xty - ZLtX.T @ M_inv_ZLty
+        rhs = Xty - np.einsum("ij,i->j", ZLtX, M_inv_ZLty)
         cb = solve_triangular(Rx, rhs, lower=True)
         beta = solve_triangular(Rx.T, cb, lower=False)
-        rss = yty - cu_sq - float(cb @ cb)
+        rss = yty - cu_sq - float(np.einsum("i,i->", cb, cb))
         # spherical random-effect coefficients u = M⁻¹(ZLᵀy − ZLᵀX β)
-        self._u = F.solve(ZLty - ZLtX @ beta)
+        self._u = F.solve(ZLty - np.einsum("ij,j->i", ZLtX, beta))
 
         sigma2 = rss / (n - p) if REML else rss / n
         sigma = float(np.sqrt(sigma2))
@@ -284,12 +285,12 @@ class lme:
         self.sigma_squared = sigma2
 
         # Fitted values ŷ = Xβ̂ + Z Λ û and residuals ε̂ = y − ŷ
-        self.fitted = X @ beta + ZL @ self._u
+        self.fitted = np.einsum("ij,j->i", X, beta) + ZL @ self._u
         self.residuals = y - self.fitted
 
         # Var(β̂) = σ̂² (XᵀX_eff)⁻¹ = σ̂² R_x⁻ᵀ R_x⁻¹
         Rx_inv = solve_triangular(Rx, np.eye(p), lower=True)
-        vcov_beta = sigma2 * (Rx_inv.T @ Rx_inv)
+        vcov_beta = sigma2 * np.einsum("ij,ik->jk", Rx_inv, Rx_inv)
         se_beta = np.sqrt(np.diag(vcov_beta))
         self.vcov_beta = pd.DataFrame(
             vcov_beta, index=self.column_names, columns=self.column_names,
@@ -385,18 +386,23 @@ class lme:
         F = self._chol_factor
         ZLty = np.asarray(ZL.T @ y).ravel()
         M_inv_ZLty = F.solve(ZLty)
-        cu_sq = float(ZLty @ M_inv_ZLty)
+        # Apple Accelerate's small-size GEMV/GEMM dispatch is non-deterministic
+        # across fresh buffers (~1e-12 noise), which L-BFGS-B's finite-diff
+        # gradient amplifies into visibly different θ. einsum sidesteps that
+        # BLAS path and stays bit-identical.
+        cu_sq = float(np.einsum("i,i->", ZLty, M_inv_ZLty))
         log_det_Lz = 0.5 * F.logdet()
         if X.shape[1] > 0:
             ZLtX = np.asarray(ZL.T @ X)
             M_inv_ZLtX = F.solve(ZLtX)
-            XtX_eff = XtX - ZLtX.T @ M_inv_ZLtX
+            XtX_eff = XtX - np.einsum("ij,ik->jk", ZLtX, M_inv_ZLtX)
             try:
                 Rx = np.linalg.cholesky(XtX_eff)
             except np.linalg.LinAlgError:
                 return None
-            cb = solve_triangular(Rx, Xty - ZLtX.T @ M_inv_ZLty, lower=True)
-            rss = yty - cu_sq - float(cb @ cb)
+            rhs = Xty - np.einsum("ij,i->j", ZLtX, M_inv_ZLty)
+            cb = solve_triangular(Rx, rhs, lower=True)
+            rss = yty - cu_sq - float(np.einsum("i,i->", cb, cb))
             log_det_Rx = float(np.log(np.diag(Rx)).sum())
         else:
             rss = yty - cu_sq

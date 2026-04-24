@@ -521,10 +521,19 @@ def deparse(node) -> str:
 @dataclass(frozen=True, slots=True)
 class Term:
     atoms: tuple  # tuple[Node, ...] — empty tuple = intercept
+    # Cached identity key: deparsed-atom frozenset. Excluded from init/repr/
+    # compare/hash so the dataclass machinery treats it as a pure cache. We
+    # still override __hash__/__eq__ below to use it explicitly.
+    _key: frozenset = field(
+        init=False, repr=False, compare=False, hash=False,
+        default_factory=frozenset,
+    )
 
-    @property
-    def _key(self) -> frozenset:
-        return frozenset(_deparse(a) for a in self.atoms)
+    def __post_init__(self) -> None:
+        # Frozen + slots: bypass __setattr__ to populate the cache once.
+        object.__setattr__(
+            self, "_key", frozenset(_deparse(a) for a in self.atoms)
+        )
 
     def __hash__(self) -> int:
         return hash(self._key)
@@ -1603,9 +1612,9 @@ def _truncate_contrast(M: np.ndarray, suffs: list[str], how_many):
 
 def _encode_factor(fb: _FactorBlock, reduced: bool) -> _NumBlock:
     M, suffs = _contrast_matrix(fb, reduced=reduced)
-    # One-hot expand then right-multiply by contrast matrix.
-    onehot = np.eye(len(fb.levels))[fb.codes]
-    values = onehot @ M
+    # `eye(k)[codes] @ M` is a dressed-up row gather; `M[codes]` is the same
+    # result without allocating the k×k identity or running a GEMM.
+    values = np.ascontiguousarray(M[fb.codes])
     return _NumBlock(values=values, suffixes=suffs, label=fb.label)
 
 
@@ -1748,7 +1757,7 @@ def materialize(expanded: ExpandedFormula, data: pd.DataFrame) -> pd.DataFrame:
     for o in expanded.offsets:
         _collect_names(o, referenced)
     referenced &= set(data.columns)
-    if referenced:
+    if referenced and any(data[c].hasnans for c in referenced):
         keep = ~data[list(referenced)].isna().any(axis=1)
         data = data.loc[keep]
 
@@ -1900,7 +1909,7 @@ def materialize_bars(expanded: ExpandedFormula, data: pd.DataFrame) -> ReTerms:
     for o in expanded.offsets:
         _collect_names(o, referenced)
     referenced &= set(data.columns)
-    if referenced:
+    if referenced and any(data[c].hasnans for c in referenced):
         keep = ~data[list(referenced)].isna().any(axis=1)
         data = data.loc[keep]
     n = len(data)
