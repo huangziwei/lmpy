@@ -14,7 +14,6 @@ and uses the syntax formula.py is designed for.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from scipy.stats import f as f_dist
 
 from conftest import load_dataset
@@ -216,14 +215,6 @@ def test_wood_1_5_sperm_main_effects():
     _assert_coef(m, "prop.partner", -339.560, 126.253, -2.690, 0.020)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "formulaic evaluates I(...) as Python and parses dotted column names as "
-        "attribute access (`prop.partner` → NameError). Expected to pass once "
-        "lm.py migrates to lmpy.formula (R-style I() handling)."
-    ),
-    strict=True,
-)
 def test_wood_1_5_sperm_interaction_with_I():
     """Wood §1.5.2 sc.mod2 — uses I() exactly as in the textbook."""
     df = load_dataset("gamair", "sperm.comp1")
