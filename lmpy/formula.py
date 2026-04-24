@@ -888,6 +888,7 @@ import locale as _locale  # noqa: E402
 import math  # noqa: E402
 import numpy as np  # noqa: E402  — kept near usage to localize heavy import
 import pandas as pd  # noqa: E402
+from scipy.linalg import eigh_tridiagonal as _eigh_tridiagonal  # noqa: E402
 
 
 # R's factor() sorts levels via locale-aware `sort(unique(x))`. On macOS the
@@ -2286,18 +2287,55 @@ def _build_re_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
 def _absorb_sumzero(X: np.ndarray, S_list: list[np.ndarray]) -> tuple[np.ndarray, list[np.ndarray]]:
     """Apply mgcv's default `absorb.cons=TRUE` sum-to-zero constraint.
 
-    C = colSums(X) (1×k).  Z = null-space basis via qr(t(C)).
-    X := X Z,  S_i := Z' S_i Z.  X loses one column, each S shrinks by one
-    dim on each side.
+    Mirrors mgcv `smoothCon`: C = colMeans(X) (1×k). If every entry of C is
+    nonzero (the usual case), apply a single Householder reflector Q from
+    qr(t(C)) and return X Q[:,1:], Z' S Z. If any entry of C is exactly zero
+    (happens when a covariate is mean-centered integers → exact-zero column
+    sums), mgcv takes a different branch: it QRs only the nonzero subset and
+    drops the *last* nonzero column, leaving the exact-zero columns in place.
+    Without this branch, floating-point noise on the near-zero columns causes
+    a rotation that swaps columns in the output (fixtures mgcv_0066, _0182).
     """
     n, k = X.shape
     if k == 0:
         return X, list(S_list)
-    C = X.sum(axis=0).reshape(1, k)
-    Q, _ = np.linalg.qr(C.T, mode="complete")  # k × k; Q[:,0] aligned with C
-    Z = Q[:, 1:]
-    X_new = X @ Z
-    S_new = [Z.T @ S @ Z for S in S_list]
+    C = X.mean(axis=0)
+    indi = np.flatnonzero(C != 0)  # exact inequality, matching mgcv
+    nx = len(indi)
+    if nx == k:
+        # Normal path: single Householder reflector on full C.
+        Q, _ = np.linalg.qr(C.reshape(k, 1), mode="complete")
+        Z = Q[:, 1:]
+        X_new = X @ Z
+        S_new = [Z.T @ S @ Z for S in S_list]
+        return X_new, S_new
+
+    # Sparse-like path: some cols of C are exactly 0; QR only the nonzero
+    # subset, place the (nx-1) null-space cols back at indi[:nx-1], and drop
+    # the col at indi[-1]. Cols not in indi stay put, unrotated.
+    nc = 1  # single constraint (one row)
+    nz = nx - nc
+    Q_sub, _ = np.linalg.qr(C[indi].reshape(nx, 1), mode="complete")  # nx × nx
+    Z_sub = Q_sub[:, 1:]  # nx × (nx-1)
+
+    X_new = X.copy()
+    if nz > 0:
+        X_new[:, indi[:nz]] = X[:, indi] @ Z_sub
+    drop_idx = indi[-1]
+    keep_mask = np.ones(k, dtype=bool)
+    keep_mask[drop_idx] = False
+    X_new = X_new[:, keep_mask]
+
+    S_new = []
+    for S in S_list:
+        ZSZ = S.copy()
+        if nz > 0:
+            ZSZ[indi[:nz], :] = Z_sub.T @ S[indi, :]
+        ZSZ = ZSZ[keep_mask, :]
+        if nz > 0:
+            ZSZ[:, indi[:nz]] = ZSZ[:, indi] @ Z_sub
+        ZSZ = ZSZ[:, keep_mask]
+        S_new.append(ZSZ)
     return X_new, S_new
 
 
@@ -2853,6 +2891,169 @@ def _tp_is_fixed(call: Call) -> bool:
     return False
 
 
+def _tp_rlanczos(
+    A: np.ndarray, m: int, lm: int, tol: float | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Port of mgcv/src/mat.c::Rlanczos (symmetric Lanczos w/ full reorth).
+
+    A: n×n symmetric. Returns (D, U) where D has length m+lm and U is n×(m+lm).
+    If lm<0 on entry ("biggest" mode), returns the m largest-magnitude
+    eigenpairs, with the positive eigenvalues filling the leading slots in
+    descending order and the negative ones in the trailing slots (most
+    negative last) — matching mgcv tprs.c's `minus = -1` call at tprs.c:408.
+
+    The key reason for porting (vs. using np.linalg.eigh) is matching mgcv's
+    basis choice inside degenerate eigenspaces of A. Lanczos with a fixed
+    start vector picks one specific orthonormal basis for any such subspace;
+    a dense eigendecomp picks a different one. For the tp smooth the Ritz
+    vectors feed into U @ diag(v) @ Z and the final X matrix, so matching
+    mgcv bit-for-bit requires the same start vector (same LCG seed), same
+    iteration order, same reorth strategy, and same tridiag eigendecomp.
+    """
+    n = A.shape[0]
+    if tol is None:
+        tol = float(np.finfo(float).eps) ** 0.7
+
+    biggest = False
+    if lm < 0:
+        biggest = True
+        lm = 0
+
+    # How often to do the tridiag eigendecomp / convergence test. Direct
+    # port of mgcv's heuristic.
+    f_check = (m + lm) // 2
+    if f_check < 10:
+        f_check = 10
+    kk_fc = n // 10
+    if kk_fc < 1:
+        kk_fc = 1
+    if kk_fc < f_check:
+        f_check = kk_fc
+
+    # mgcv's LCG-seeded start vector. The specific constants (106, 1283, 6075)
+    # and the `jran=1` seed are load-bearing — changing them would pick a
+    # different basis within degenerate subspaces.
+    ia, ic, im_mod = 106, 1283, 6075
+    jran = 1
+    q0 = np.empty(n, dtype=float)
+    for i in range(n):
+        jran = (jran * ia + ic) % im_mod
+        q0[i] = jran / im_mod - 0.5
+    q0 /= np.linalg.norm(q0)
+    q: list[np.ndarray] = [q0]
+
+    a = np.zeros(n)
+    b = np.zeros(n)
+    err = np.full(n, 1e300)
+
+    d_sorted: np.ndarray | None = None
+    v_eig: np.ndarray | None = None
+
+    j = 0
+    while j < n:
+        # z = A q[j]  (full matvec; symmetry is exploited by dsymv in mgcv
+        # but the numerical difference vs a dense matmul is within the
+        # 1e-5 basis-equivalence tolerance we test against).
+        z = A @ q[j]
+        aj = float(q[j] @ z)
+        a[j] = aj
+        if j == 0:
+            z = z - aj * q[0]
+        else:
+            z = z - aj * q[j] - b[j - 1] * q[j - 1]
+            # Full modified Gram-Schmidt, twice (mgcv does this to stabilize).
+            # Must be sequential (project out q[0], then q[1], ...): the FP
+            # trajectory differs from batched classical GS and mgcv uses
+            # sequential.
+            for _ in range(2):
+                for i_o in range(j + 1):
+                    xx = float(q[i_o] @ z)
+                    z = z - xx * q[i_o]
+        bj = float(np.linalg.norm(z))
+        b[j] = bj
+        if j < n - 1:
+            if bj > 0.0:
+                q.append(z / bj)
+            else:
+                q.append(np.zeros(n))
+
+        if ((j >= m + lm) and (j % f_check == 0)) or (j == n - 1):
+            d_copy = a[: j + 1].copy()
+            g_copy = b[:j].copy()
+            # mgcv calls dstedc (D&C). scipy's default driver is stemr (MRRR).
+            # Both return identical eigenvalues; eigenvector basis within a
+            # tridiag-internal degenerate block could differ — but Lanczos
+            # typically exposes a degenerate E-eigenvalue only once in T_j
+            # (until many more iterations pass), so T_j is non-degenerate
+            # and V is unique up to sign.
+            w, V = _eigh_tridiagonal(d_copy, g_copy)
+            # scipy returns ascending; mgcv_trisymeig(descending=1) returns
+            # descending. Reverse.
+            w = w[::-1].copy()
+            V = V[:, ::-1].copy()
+            d_sorted = w
+            v_eig = V
+
+            normTj = max(abs(w[0]), abs(w[-1]))
+            err[: j + 1] = np.abs(bj * V[j, :])
+
+            if j >= m + lm:
+                max_err = normTj * tol
+                if biggest:
+                    pi = 0
+                    ni = 0
+                    converged = True
+                    while pi + ni < m:
+                        if abs(w[pi]) >= abs(w[j - ni]):
+                            if err[pi] > max_err:
+                                converged = False
+                                break
+                            pi += 1
+                        else:
+                            # mgcv checks err[ni], not err[j-ni]. Replicating
+                            # the exact C code for behavioral parity — the
+                            # convergence check is loose but the eigenvectors
+                            # produced are still correct once the iteration
+                            # stops.
+                            if err[ni] > max_err:
+                                converged = False
+                                break
+                            ni += 1
+                    if converged:
+                        m = pi
+                        lm = ni
+                        j += 1
+                        break
+                else:
+                    ok = True
+                    for i_chk in range(m):
+                        if err[i_chk] > max_err:
+                            ok = False
+                    for i_chk in range(j, j - lm, -1):
+                        if err[i_chk] > max_err:
+                            ok = False
+                    if ok:
+                        j += 1
+                        break
+        j += 1
+
+    assert d_sorted is not None and v_eig is not None
+
+    # Ritz vectors: U[:,k] = sum_{l<j} q[l] * V[l, idx(k)].
+    # Stack q[0..j-1] into Q of shape (n, j).
+    Q = np.column_stack(q[:j])
+    D_out = np.empty(m + lm)
+    U_out = np.zeros((n, m + lm))
+    for k_idx in range(m):
+        D_out[k_idx] = d_sorted[k_idx]
+        U_out[:, k_idx] = Q @ v_eig[:j, k_idx]
+    for k_idx in range(m, m + lm):
+        kk_idx = j - (m + lm - k_idx)
+        D_out[k_idx] = d_sorted[kk_idx]
+        U_out[:, k_idx] = Q @ v_eig[:j, kk_idx]
+    return D_out, U_out
+
+
 def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     """Build thin-plate regression spline (`bs="tp"`, the default) block.
 
@@ -2884,59 +3085,96 @@ def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     E = _tp_E(Xu, m, d)
     T_mat = _tp_T(Xu, m, d)
 
-    # Top-k eigendecomposition of E, then reorder descending by signed value.
-    # mgcv's Lanczos returns this ordering: largest positive first, then
-    # decreasing down through all positives, then remaining negatives (least
-    # negative first, most negative last) — equivalently, sorted descending.
-    vals, vecs = np.linalg.eigh(E)
-    ord_mag = np.argsort(-np.abs(vals))[:k]
-    v_top = vals[ord_mag]
-    U_top = vecs[:, ord_mag]
-    # Sort descending by signed value.
-    ord_sign = np.argsort(-v_top)
-    v_k = v_top[ord_sign]
-    U = U_top[:, ord_sign]
-    # Canonical sign: make the largest-|·| entry of each col positive. mgcv's
-    # Lanczos uses a different but equally-arbitrary convention; column signs
-    # may flip vs mgcv's exact output (validator is sign-tolerant).
-    for j in range(k):
-        idx = int(np.argmax(np.abs(U[:, j])))
-        if U[idx, j] < 0:
-            U[:, j] = -U[:, j]
+    pure_knot = (nu == k)
 
-    # TU = T' U, QT-factorize, apply to U, T, S.
-    TU = T_mat.T @ U
-    Z_hh = _tp_qt_factor(TU)
+    if pure_knot:
+        # When nu == k mgcv skips the eigendecomposition entirely (no
+        # truncation needed) and builds UZ from QT(T', fullQ=1). X is then
+        # computed by evaluating the TPS kernel + polynomial basis at each
+        # data point directly, rather than by indexing an X1-on-Xu table.
+        # The resulting basis differs from the Lanczos-based one by a rotation
+        # within the null-space block, so the two paths are not interchangeable.
+        Z_hh = _tp_qt_factor(T_mat.T.copy())
+        # Full Q (nu × nu) via applying HH reflectors to identity from the right.
+        Q_full = _tp_hqmult_right(np.eye(nu), Z_hh, transposed=False)
 
-    # X1 on unique rows: first (k-M) cols = U diag(v) applied with Q,
-    # last M cols = polynomial T.
-    X1 = U * v_k  # col-wise scaling
-    X1 = _tp_hqmult_right(X1, Z_hh, transposed=False)
-    X1[:, k - M:] = 0.0
-    X1[:, k - M:k - M + M] = T_mat
-    X_raw = X1[yxindex, :]  # map unique → full data rows
+        UZ = np.zeros((nu + M, k))
+        UZ[:nu, :k - M] = Q_full[:, :k - M]
+        for i in range(M):
+            UZ[(nu + M) - i - 1, k - i - 1] = 1.0
 
-    # UZ: (nu + M) × k. Radial block = U @ Q on rows 0..nu-1. Poly block on
-    # last M rows is the identity (diagonal on the last M cols).
-    UZ = np.zeros((nu + M, k))
-    UZ[:nu, :] = U
-    UZ[:nu, :] = _tp_hqmult_right(UZ[:nu, :], Z_hh, transposed=False)
-    UZ[:nu, k - M:] = 0.0
-    for i in range(M):
-        UZ[(nu + M) - i - 1, k - i - 1] = 1.0
+        eta0 = _tp_eta_const(m, d)
+        pi_pow = _tp_gen_poly_powers(M, m, d)
+        X_raw = np.zeros((n, k))
+        b = np.empty(nu + M)
+        for i in range(n):
+            x_i = x_c[i]
+            diff = Xu - x_i  # (nu, d)
+            rsq = np.sum(diff * diff, axis=1)
+            for j in range(nu):
+                b[j] = _tp_fast_eta(m, d, float(rsq[j]), eta0)
+            for j in range(M):
+                val = 1.0
+                for dim_idx in range(d):
+                    pk = pi_pow[j, dim_idx]
+                    if pk > 0:
+                        val *= x_i[dim_idx] ** pk
+                b[nu + j] = val
+            X_raw[i, :] = UZ.T @ b
 
-    # Penalty S: Q' diag(v) Q, zero-pad last M rows/cols (polynomial part
-    # is unpenalized).
-    if _tp_is_fixed(call):
-        S_list: list[np.ndarray] = []
+        if _tp_is_fixed(call):
+            S_list: list[np.ndarray] = []
+        else:
+            # S starts from E itself (not diag(v)), embedded in a k×k frame.
+            S = np.zeros((k, k))
+            S[:nu, :nu] = E
+            S = _tp_hqmult_right(S, Z_hh, transposed=False)
+            S = _tp_hqmult_left_transposed(S, Z_hh)
+            S[-M:, :] = 0.0
+            S[:, -M:] = 0.0
+            S = (S + S.T) / 2.0
+            S_list = [S]
     else:
-        S = np.diag(v_k).astype(float)
-        S = _tp_hqmult_right(S, Z_hh, transposed=False)
-        S = _tp_hqmult_left_transposed(S, Z_hh)
-        S[-M:, :] = 0.0
-        S[:, -M:] = 0.0
-        S = (S + S.T) / 2.0
-        S_list = [S]
+        # Top-k eigendecomposition of E via mgcv's Rlanczos. Lanczos (with
+        # a fixed LCG start vector) picks a specific orthonormal basis for
+        # any degenerate eigenspace; np.linalg.eigh picks a different one,
+        # which causes several tp fixtures with clustered/repeated eigenvalues
+        # to diverge from mgcv's output by a basis rotation.
+        v_k, U = _tp_rlanczos(E, k, -1)
+
+        # TU = T' U, QT-factorize, apply to U, T, S.
+        TU = T_mat.T @ U
+        Z_hh = _tp_qt_factor(TU)
+
+        # X1 on unique rows: first (k-M) cols = U diag(v) applied with Q,
+        # last M cols = polynomial T.
+        X1 = U * v_k  # col-wise scaling
+        X1 = _tp_hqmult_right(X1, Z_hh, transposed=False)
+        X1[:, k - M:] = 0.0
+        X1[:, k - M:k - M + M] = T_mat
+        X_raw = X1[yxindex, :]  # map unique → full data rows
+
+        # UZ: (nu + M) × k. Radial block = U @ Q on rows 0..nu-1. Poly block
+        # on last M rows is the identity (diagonal on the last M cols).
+        UZ = np.zeros((nu + M, k))
+        UZ[:nu, :] = U
+        UZ[:nu, :] = _tp_hqmult_right(UZ[:nu, :], Z_hh, transposed=False)
+        UZ[:nu, k - M:] = 0.0
+        for i in range(M):
+            UZ[(nu + M) - i - 1, k - i - 1] = 1.0
+
+        # Penalty S: Q' diag(v) Q, zero-pad last M rows/cols (polynomial
+        # part is unpenalized).
+        if _tp_is_fixed(call):
+            S_list: list[np.ndarray] = []
+        else:
+            S = np.diag(v_k).astype(float)
+            S = _tp_hqmult_right(S, Z_hh, transposed=False)
+            S = _tp_hqmult_left_transposed(S, Z_hh)
+            S[-M:, :] = 0.0
+            S[:, -M:] = 0.0
+            S = (S + S.T) / 2.0
+            S_list = [S]
 
     # Rescale each X column so its sum-of-squares = n (= mgcv's "rms=1").
     # Apply same factor to UZ cols and to S rows+cols. After this, we have
