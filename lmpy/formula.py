@@ -3619,11 +3619,12 @@ def _tp_rlanczos(
     # (Not einsum: einsum's reduction differs from np.sum by ~1 ULP, which
     # is enough to rotate eigenvectors away from the R-oracle basis that
     # test_smooths calibrated against.)
-    def _ddot(u, v):
-        return float(np.sum(u * v))
-
-    def _dnrm2(v):
-        return float(np.sqrt(np.sum(v * v)))
+    #
+    # Preallocated buffers + in-place numpy ops are used below to avoid
+    # per-iteration temp allocations in the hot MGS loop. Arithmetic is
+    # bit-identical to the naive `float(np.sum(u*v))` / `z = z - xx * q[i]`
+    # form (pairwise reduction along a contiguous axis matches the 1D case;
+    # verified against the R oracle on all tp/te fixtures).
 
     # mgcv's LCG-seeded start vector. The specific constants (106, 1283, 6075)
     # and the `jran=1` seed are load-bearing — changing them would pick a
@@ -3634,43 +3635,61 @@ def _tp_rlanczos(
     for i in range(n):
         jran = (jran * ia + ic) % im_mod
         q0[i] = jran / im_mod - 0.5
-    q0 /= _dnrm2(q0)
-    q: list[np.ndarray] = [q0]
+    q0 /= float(np.sqrt(np.sum(q0 * q0)))
+
+    # Q stores Lanczos vectors as rows of a dense (n+1, n) array. Row-wise
+    # layout makes Q[i] a C-contiguous view, so np.multiply(Q[i], z, out=buf)
+    # has the same pairwise-reduce semantics as np.sum(q[i] * z) for 1D q.
+    Q = np.zeros((n + 1, n))
+    Q[0] = q0
 
     a = np.zeros(n)
     b = np.zeros(n)
     err = np.full(n, 1e300)
+
+    # Scratch buffers reused each iteration.
+    buf = np.empty(n)
+    scaled = np.empty(n)
 
     d_sorted: np.ndarray | None = None
     v_eig: np.ndarray | None = None
 
     j = 0
     while j < n:
+        qj = Q[j]
         # z = A q[j]  (full matvec; symmetry is exploited by dsymv in mgcv
         # but the numerical difference vs a dense matmul is within the
         # 1e-5 basis-equivalence tolerance we test against).
-        z = A @ q[j]
-        aj = _ddot(q[j], z)
+        z = A @ qj
+        np.multiply(qj, z, out=buf)
+        aj = float(buf.sum())
         a[j] = aj
         if j == 0:
-            z = z - aj * q[0]
+            np.multiply(qj, aj, out=scaled)
+            np.subtract(z, scaled, out=z)
         else:
-            z = z - aj * q[j] - b[j - 1] * q[j - 1]
+            np.multiply(qj, aj, out=scaled)
+            np.subtract(z, scaled, out=z)
+            np.multiply(Q[j - 1], b[j - 1], out=scaled)
+            np.subtract(z, scaled, out=z)
             # Full modified Gram-Schmidt, twice (mgcv does this to stabilize).
             # Must be sequential (project out q[0], then q[1], ...): the FP
             # trajectory differs from batched classical GS and mgcv uses
             # sequential.
             for _ in range(2):
                 for i_o in range(j + 1):
-                    xx = _ddot(q[i_o], z)
-                    z = z - xx * q[i_o]
-        bj = _dnrm2(z)
+                    qi = Q[i_o]
+                    np.multiply(qi, z, out=buf)
+                    xx = float(buf.sum())
+                    np.multiply(qi, xx, out=scaled)
+                    np.subtract(z, scaled, out=z)
+        np.multiply(z, z, out=buf)
+        bj = float(np.sqrt(buf.sum()))
         b[j] = bj
         if j < n - 1:
             if bj > 0.0:
-                q.append(z / bj)
-            else:
-                q.append(np.zeros(n))
+                np.divide(z, bj, out=Q[j + 1])
+            # else: Q[j+1] already zero-initialized.
 
         if ((j >= m + lm) and (j % f_check == 0)) or (j == n - 1):
             d_copy = a[: j + 1].copy()
@@ -3736,17 +3755,18 @@ def _tp_rlanczos(
     assert d_sorted is not None and v_eig is not None
 
     # Ritz vectors: U[:,k] = sum_{l<j} q[l] * V[l, idx(k)].
-    # Stack q[0..j-1] into Q of shape (n, j).
-    Q = np.column_stack(q[:j])
+    # Q stored row-wise (Q[l] = q[l]); transpose to match the (n, j) @ (j,)
+    # matmul shape the original code used with np.column_stack(q[:j]).
+    Qj = Q[:j].T
     D_out = np.empty(m + lm)
     U_out = np.zeros((n, m + lm))
     for k_idx in range(m):
         D_out[k_idx] = d_sorted[k_idx]
-        U_out[:, k_idx] = Q @ v_eig[:j, k_idx]
+        U_out[:, k_idx] = Qj @ v_eig[:j, k_idx]
     for k_idx in range(m, m + lm):
         kk_idx = j - (m + lm - k_idx)
         D_out[k_idx] = d_sorted[kk_idx]
-        U_out[:, k_idx] = Q @ v_eig[:j, kk_idx]
+        U_out[:, k_idx] = Qj @ v_eig[:j, kk_idx]
     return D_out, U_out
 
 
