@@ -1337,7 +1337,10 @@ def _parse_boundary(node, data, x):
 
 
 def _bs_basis(x, degree, boundary, interior_knots, df, intercept):
-    """B-spline basis matching R's bs(). Returns (n, df) matrix."""
+    """B-spline basis matching R's `splines::bs()`. Returns (n, df) matrix.
+    Parametric-term helper used from `_eval_call` (e.g. `y ~ bs(x, df=10)`).
+    NOT mgcv's `s(x, bs="bs")` smoother — that's `_build_bs_smooth` below.
+    """
     from scipy.interpolate import BSpline as _BSpline
     ord = degree + 1
     # If df given and no explicit knots, place interior knots at quantiles.
@@ -2634,6 +2637,28 @@ def _eval_c_vec_ints(node) -> list[int] | None:
     return None
 
 
+def _eval_c_vec_floats(node) -> list[float] | None:
+    """Like `_eval_c_vec_ints` but preserves float precision.
+    Also accepts a unary minus wrapping a numeric literal (e.g. `c(-1, 0.5)`)."""
+    def _lit(n):
+        if isinstance(n, Literal) and n.kind == "num":
+            return float(n.value)
+        if isinstance(n, UnaryOp) and n.op == "-":
+            inner = _lit(n.operand)
+            return None if inner is None else -inner
+        return None
+    if isinstance(node, Call) and node.fn == "c":
+        out: list[float] = []
+        for a in node.args:
+            v = _lit(a)
+            if v is None:
+                return None
+            out.append(v)
+        return out
+    v = _lit(node)
+    return None if v is None else [v]
+
+
 def _ps_order_m(call: Call) -> tuple[int, int]:
     """Resolve p.order: m=c(basis_order, penalty_order). Single scalar → both.
     Default (2, 2)."""
@@ -2774,6 +2799,13 @@ def _cp_penalty(np_cols: int, p_ord: int) -> np.ndarray:
 # basis with an integrated-squared-mth-derivative penalty ∫ (f^(m_j))² dx,
 # where f is the spline and m can specify MULTIPLE penalty orders
 # (m = c(basis_order, m2_1, m2_2, ...)). Each m2 produces one penalty.
+#
+# Note on naming: `s(x, bs="bs")` in mgcv is UNRELATED to R's top-level
+# `splines::bs()` (the parametric basis used in `y ~ bs(x, df=...)`, handled
+# elsewhere by `_bs_basis`). mgcv just happens to use "bs" as its spec key.
+# The two paths share nothing — different knots, different purpose, different
+# class. Helpers in this section (`_bs_design`, `_bs_penalty`, etc.) are all
+# the mgcv-smoother variant.
 #
 # Penalty assembly (per m2): f^(m2) is a piecewise polynomial of degree
 # pord = m[0] - m2 on each interval of the interior knots k0. Evaluate the
@@ -2917,6 +2949,146 @@ def _build_cp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
         raise ValueError("penalty order too high for basis dimension")
     S = _cp_penalty(X.shape[1], m[1])
     return _apply_by_and_absorb(call, data, X, [S], "cpspline.smooth", term)
+
+
+# ---- gp (Gaussian process / Kammann–Wand) ----------------------------------
+#
+# Port of mgcv's smooth.construct.gp.smooth.spec. Covariance kernel over
+# (centered) covariates, truncated via eigendecomposition of the kernel
+# matrix on unique data points. Penalty S has the top-k eigenvalues of the
+# kernel on the diagonal (zeros on the null-space block). Design matrix X
+# = [E(x, knt) @ UZ | T(x)], where UZ are the kept kernel eigenvectors and
+# T is the polynomial null space (constant, or constant+linear when not
+# stationary). `m=c(sign*type, rho, k)` controls the kernel family.
+
+
+def _gp_parse_m(call: Call) -> tuple[bool, int, float, float]:
+    """Resolve (stationary, type, rho_init, power_k).
+    Defaults: stationary=False, type=3 (Matern ν=1.5), rho=auto, k=1."""
+    m_src = call.kwargs.get("m")
+    vals = _eval_c_vec_floats(m_src) if m_src is not None else None
+    if not vals:
+        return (False, 3, -1.0, 1.0)
+    stationary = vals[0] < 0
+    t = abs(int(round(vals[0])))
+    if t == 0:  # shouldn't happen, but guard
+        t = 3
+    rho = vals[1] if len(vals) > 1 else -1.0
+    pk = vals[2] if len(vals) > 2 else 1.0
+    return (stationary, t, rho, pk)
+
+
+def _gp_apply_kernel(E: np.ndarray, type_: int, power_k: float) -> np.ndarray:
+    if type_ == 1:  # spherical (compact support on [0,1])
+        return (1.0 - 1.5 * E + 0.5 * E ** 3) * (E <= 1.0)
+    if type_ == 2:  # power exponential
+        return np.exp(-(E ** power_k))
+    eE = np.exp(-E)
+    if type_ == 3:  # Matern ν=1.5
+        return (1.0 + E) * eE
+    if type_ == 4:  # Matern ν=2.5
+        return eE + (E * eE) * (1.0 + E / 3.0)
+    if type_ == 5:  # Matern ν=3.5
+        return eE + (E * eE) * (1.0 + 0.4 * E + E ** 2 / 15.0)
+    raise ValueError(f"unknown GP kernel type {type_}")
+
+
+def _gp_E_defn(
+    x: np.ndarray, xk: np.ndarray, type_: int, rho_init: float, power_k: float,
+    sign_type: int,
+) -> tuple[np.ndarray, tuple[float, float, float]]:
+    """`gpE(x, xk, defn)`: distance-based kernel matrix + resolved defn.
+    If rho_init <= 0, rho is set to max of the raw distance matrix."""
+    diff = x[:, None, :] - xk[None, :, :]
+    E_raw = np.sqrt((diff ** 2).sum(axis=2))
+    rho = rho_init if rho_init > 0 else float(E_raw.max())
+    E = E_raw / rho
+    K = _gp_apply_kernel(E, type_, power_k)
+    return K, (sign_type * type_, rho, power_k)
+
+
+def _gp_E_with_defn(x: np.ndarray, xk: np.ndarray, defn: tuple[float, float, float]) -> np.ndarray:
+    """Recompute kernel using a pre-resolved defn (rho already known)."""
+    st_t, rho, power_k = defn
+    type_ = abs(int(round(st_t)))
+    diff = x[:, None, :] - xk[None, :, :]
+    E = np.sqrt((diff ** 2).sum(axis=2)) / rho
+    return _gp_apply_kernel(E, type_, power_k)
+
+
+def _gp_T(x_c: np.ndarray, stationary: bool) -> np.ndarray:
+    """Polynomial null-space basis: [1] when stationary, else [1, x_1, ..., x_d]."""
+    n = x_c.shape[0]
+    if stationary:
+        return np.ones((n, 1))
+    return np.column_stack([np.ones(n), x_c])
+
+
+def _gp_default_k(call: Call, d: int, null_space_dim: int) -> int:
+    k = call.kwargs.get("k")
+    if isinstance(k, Literal) and k.kind == "num":
+        return int(k.value)
+    # mgcv default: d + 1 + [10, 30, 100][d-1]
+    table = {1: 10, 2: 30, 3: 100}
+    add = table.get(d, 100)
+    bs_dim = d + 1 + add
+    if bs_dim < d + 2:
+        bs_dim = d + 2
+    return bs_dim
+
+
+def _build_gp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    term = _smooth_term_vars(call)
+    d = len(term)
+    x_full = np.column_stack([data[v].to_numpy(dtype=float) for v in term])
+    stationary, type_, rho_init, power_k = _gp_parse_m(call)
+    null_space_dim = 1 if stationary else d + 1
+
+    bs_dim = _gp_default_k(call, d, null_space_dim)
+    if bs_dim < d + 2:
+        bs_dim = d + 2
+
+    # Knots: unique covariate combinations (mgcv's `uniquecombs`).
+    xu = np.unique(x_full, axis=0)
+    nk = xu.shape[0]
+    if nk < bs_dim:
+        raise ValueError(
+            f"gp: fewer unique covariate combinations ({nk}) than bs.dim ({bs_dim})"
+        )
+
+    # Center both data and knots by the DATA column means.
+    shift = x_full.mean(axis=0)
+    x_c = x_full - shift
+    xu_c = xu - shift
+
+    # Kernel matrix on knots — this is also what resolves `rho` if default.
+    sign_type = -1 if stationary else 1
+    E, defn = _gp_E_defn(xu_c, xu_c, type_, rho_init, power_k, sign_type)
+
+    k_radial = bs_dim - null_space_dim
+
+    if k_radial < nk:
+        # Top-k eigendecomposition of E by magnitude. For positive-definite
+        # kernels this is just top-k by value; spherical/negative-sign types
+        # may produce indefinite E, so sort by |λ|.
+        eigs, vecs = np.linalg.eigh(E)
+        order = np.argsort(-np.abs(eigs))[:k_radial]
+        lam = eigs[order]
+        UZ = vecs[:, order]
+        D = np.zeros((bs_dim, bs_dim))
+        D[:k_radial, :k_radial] = np.diag(lam)
+    else:
+        UZ = np.eye(nk)
+        D = np.zeros((bs_dim, bs_dim))
+        D[:nk, :nk] = E
+
+    # Design matrix on original (possibly duplicate) x using resolved defn.
+    E_x = _gp_E_with_defn(x_c, xu_c, defn)
+    X_radial = E_x @ UZ
+    T = _gp_T(x_c, stationary)
+    X = np.hstack([X_radial, T])
+
+    return _apply_by_and_absorb(call, data, X, [D], "gp.smooth.spec", term)
 
 
 # ---- tp (thin-plate regression spline, Wood 2003) --------------------------
@@ -3559,6 +3731,8 @@ def materialize_smooths(
             out.append(_build_cp_smooth(call, data))
         elif bs == "bs":
             out.append(_build_bs_smooth(call, data))
+        elif bs == "gp":
+            out.append(_build_gp_smooth(call, data))
         else:
             raise NotImplementedError(
                 f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
