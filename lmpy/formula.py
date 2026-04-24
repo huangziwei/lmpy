@@ -893,11 +893,41 @@ def _contains_dot(node) -> bool:
 # Not yet: bs(), ns(), orthogonal poly(), cut(), pmin/pmax.
 
 
+import contextlib  # noqa: E402
+import contextvars  # noqa: E402
 import locale as _locale  # noqa: E402
 import math  # noqa: E402
 import numpy as np  # noqa: E402  — kept near usage to localize heavy import
 import polars as pl  # noqa: E402
 from scipy.linalg import eigh_tridiagonal as _eigh_tridiagonal  # noqa: E402
+
+
+# Polars 1.40+ made pl.Categorical process-global (shared string cache across
+# DataFrames), so lmpy can no longer use pl.Enum vs pl.Categorical as the
+# ordered-vs-unordered factor signal — only pl.Enum preserves per-column level
+# order. Callers instead declare ordered columns via `with_ordered_cols(...)`
+# (or the helper `set_ordered_cols`) before materializing. `_factor_from_series`
+# consults this context to decide whether a factor should use poly contrasts.
+_ORDERED_COLS_CV: contextvars.ContextVar[frozenset[str]] = contextvars.ContextVar(
+    "_lmpy_ordered_cols", default=frozenset()
+)
+
+
+@contextlib.contextmanager
+def with_ordered_cols(cols):
+    """Context manager: inside the `with` block, the given column names are
+    treated as R-style ordered factors (poly contrasts, drop-first in `by=`)."""
+    token = _ORDERED_COLS_CV.set(frozenset(cols))
+    try:
+        yield
+    finally:
+        _ORDERED_COLS_CV.reset(token)
+
+
+def set_ordered_cols(cols):
+    """Set the ordered-columns context without restoring on exit. Intended for
+    test harnesses that reset per-test via a fixture rather than a `with`."""
+    _ORDERED_COLS_CV.set(frozenset(cols))
 
 
 # R's factor() sorts levels via locale-aware `sort(unique(x))`. On macOS the
@@ -969,19 +999,30 @@ def _is_categorical(series: pl.Series) -> bool:
 def _factor_from_series(series: pl.Series, label: str, ordered_hint: bool = False) -> _FactorBlock:
     dt = series.dtype
     if dt in (pl.Categorical, pl.Enum):
-        levels = series.cat.get_categories().to_list()
-        # to_physical() gives uint32 codes; null rows get a sentinel we map to -1.
-        codes = series.to_physical().to_numpy().astype(np.int64)
-        if series.null_count() > 0:
-            null_mask = series.is_null().to_numpy()
-            codes = np.where(null_mask, -1, codes).astype(int)
-        else:
-            codes = codes.astype(int)
-        # Dtype convention: pl.Enum signals R's ordered factor (poly contrasts,
-        # drop-first in s(…, by=…)); pl.Categorical signals an unordered factor
-        # (treatment contrasts, all-levels in by). Polars has no native ordered-
-        # factor dtype, so we repurpose the Enum/Categorical split to carry it.
-        ordered = (dt == pl.Enum) or ordered_hint
+        # polars 1.40+ gives all pl.Categorical columns in one DataFrame a merged
+        # string pool, so cat.get_categories() returns every category seen across
+        # sibling columns and to_physical() indexes into that merged pool. Drop
+        # levels absent from this column (matches R's droplevels semantics lme4
+        # and mgcv use when building Z / model matrices) and remap codes densely.
+        full = series.cat.get_categories().to_list()
+        codes_raw = series.to_physical().to_numpy().astype(np.int64)
+        null_mask = series.is_null().to_numpy() if series.null_count() > 0 else None
+        valid = codes_raw if null_mask is None else codes_raw[~null_mask]
+        present = np.unique(valid) if valid.size else np.empty(0, dtype=np.int64)
+        levels = [full[int(c)] for c in present]
+        remap = np.full(len(full) + 1, -1, dtype=np.int64)
+        for new, old in enumerate(present):
+            remap[int(old)] = new
+        codes = remap[codes_raw] if codes_raw.size else np.empty(0, dtype=np.int64)
+        if null_mask is not None:
+            codes = np.where(null_mask, -1, codes)
+        codes = codes.astype(int)
+        # Ordered-factor signal: polars has no native ordered-factor dtype, and
+        # polars 1.40+ made pl.Categorical process-global (so we can't use the
+        # Enum/Categorical split anymore either). Callers declare ordered cols
+        # via `with_ordered_cols(...)`; the explicit `ordered_hint` wins when
+        # the call site already knows (e.g. `ordered(x)` in a formula).
+        ordered = ordered_hint or (label in _ORDERED_COLS_CV.get())
         return _FactorBlock(codes=codes, levels=levels, ordered=ordered, label=label)
     # R's factor() uses locale-aware sort(unique(x)) on strings, but numeric
     # columns sort numerically (factor() first coerces to character and R's
@@ -1004,7 +1045,8 @@ def _factor_from_series(series: pl.Series, label: str, ordered_hint: bool = Fals
         )
     else:
         codes = np.array([code_map.get(v, -1) for v in values], dtype=int)
-    return _FactorBlock(codes=codes, levels=levels, ordered=ordered_hint, label=label)
+    ordered = ordered_hint or (label in _ORDERED_COLS_CV.get())
+    return _FactorBlock(codes=codes, levels=levels, ordered=ordered, label=label)
 
 
 def _eval_maybe_string(node, data: pl.DataFrame) -> np.ndarray:
@@ -2226,11 +2268,30 @@ def _is_factor_like(col: pl.Series | np.ndarray) -> bool:
     return col.dtype.kind in ("O", "U", "S")
 
 
+def _is_ordered_by(col: pl.Series) -> bool:
+    """Whether a smooth's `by=` column is an R-style ordered factor.
+
+    mgcv's `smooth.construct` drops the first level for ordered `by` factors
+    (so the baseline level is absorbed into the main effect). Detection here
+    matches `_factor_from_series`'s ordered signal: look up the column name
+    in the `_ORDERED_COLS_CV` context declared by the caller.
+    """
+    name = getattr(col, "name", None)
+    return bool(name) and name in _ORDERED_COLS_CV.get()
+
+
 def _factor_levels(col: pl.Series) -> list:
     """R-style factor levels: sorted unique values (alphabetic for strings,
     numeric for numerics)."""
     if col.dtype in (pl.Categorical, pl.Enum):
-        return col.cat.get_categories().to_list()
+        # See `_factor_from_series`: polars 1.40+ merges Categorical category
+        # pools across sibling columns in a DataFrame, so cat.get_categories()
+        # may include levels from other columns. Restrict to levels actually
+        # present in this column, keeping their schema order.
+        full = col.cat.get_categories().to_list()
+        codes = col.drop_nulls().to_physical().to_numpy().astype(np.int64)
+        present = np.unique(codes) if codes.size else np.empty(0, dtype=np.int64)
+        return [full[int(c)] for c in present]
     uniq = col.drop_nulls().unique().to_list()
     if col.dtype.is_numeric():
         return sorted(uniq)
@@ -2268,7 +2329,7 @@ def _apply_by_and_absorb(
         # fires for object/unicode arrays, which don't appear on the current
         # _eval_by_col paths).
         levels = _factor_levels(by_col)
-        if by_col.dtype == pl.Enum and len(levels) > 1:
+        if _is_ordered_by(by_col) and len(levels) > 1:
             levels = levels[1:]
         by_arr = by_col.to_numpy()
         # mgcv sets `sm$C = colSums(sm$X)` once on the full (pre-by) X, then
@@ -2353,7 +2414,7 @@ def _build_re_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     by_col = _eval_by_col(by_expr, data)
     if _is_factor_like(by_col):
         levels = _factor_levels(by_col)
-        if by_col.dtype == pl.Enum and len(levels) > 1:
+        if _is_ordered_by(by_col) and len(levels) > 1:
             levels = levels[1:]
         by_arr = by_col.to_numpy()
         return [
@@ -3587,13 +3648,14 @@ def _tp_rlanczos(
         if ((j >= m + lm) and (j % f_check == 0)) or (j == n - 1):
             d_copy = a[: j + 1].copy()
             g_copy = b[:j].copy()
-            # mgcv calls dstedc (D&C). scipy's default driver is stemr (MRRR).
-            # Both return identical eigenvalues; eigenvector basis within a
-            # tridiag-internal degenerate block could differ — but Lanczos
-            # typically exposes a degenerate E-eigenvalue only once in T_j
-            # (until many more iterations pass), so T_j is non-degenerate
-            # and V is unique up to sign.
-            w, V = _eigh_tridiagonal(d_copy, g_copy)
+            # Pin the LAPACK driver to stemr (MRRR). scipy 1.17 changed the
+            # `lapack_driver='auto'` default from stemr to stevd (D&C), and
+            # for small near-zero off-diagonals the two drivers pick different
+            # eigenvector signs. That shows up downstream as a ~0.1 rotation in
+            # the absorb.cons'd X matrix — passed at scipy 1.15 / fails at 1.17
+            # (see mgcv_0020 wine tp). stemr is what matches mgcv's ground-truth
+            # basis empirically on every tp/te/tp-by fixture we have.
+            w, V = _eigh_tridiagonal(d_copy, g_copy, lapack_driver="stemr")
             # scipy returns ascending; mgcv_trisymeig(descending=1) returns
             # descending. Reverse.
             w = w[::-1].copy()

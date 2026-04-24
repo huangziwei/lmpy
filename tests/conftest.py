@@ -2,6 +2,9 @@ import json
 from pathlib import Path
 
 import polars as pl
+import pytest
+
+from lmpy.formula import set_ordered_cols
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures"
 DATA_ROOT = Path(__file__).parent.parent / "datasets"
@@ -29,19 +32,20 @@ def _pkg_subdir(pkg: str) -> str:
 
 
 def _apply_schema(df: pl.DataFrame, pkg: str, name: str) -> pl.DataFrame:
-    """Re-cast factor columns from the sidecar schema into the lmpy dtype
-    convention (pl.Enum = ordered, pl.Categorical = unordered).
+    """Re-cast factor columns from the sidecar schema into pl.Enum.
 
     CSV round-trip erases R's factor type — quoted numeric levels come back
     as Int64, character levels as String. Without this step, fs/sz/by=factor
     smooths silently take the non-factor fallthrough path, so the R ground
     truth and lmpy's output agree only on that degraded path.
 
-    Polars has no native ordered-factor dtype. lmpy treats pl.Enum as R's
-    ordered factor (poly contrasts, drop-first in s(…, by=…)) and
-    pl.Categorical as R's unordered factor. For unordered cols we cast
-    through pl.Enum first so the level order from the schema is preserved
-    in the resulting Categorical's `cat.get_categories()`.
+    Polars 1.40+ makes pl.Categorical process-global (shared string cache
+    across DataFrames), which merges sibling columns' level pools and
+    reorders levels by first-appearance. pl.Enum keeps its declared levels
+    per-column, so we use Enum for every factor here regardless of the
+    schema's `ordered` flag. Ordered vs. unordered contrasts are driven by
+    `ordered_cols` passed through lmpy's public API (e.g. via `ORDERED_COLS`
+    below), not by dtype.
     """
     path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
     if not path.exists():
@@ -55,11 +59,27 @@ def _apply_schema(df: pl.DataFrame, pkg: str, name: str) -> pl.DataFrame:
         if col not in df.columns:
             continue
         levels = [str(v) for v in spec["levels"]]
-        e = pl.col(col).cast(pl.Utf8).cast(pl.Enum(levels))
-        if not spec.get("ordered"):
-            e = e.cast(pl.Categorical)
-        exprs.append(e)
+        exprs.append(pl.col(col).cast(pl.Utf8).cast(pl.Enum(levels)))
     return df.with_columns(exprs) if exprs else df
+
+
+def ordered_schema_cols(pkg: str, name: str) -> frozenset[str]:
+    """Columns marked `ordered: true` in the dataset's schema sidecar.
+
+    Since pl.Enum carries level-order for both ordered and unordered factors
+    (see `_apply_schema`), the ordered flag is plumbed separately via
+    `lmpy.formula.with_ordered_cols(...)`.
+    """
+    path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
+    if not path.exists():
+        return frozenset()
+    sch = json.loads(path.read_text())
+    return frozenset(
+        col for col, spec in sch.get("factors", {}).items() if spec.get("ordered")
+    )
+
+
+_current_ordered_cols: "set[str]" = set()
 
 
 def load_dataset(pkg: str, name: str) -> pl.DataFrame:
@@ -67,7 +87,27 @@ def load_dataset(pkg: str, name: str) -> pl.DataFrame:
     if key not in _data_cache:
         df = pl.read_csv(DATA_ROOT / _pkg_subdir(pkg) / f"{name}.csv", null_values="NA")
         _data_cache[key] = _apply_schema(df, pkg, name)
+    # Register any ordered factor columns with lmpy's contextvar so the
+    # formula machinery can apply poly contrasts / ordered-by handling.
+    # Accumulates across calls within a test (some fixtures touch multiple
+    # datasets); `_reset_ordered_cols` autouse fixture clears between tests.
+    ordered = ordered_schema_cols(pkg, name)
+    if ordered:
+        _current_ordered_cols.update(ordered)
+        set_ordered_cols(frozenset(_current_ordered_cols))
     return _data_cache[key].clone()
+
+
+@pytest.fixture(autouse=True)
+def _reset_ordered_cols():
+    """Clear the ordered-cols contextvar and the accumulator before each test
+    so cached-dataset fixtures from an earlier test don't bleed ordered labels
+    into an unrelated one."""
+    _current_ordered_cols.clear()
+    set_ordered_cols(frozenset())
+    yield
+    _current_ordered_cols.clear()
+    set_ordered_cols(frozenset())
 
 
 
