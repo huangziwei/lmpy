@@ -7,7 +7,7 @@ each other.
 
 from __future__ import annotations
 
-import pandas as pd
+import polars as pl
 from scipy.stats import chi2, f
 
 from .lm import lm
@@ -22,12 +22,13 @@ def AIC(*models) -> None:
 
     Each model must expose ``.AIC``, ``.npar``, and ``.formula``.
     """
-    rows = pd.DataFrame.from_dict({
+    rows = pl.DataFrame({
         "formula": [m.formula for m in models],
         "df":      [m.npar    for m in models],
-        "AIC":     [m.AIC     for m in models],
-    }).set_index("formula")
-    print(rows.to_string(formatters={"AIC": "{:.2f}".format}))
+        "AIC":     [f"{m.AIC:.2f}" for m in models],
+    })
+    with pl.Config(tbl_rows=-1, tbl_cols=-1):
+        print(rows)
 
 
 def BIC(*models) -> None:
@@ -35,12 +36,13 @@ def BIC(*models) -> None:
 
     Each model must expose ``.BIC``, ``.npar``, and ``.formula``.
     """
-    rows = pd.DataFrame.from_dict({
+    rows = pl.DataFrame({
         "formula": [m.formula for m in models],
         "df":      [m.npar    for m in models],
-        "BIC":     [m.BIC     for m in models],
-    }).set_index("formula")
-    print(rows.to_string(formatters={"BIC": "{:.2f}".format}))
+        "BIC":     [f"{m.BIC:.2f}" for m in models],
+    })
+    with pl.Config(tbl_rows=-1, tbl_cols=-1):
+        print(rows)
 
 
 def anova(*models):
@@ -95,7 +97,8 @@ def _anova_lm(*models):
     for i, m in enumerate(models):
         docstring += f"{labels[i]}: {m.formula}\n"
 
-    df_ = pd.DataFrame.from_dict({
+    df_ = pl.DataFrame({
+        "model":     [labels[i] for i in order],
         "Res.Df":    dfs,
         "RSS":       [f"{r:.3f}" for r in rss],
         "Df":        df_col,
@@ -104,10 +107,10 @@ def _anova_lm(*models):
         "Pr(>F)":    p_col,
         " ":         sig_col,
     })
-    df_.index = [labels[i] for i in order]
 
     print(docstring)
-    print(df_.to_string())
+    with pl.Config(tbl_rows=-1, tbl_cols=-1):
+        print(df_)
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
 
@@ -147,7 +150,8 @@ def _anova_lme(*models):
     for i, m in enumerate(models):
         docstring += f"{labels[i]}: {m.formula}\n"
 
-    df_ = pd.DataFrame.from_dict({
+    df_ = pl.DataFrame({
+        "model":      [labels[i] for i in order],
         "npar":       npar_col,
         "AIC":        aic_col,
         "BIC":        bic_col,
@@ -158,9 +162,9 @@ def _anova_lme(*models):
         "Pr(>Chisq)": p_col,
         " ":          sig_col,
     })
-    df_.index = [labels[i] for i in order]
 
     print(docstring)
-    print(df_.to_string())
+    with pl.Config(tbl_rows=-1, tbl_cols=-1):
+        print(df_)
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")

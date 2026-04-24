@@ -896,7 +896,7 @@ def _contains_dot(node) -> bool:
 import locale as _locale  # noqa: E402
 import math  # noqa: E402
 import numpy as np  # noqa: E402  — kept near usage to localize heavy import
-import pandas as pd  # noqa: E402
+import polars as pl  # noqa: E402
 from scipy.linalg import eigh_tridiagonal as _eigh_tridiagonal  # noqa: E402
 
 
@@ -951,43 +951,59 @@ def _as_float(x) -> np.ndarray:
     return arr.astype(float)
 
 
-def _series(data: pd.DataFrame, name: str) -> pd.Series:
+def _series(data: pl.DataFrame, name: str) -> pl.Series:
     if name not in data.columns:
         raise KeyError(f"column {name!r} not in data")
     return data[name]
 
 
-def _is_categorical(series: pd.Series) -> bool:
-    if pd.api.types.is_categorical_dtype(series):
+def _is_categorical(series: pl.Series) -> bool:
+    dt = series.dtype
+    if dt in (pl.Categorical, pl.Enum):
         return True
-    if series.dtype == object:
+    if dt in (pl.String, pl.Utf8, pl.Object):
         return True
     return False
 
 
-def _factor_from_series(series: pd.Series, label: str, ordered_hint: bool = False) -> _FactorBlock:
-    if pd.api.types.is_categorical_dtype(series):
-        cat = series.cat
-        return _FactorBlock(
-            codes=np.asarray(cat.codes),
-            levels=list(cat.categories),
-            ordered=bool(cat.ordered) or ordered_hint,
-            label=label,
-        )
+def _factor_from_series(series: pl.Series, label: str, ordered_hint: bool = False) -> _FactorBlock:
+    dt = series.dtype
+    if dt in (pl.Categorical, pl.Enum):
+        levels = series.cat.get_categories().to_list()
+        # to_physical() gives uint32 codes; null rows get a sentinel we map to -1.
+        codes = series.to_physical().to_numpy().astype(np.int64)
+        if series.null_count() > 0:
+            null_mask = series.is_null().to_numpy()
+            codes = np.where(null_mask, -1, codes).astype(int)
+        else:
+            codes = codes.astype(int)
+        ordered = (dt == pl.Enum) or ordered_hint
+        return _FactorBlock(codes=codes, levels=levels, ordered=ordered, label=label)
     # R's factor() uses locale-aware sort(unique(x)) on strings, but numeric
     # columns sort numerically (factor() first coerces to character and R's
     # sort on numerics is numeric when the input was numeric).
-    uniq = series.dropna().unique().tolist()
-    if pd.api.types.is_numeric_dtype(series):
+    values = series.to_numpy()
+    null_mask = series.is_null().to_numpy() if series.null_count() > 0 else None
+    if null_mask is not None:
+        uniq = series.drop_nulls().unique().to_list()
+    else:
+        uniq = series.unique().to_list()
+    if dt.is_numeric():
         levels = sorted(uniq)
     else:
         levels = sorted(uniq, key=_factor_sort_key)
     code_map = {lv: i for i, lv in enumerate(levels)}
-    codes = np.array([code_map.get(v, -1) for v in series], dtype=int)
+    if null_mask is not None:
+        codes = np.array(
+            [-1 if null_mask[i] else code_map.get(values[i], -1) for i in range(len(values))],
+            dtype=int,
+        )
+    else:
+        codes = np.array([code_map.get(v, -1) for v in values], dtype=int)
     return _FactorBlock(codes=codes, levels=levels, ordered=ordered_hint, label=label)
 
 
-def _eval_maybe_string(node, data: pd.DataFrame) -> np.ndarray:
+def _eval_maybe_string(node, data: pl.DataFrame) -> np.ndarray:
     """Like `_eval_numeric` but preserves string dtype for comparison branches."""
     if isinstance(node, Literal) and node.kind == "str":
         return np.full(len(data), node.value, dtype=object)
@@ -995,14 +1011,14 @@ def _eval_maybe_string(node, data: pd.DataFrame) -> np.ndarray:
         if node.ident in _R_CONSTANTS:
             return np.full(len(data), float(_R_CONSTANTS[node.ident]))
         s = _series(data, node.ident)
-        if s.dtype == object or pd.api.types.is_categorical_dtype(s):
+        if s.dtype in (pl.Categorical, pl.Enum, pl.String, pl.Utf8, pl.Object):
             return s.to_numpy()
         return _as_float(s.to_numpy())
     # Fallback to numeric; comparison ops on numeric are fine.
     return _eval_numeric(node, data)
 
 
-def _eval_numeric(node, data: pd.DataFrame) -> np.ndarray:
+def _eval_numeric(node, data: pl.DataFrame) -> np.ndarray:
     """Evaluate a node to a 1-D float array, assuming it's strictly numeric.
 
     Used inside `I(...)` and as argument evaluation for numeric-only builtins.
@@ -1039,7 +1055,7 @@ def _eval_numeric(node, data: pd.DataFrame) -> np.ndarray:
     if isinstance(node, BinOp):
         op = node.op
         if op == "$":
-            # pandas column accessor: data$col  => data[col]
+            # DataFrame column accessor: data$col  => data[col]
             if isinstance(node.left, Name) and isinstance(node.right, Name):
                 return _as_float(_series(data, node.right.ident).to_numpy())
             raise TypeError("`$` only supported as `data$col`")
@@ -1081,7 +1097,7 @@ def _eval_numeric(node, data: pd.DataFrame) -> np.ndarray:
 
 
 # Function-call atom evaluator: returns _NumBlock or _FactorBlock.
-def _eval_call(call: Call, data: pd.DataFrame):
+def _eval_call(call: Call, data: pl.DataFrame):
     fn = call.fn
     label = _deparse(call)
 
@@ -1123,7 +1139,7 @@ def _eval_call(call: Call, data: pd.DataFrame):
         if isinstance(src, Name):
             s = _series(data, src.ident)
         else:
-            s = pd.Series(_eval_numeric(src, data))
+            s = pl.Series(_eval_numeric(src, data))
         ordered = False
         if "ordered" in call.kwargs:
             ok = call.kwargs["ordered"]
@@ -1134,26 +1150,30 @@ def _eval_call(call: Call, data: pd.DataFrame):
             lvls = _eval_level_list(lvl_node)
             # Recode to the explicit level order.
             code_map = {lv: i for i, lv in enumerate(lvls)}
-            new_codes = np.array([code_map.get(v, -1) for v in s], dtype=int)
+            new_codes = np.array(
+                [code_map.get(v, -1) for v in s.to_list()], dtype=int
+            )
             blk = _FactorBlock(codes=new_codes, levels=lvls, ordered=blk.ordered, label=label)
         return blk
 
     if fn == "ordered":
         # Same as factor() but ordered=TRUE, and default contrast becomes poly.
         src = call.args[0]
-        s = _series(data, src.ident) if isinstance(src, Name) else pd.Series(_eval_numeric(src, data))
+        s = _series(data, src.ident) if isinstance(src, Name) else pl.Series(_eval_numeric(src, data))
         blk = _factor_from_series(s, label=label, ordered_hint=True)
         if "levels" in call.kwargs:
             lvls = _eval_level_list(call.kwargs["levels"])
             code_map = {lv: i for i, lv in enumerate(lvls)}
-            new_codes = np.array([code_map.get(v, -1) for v in s], dtype=int)
+            new_codes = np.array(
+                [code_map.get(v, -1) for v in s.to_list()], dtype=int
+            )
             blk = _FactorBlock(codes=new_codes, levels=lvls, ordered=True, label=label)
         return blk
 
     if fn == "dummy":
         # lme4's dummy(f, level) → 0/1 indicator for `f == level`.
         src = call.args[0]
-        s = _series(data, src.ident) if isinstance(src, Name) else pd.Series(_eval_numeric(src, data))
+        s = _series(data, src.ident) if isinstance(src, Name) else pl.Series(_eval_numeric(src, data))
         level_node = call.args[1] if len(call.args) >= 2 else call.kwargs.get("level")
         if isinstance(level_node, Literal):
             level = level_node.value
@@ -1169,7 +1189,9 @@ def _eval_call(call: Call, data: pd.DataFrame):
         inner = _eval_atom(call.args[0], data)
         if not isinstance(inner, _FactorBlock):
             if isinstance(call.args[0], Name):
-                inner = _factor_from_series(_series(data, call.args[0].ident), label=label)
+                inner = _factor_from_series(
+                    _series(data, call.args[0].ident), label=label,
+                )
             else:
                 raise TypeError("relevel() requires a factor-like first argument")
         ref_node = call.kwargs.get("ref")
@@ -1476,7 +1498,7 @@ def _poly_orthogonal(x: np.ndarray, degree: int) -> np.ndarray:
     return (Q * signs)[:, 1:]
 
 
-def _eval_atom(node, data: pd.DataFrame):
+def _eval_atom(node, data: pl.DataFrame):
     """Per-atom entry point: returns _NumBlock or _FactorBlock."""
     if isinstance(node, Name):
         s = _series(data, node.ident)
@@ -1669,7 +1691,7 @@ def _term_needs_full_first_factor(term: Term, earlier_terms: list[Term], interce
 
 def _encode_term(
     term: Term,
-    data: pd.DataFrame,
+    data: pl.DataFrame,
     earlier_terms: list[Term],
     intercept: bool,
 ) -> _NumBlock:
@@ -1738,15 +1760,13 @@ def _collect_names(node, names: set[str]) -> None:
             _collect_names(i, names)
 
 
-def materialize(expanded: ExpandedFormula, data: pd.DataFrame) -> pd.DataFrame:
-    """Turn an expanded formula + data frame into a design matrix X.
+def referenced_columns(expanded: ExpandedFormula) -> set[str]:
+    """Every data-column Name referenced by any term, bar, or offset.
 
-    NA-omit: rows with missing values in any referenced column are dropped
-    first (R's `na.action = na.omit` default). Column order: intercept (if
-    on), then each term in `expanded.terms` order, with term-internal column
-    order matching R's interaction convention (first atom's levels vary
-    fastest). Column names follow R: `(Intercept)`, `x`, `fb`, `x:fb`,
-    `I(x^2)`, etc.
+    Public helper used by the NA-omit paths in ``materialize`` /
+    ``materialize_bars`` and by ``lmpy.utils.prepare_design`` (so prepare
+    can align the response to the NA-cleaned X without relying on a
+    shared index — polars has none).
     """
     referenced: set[str] = set()
     for t in expanded.terms:
@@ -1756,10 +1776,23 @@ def materialize(expanded: ExpandedFormula, data: pd.DataFrame) -> pd.DataFrame:
         _collect_names(b, referenced)
     for o in expanded.offsets:
         _collect_names(o, referenced)
-    referenced &= set(data.columns)
-    if referenced and any(data[c].hasnans for c in referenced):
-        keep = ~data[list(referenced)].isna().any(axis=1)
-        data = data.loc[keep]
+    return referenced
+
+
+def materialize(expanded: ExpandedFormula, data: pl.DataFrame) -> pl.DataFrame:
+    """Turn an expanded formula + data frame into a design matrix X.
+
+    NA-omit: rows with missing values in any referenced column are dropped
+    first (R's `na.action = na.omit` default). Column order: intercept (if
+    on), then each term in `expanded.terms` order, with term-internal column
+    order matching R's interaction convention (first atom's levels vary
+    fastest). Column names follow R: `(Intercept)`, `x`, `fb`, `x:fb`,
+    `I(x^2)`, etc.
+    """
+    referenced = referenced_columns(expanded) & set(data.columns)
+    ref_list = list(referenced)
+    if ref_list and any(data[c].null_count() > 0 for c in ref_list):
+        data = data.drop_nulls(subset=ref_list)
 
     blocks: list[_NumBlock] = []
     running_terms: list[Term] = []
@@ -1772,11 +1805,15 @@ def materialize(expanded: ExpandedFormula, data: pd.DataFrame) -> pd.DataFrame:
         blocks.append(_encode_term(t, data, running_terms, expanded.intercept))
         running_terms.append(t)
 
-    all_values = np.hstack([b.values for b in blocks]) if blocks else np.zeros((len(data), 0))
     all_names: list[str] = []
     for b in blocks:
         all_names.extend(b.suffixes)
-    return pd.DataFrame(all_values, columns=all_names, index=data.index)
+    if not blocks or sum(b.values.shape[1] for b in blocks) == 0:
+        # Polars can't represent (n, 0); return an empty frame and let
+        # callers use ``len(input_data)`` if they need the row count.
+        return pl.DataFrame()
+    all_values = np.hstack([b.values for b in blocks])
+    return pl.from_numpy(all_values, schema=all_names)
 
 
 # ---------------------------------------------------------------------------
@@ -1811,7 +1848,7 @@ def _bar_lhs_to_ef(lhs_node) -> ExpandedFormula:
     return expand(Formula(lhs=None, rhs=lhs_node))
 
 
-def _materialize_re_lhs(lhs_ef: ExpandedFormula, data: pd.DataFrame) -> tuple[np.ndarray, list[str]]:
+def _materialize_re_lhs(lhs_ef: ExpandedFormula, data: pl.DataFrame) -> tuple[np.ndarray, list[str]]:
     """Materialize a bar's LHS as a dense (n, c) matrix + component names.
 
     Uses the same code path as the fixed-effect materializer: contrast-coded
@@ -1851,7 +1888,7 @@ def _flatten_nested_group(node) -> list:
     return [node]
 
 
-def _eval_group(node, data: pd.DataFrame) -> tuple[np.ndarray, list, str]:
+def _eval_group(node, data: pl.DataFrame) -> tuple[np.ndarray, list, str]:
     """Resolve a bar's grouping expression → (codes, levels, label)."""
     if isinstance(node, Paren):
         return _eval_group(node.expr, data)
@@ -1885,14 +1922,14 @@ def _eval_group(node, data: pd.DataFrame) -> tuple[np.ndarray, list, str]:
     # Fallback: evaluate as numeric then factor-ize.
     try:
         v = _eval_numeric(node, data)
-        s = pd.Series(v)
+        s = pl.Series(v)
         fb = _factor_from_series(s, label=_deparse(node))
         return fb.codes, fb.levels, _deparse(node)
     except Exception as e:
         raise TypeError(f"can't resolve grouping {_deparse(node)!r}: {e}") from e
 
 
-def materialize_bars(expanded: ExpandedFormula, data: pd.DataFrame) -> ReTerms:
+def materialize_bars(expanded: ExpandedFormula, data: pl.DataFrame) -> ReTerms:
     """Build lme4's Z / Λᵀ template / θ from the bars of an expanded formula.
 
     Matches lme4's conventions: bars with nested groupings ``a/b`` split into
@@ -1900,18 +1937,10 @@ def materialize_bars(expanded: ExpandedFormula, data: pd.DataFrame) -> ReTerms:
     per LHS column; final bar order is stable-sorted by descending number of
     grouping-factor levels. θ is initialized to the identity Cholesky factor.
     """
-    referenced: set[str] = set()
-    for t in expanded.terms:
-        for a in t.atoms:
-            _collect_names(a, referenced)
-    for b in expanded.bars:
-        _collect_names(b, referenced)
-    for o in expanded.offsets:
-        _collect_names(o, referenced)
-    referenced &= set(data.columns)
-    if referenced and any(data[c].hasnans for c in referenced):
-        keep = ~data[list(referenced)].isna().any(axis=1)
-        data = data.loc[keep]
+    referenced = referenced_columns(expanded) & set(data.columns)
+    ref_list = list(referenced)
+    if ref_list and any(data[c].null_count() > 0 for c in ref_list):
+        data = data.drop_nulls(subset=ref_list)
     n = len(data)
 
     # Normalize each parsed bar into (lhs_matrix, cnames, group_codes,
@@ -2130,48 +2159,74 @@ def _smooth_by_expr(call: Call) -> str | None:
     return _deparse(by)
 
 
-def _eval_by_col(by_expr: str, data: pd.DataFrame) -> np.ndarray | pd.Series:
-    """Evaluate the by expression against `data`.
-    Plain name → column.
-    Otherwise use pandas.eval (limited).
+def _eval_by_col(by_expr: str, data: pl.DataFrame) -> pl.Series | np.ndarray:
+    """Evaluate a smooth's ``by=`` expression against ``data``.
+
+    We support the four forms that R/mgcv users actually write — anything
+    more exotic would need ``pd.eval``-class machinery that polars does not
+    ship. Supported:
+      * plain column name → the column (as a ``pl.Series``)
+      * ``as.numeric(<name>)`` → float ndarray
+      * ``<name> == <lit>`` / ``<name> != <lit>`` → bool ndarray
+      * ``as.numeric(<name> == <lit>)`` → float ndarray (0/1 indicator)
     """
-    if by_expr in data.columns:
-        return data[by_expr]
-    # Support a few common forms: `as.numeric(expr)`, `expr == lit`, etc.
-    py_expr = by_expr
-    # R-ism → Python. Simple translations: `as.numeric(x)` → `x.astype(float)`.
-    # Lean on pandas/numexpr by handing it the expression with column names
-    # mapped via local_dict. Strip R wrappers.
+    expr = by_expr.strip()
+    if expr in data.columns:
+        return data[expr]
+
     import re as _re
-    m = _re.fullmatch(r"as\.numeric\((.*)\)", py_expr.strip())
+
+    m = _re.fullmatch(r"as\.numeric\((.*)\)", expr)
     if m:
-        inner = m.group(1)
-        return _eval_by_col(inner, data).astype(float)
-    # `==` works in both R and pandas.eval; let pandas handle it.
-    return pd.eval(py_expr, local_dict={c: data[c] for c in data.columns})
+        inner = _eval_by_col(m.group(1).strip(), data)
+        if isinstance(inner, pl.Series):
+            inner = inner.to_numpy()
+        return np.asarray(inner).astype(float)
+
+    # Binary comparisons: <col> (==|!=) <literal>
+    m = _re.fullmatch(
+        r'(\w+(?:\.\w+)*)\s*(==|!=)\s*(?:"([^"]*)"|\'([^\']*)\'|([-+]?\d+(?:\.\d+)?))',
+        expr,
+    )
+    if m:
+        col_name, op, s_dq, s_sq, num = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)
+        if col_name not in data.columns:
+            raise KeyError(f"by=: column {col_name!r} not in data")
+        if num is not None:
+            lit = float(num)
+        else:
+            lit = s_dq if s_dq is not None else s_sq
+        arr = data[col_name].to_numpy()
+        mask = (arr == lit) if op == "==" else (arr != lit)
+        return mask.astype(bool)
+
+    raise ValueError(
+        f"by={by_expr!r} is not supported; expected a column name, "
+        "`col == lit`, `col != lit`, or `as.numeric(...)` wrapping one of those"
+    )
 
 
-def _is_factor_like(col: np.ndarray | pd.Series) -> bool:
+def _is_factor_like(col: pl.Series | np.ndarray) -> bool:
     """Treat string / object / categorical columns as factor-ish."""
-    if isinstance(col, pd.Series):
-        if isinstance(col.dtype, pd.CategoricalDtype):
-            return True
-        if col.dtype == object:
-            return True
-        return False
+    if isinstance(col, pl.Series):
+        return col.dtype in (pl.Categorical, pl.Enum, pl.String, pl.Utf8, pl.Object)
     return col.dtype.kind in ("O", "U", "S")
 
 
-def _factor_levels(col: pd.Series) -> list:
-    """R-style factor levels: alphabetically sorted unique values."""
-    if isinstance(col.dtype, pd.CategoricalDtype):
-        return list(col.cat.categories)
-    return sorted(col.dropna().unique())
+def _factor_levels(col: pl.Series) -> list:
+    """R-style factor levels: sorted unique values (alphabetic for strings,
+    numeric for numerics)."""
+    if col.dtype in (pl.Categorical, pl.Enum):
+        return col.cat.get_categories().to_list()
+    uniq = col.drop_nulls().unique().to_list()
+    if col.dtype.is_numeric():
+        return sorted(uniq)
+    return sorted(uniq, key=_factor_sort_key)
 
 
 def _apply_by_and_absorb(
     call: Call,
-    data: pd.DataFrame,
+    data: pl.DataFrame,
     X: np.ndarray,
     S_list: list[np.ndarray],
     cls: str,
@@ -2196,14 +2251,16 @@ def _apply_by_and_absorb(
 
     by_col = _eval_by_col(by_expr, data)
     if _is_factor_like(by_col):
-        by_series = pd.Series(by_col).reset_index(drop=True)
-        levels = _factor_levels(by_series)
-        # TODO: ordered factors drop first level; detect via CategoricalDtype.ordered.
-        if isinstance(by_series.dtype, pd.CategoricalDtype) and by_series.dtype.ordered and len(levels) > 1:
+        # by_col is a pl.Series (the _is_factor_like(np.ndarray) branch only
+        # fires for object/unicode arrays, which don't appear on the current
+        # _eval_by_col paths).
+        levels = _factor_levels(by_col)
+        if by_col.dtype == pl.Enum and len(levels) > 1:
             levels = levels[1:]
+        by_arr = by_col.to_numpy()
         blocks: list[SmoothBlock] = []
         for lev in levels:
-            mask = (by_series == lev).to_numpy().astype(float)
+            mask = (by_arr == lev).astype(float)
             X_lev = X * mask[:, None]
             X2, S2 = _absorb_sumzero(X_lev, S_list)
             label = f"{base_label}:{by_expr}{lev}"
@@ -2211,7 +2268,10 @@ def _apply_by_and_absorb(
         return blocks
 
     # Numeric by: multiply X by by-column, skip absorb.cons.
-    by_arr = np.asarray(by_col, dtype=float)
+    if isinstance(by_col, pl.Series):
+        by_arr = by_col.to_numpy().astype(float)
+    else:
+        by_arr = np.asarray(by_col, dtype=float)
     X2 = X * by_arr[:, None]
     return [SmoothBlock(
         label=f"{base_label}:{by_expr}",
@@ -2244,7 +2304,7 @@ def _scale_penalty(X: np.ndarray, S_list: list[np.ndarray]) -> list[np.ndarray]:
     return out
 
 
-def _build_re_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_re_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`bs="re"` → `model.matrix(~ term1:term2:...-1, data)`.
 
     Penalty is `diag(ncol(X))`. re sets `no.rescale=TRUE` in mgcv, so
@@ -2263,7 +2323,7 @@ def _build_re_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     ef = expand(fake)
     ef.intercept = False
     X_df = materialize(ef, data)
-    X = X_df.values.astype(float)
+    X = X_df.to_numpy().astype(float)
     S_list = [np.eye(X.shape[1])]
     S_list = _scale_penalty(X, S_list)
     # re.smooth.spec sets C = empty (no absorb.cons). `by` is still honored:
@@ -2275,20 +2335,23 @@ def _build_re_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
                             cls="re.smooth.spec", X=X, S=S_list)]
     by_col = _eval_by_col(by_expr, data)
     if _is_factor_like(by_col):
-        by_series = pd.Series(by_col).reset_index(drop=True)
-        levels = _factor_levels(by_series)
-        if isinstance(by_series.dtype, pd.CategoricalDtype) and by_series.dtype.ordered and len(levels) > 1:
+        levels = _factor_levels(by_col)
+        if by_col.dtype == pl.Enum and len(levels) > 1:
             levels = levels[1:]
+        by_arr = by_col.to_numpy()
         return [
             SmoothBlock(
                 label=f"{base_label}:{by_expr}{lev}", term=term_vars,
                 cls="re.smooth.spec",
-                X=X * (by_series == lev).to_numpy().astype(float)[:, None],
+                X=X * (by_arr == lev).astype(float)[:, None],
                 S=S_list,
             )
             for lev in levels
         ]
-    by_arr = np.asarray(by_col, dtype=float)
+    if isinstance(by_col, pl.Series):
+        by_arr = by_col.to_numpy().astype(float)
+    else:
+        by_arr = np.asarray(by_col, dtype=float)
     return [SmoothBlock(
         label=f"{base_label}:{by_expr}", term=term_vars,
         cls="re.smooth.spec",
@@ -2442,7 +2505,7 @@ def _cr_is_fixed(call: Call) -> bool:
 
 
 def _cr_raw(
-    call: Call, data: pd.DataFrame, term: list[str] | None = None,
+    call: Call, data: pl.DataFrame, term: list[str] | None = None,
 ) -> tuple[np.ndarray, list[np.ndarray], np.ndarray]:
     """Bare cr output (X, S_list, knots) — no scale.penalty, no absorb.cons.
 
@@ -2453,9 +2516,9 @@ def _cr_raw(
         term = _smooth_term_vars(call)
     if len(term) != 1:
         raise ValueError("cr smooth must be 1D")
-    x = data[term[0]].to_numpy(dtype=float)
+    x = data[term[0]].to_numpy().astype(float)
     nk = _cr_default_k(call)
-    xu = pd.unique(pd.Series(x).dropna())
+    xu = np.unique(x[~np.isnan(x)])
     if len(xu) < nk:
         raise ValueError(f"cr smooth: fewer unique x than knots ({len(xu)} < {nk})")
     # R's default knots: quantile(unique(x), seq(0, 1, length=nk)), type 7.
@@ -2466,7 +2529,7 @@ def _cr_raw(
     return X, S_list, knots
 
 
-def _build_cr_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_cr_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """Build cubic regression spline (`bs="cr"`) smooth block.
 
     Follows mgcv's smooth.construct.cr.smooth.spec: knots at quantiles of
@@ -2611,11 +2674,11 @@ def _cc_is_fixed(call: Call) -> bool:
     return False
 
 
-def _build_cc_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_cc_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     term = _smooth_term_vars(call)
     if len(term) != 1:
         raise ValueError("cc smooth must be 1D")
-    x = data[term[0]].to_numpy(dtype=float)
+    x = data[term[0]].to_numpy().astype(float)
     nk = _cc_default_k(call)
     if nk < 4:
         nk = 4
@@ -2728,11 +2791,11 @@ def _ps_penalty(k: int, m1: int) -> np.ndarray:
     return D.T @ D
 
 
-def _build_ps_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_ps_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     term = _smooth_term_vars(call)
     if len(term) != 1:
         raise ValueError('bs="ps" only handles 1D smooths')
-    x = data[term[0]].to_numpy(dtype=float)
+    x = data[term[0]].to_numpy().astype(float)
     m = _ps_order_m(call)
     k = _ps_default_k(call, m[0])
     knots = _ps_knots(x, m[0], k)
@@ -2938,11 +3001,11 @@ def _bs_penalty(knots: np.ndarray, m0: int, m2: int) -> np.ndarray:
     return D.T @ W @ D
 
 
-def _build_bs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_bs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     term = _smooth_term_vars(call)
     if len(term) != 1:
         raise ValueError('bs="bs" only handles 1D smooths')
-    x = data[term[0]].to_numpy(dtype=float)
+    x = data[term[0]].to_numpy().astype(float)
     m = _bs_order_m(call)
     m0 = m[0]
     bs_dim = _bs_default_k(call, m0)
@@ -2952,11 +3015,11 @@ def _build_bs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     return _apply_by_and_absorb(call, data, X, S_list, "Bspline.smooth", term)
 
 
-def _build_cp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_cp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     term = _smooth_term_vars(call)
     if len(term) != 1:
         raise ValueError('bs="cp" only handles 1D smooths')
-    x = data[term[0]].to_numpy(dtype=float)
+    x = data[term[0]].to_numpy().astype(float)
     m = _ps_order_m(call)
     bs_dim = _cp_default_k(call, m[0])
     nk = bs_dim + 1
@@ -3057,10 +3120,10 @@ def _gp_default_k(call: Call, d: int, null_space_dim: int) -> int:
     return bs_dim
 
 
-def _build_gp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_gp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     term = _smooth_term_vars(call)
     d = len(term)
-    x_full = np.column_stack([data[v].to_numpy(dtype=float) for v in term])
+    x_full = np.column_stack([data[v].to_numpy().astype(float) for v in term])
     stationary, type_, rho_init, power_k = _gp_parse_m(call)
     null_space_dim = 1 if stationary else d + 1
 
@@ -3572,7 +3635,7 @@ def _tp_rlanczos(
 
 
 def _tp_raw(
-    call: Call, data: pd.DataFrame, term: list[str],
+    call: Call, data: pl.DataFrame, term: list[str],
 ) -> tuple[np.ndarray, list[np.ndarray], int, int, int]:
     """Bare `smooth.construct.tp.smooth.spec` output: no scale.penalty,
     no absorb.cons, no drop_null. Returns `(X_raw, S_list, M, k, rank)`
@@ -3584,7 +3647,7 @@ def _tp_raw(
     """
     d = len(term)
     # Build (n × d) matrix of covariates, shifted by column mean.
-    x_full = np.column_stack([data[v].to_numpy(dtype=float) for v in term])
+    x_full = np.column_stack([data[v].to_numpy().astype(float) for v in term])
     shift = x_full.mean(axis=0)
     x_c = x_full - shift
     n = x_c.shape[0]
@@ -3707,7 +3770,7 @@ def _tp_raw(
     return X_raw, S_list, M, k, k - M
 
 
-def _build_tp_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_tp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """Build thin-plate regression spline (`bs="tp"`, the default) block.
 
     Exact port of mgcv/src/tprs.c::tprs_setup (case `n_knots < k`, which is
@@ -3846,7 +3909,7 @@ def _nat_param(
     return X_new, D, P
 
 
-def _fs_find_factor(term: list[str], data: pd.DataFrame) -> tuple[str | None, list[str]]:
+def _fs_find_factor(term: list[str], data: pl.DataFrame) -> tuple[str | None, list[str]]:
     """Split a term list into (factor_var | None, non_factor_vars).
 
     Returns `(None, term)` when no term is factor-like — mgcv falls through
@@ -3864,7 +3927,7 @@ def _fs_find_factor(term: list[str], data: pd.DataFrame) -> tuple[str | None, li
     return fterm, others
 
 
-def _build_fs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`bs="fs"` — factor-smooth interaction.
 
     Default base smooth is `tp` (`xt$bs="tp"` in mgcv; alternative bases
@@ -3898,9 +3961,9 @@ def _build_fs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
 
     # Duplicate block-wise across levels.
     X = np.zeros((n, p * nf))
-    fac_arr = pd.Series(fac_col).reset_index(drop=True)
+    fac_arr = fac_col.to_numpy()
     for j, lev in enumerate(flev):
-        mask = (fac_arr == lev).to_numpy().astype(float)
+        mask = (fac_arr == lev).astype(float)
         X[:, j * p : (j + 1) * p] = Xr * mask[:, None]
 
     # Penalty 1: range — diag of [D, 0...0] replicated nf times.
@@ -3924,7 +3987,7 @@ def _build_fs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     )]
 
 
-def _build_sz_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_sz_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`bs="sz"` — zero-center nested smooth.
 
     Default base smooth is `tp` (`xt$bs="tp"` in mgcv; alternative bases
@@ -4130,7 +4193,7 @@ def _ad_inner_2d_basis(kp: tuple[int, int], Db: dict) -> tuple[np.ndarray, np.nd
     return Vrr, Vcc, Vcr
 
 
-def _build_ad_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_ad_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`bs="ad"` — adaptive P-spline (1D or 2D).
 
     1D: builds a standard ps basis, then replaces its single penalty with
@@ -4146,7 +4209,7 @@ def _build_ad_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
         raise ValueError("ad smooth supports only 1 or 2 covariates")
 
     if d == 1:
-        x = data[term[0]].to_numpy(dtype=float)
+        x = data[term[0]].to_numpy().astype(float)
         m = _ad_order_m(call, 1)
         k = _ad_default_k(call, 1)[0]
         knots = _ps_knots(x, m0=2, k=k)
@@ -4164,8 +4227,8 @@ def _build_ad_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     k_vec = _ad_default_k(call, 2)
     ki, kj = int(k_vec[0]), int(k_vec[1])
     kp = _ad_order_m(call, 2)
-    xi = data[term[0]].to_numpy(dtype=float)
-    xj = data[term[1]].to_numpy(dtype=float)
+    xi = data[term[0]].to_numpy().astype(float)
+    xj = data[term[1]].to_numpy().astype(float)
     knots_i = _ps_knots(xi, m0=2, k=ki)
     knots_j = _ps_knots(xj, m0=2, k=kj)
     Xi = _ps_basis(xi, knots_i, m0=2)
@@ -4247,7 +4310,7 @@ def _te_cast_bool(node) -> bool:
     raise ValueError(f"expected boolean, got {node!r}")
 
 
-def _te_parse_margins(call: Call, data: pd.DataFrame) -> list[dict]:
+def _te_parse_margins(call: Call, data: pl.DataFrame) -> list[dict]:
     """Parse a te/ti/t2 call into a list of margin specs.
 
     Each margin spec is a dict `{term, bs, k, m, fx}` describing what to
@@ -4316,7 +4379,7 @@ def _te_make_margin_call(spec: dict) -> Call:
 
 
 def _te_build_margin_raw(
-    spec: dict, data: pd.DataFrame,
+    spec: dict, data: pl.DataFrame,
 ) -> tuple[np.ndarray, list[np.ndarray], object, bool]:
     """Build the bare margin (no absorb.cons) — returns
     `(X, S_list, predict, noterp)`. `noterp=True` signals that this basis
@@ -4340,7 +4403,7 @@ def _te_build_margin_raw(
 
 
 def _te_build_margin_centered(
-    spec: dict, data: pd.DataFrame,
+    spec: dict, data: pl.DataFrame,
 ) -> tuple[np.ndarray, list[np.ndarray], object, bool]:
     """Build a centered margin (absorb.cons applied), returning
     `(X, S_list, predict, noterp)`. Equivalent to
@@ -4419,7 +4482,7 @@ def _tensor_prod_S(Sm: list[np.ndarray]) -> list[np.ndarray]:
     return out
 
 
-def _build_te_smooth(call: Call, data: pd.DataFrame, *, inter: bool = False,
+def _build_te_smooth(call: Call, data: pl.DataFrame, *, inter: bool = False,
                      mc: list[bool] | None = None) -> list[SmoothBlock]:
     """`te(...)` / `ti(...)` constructor.
 
@@ -4463,7 +4526,7 @@ def _build_te_smooth(call: Call, data: pd.DataFrame, *, inter: bool = False,
         # np=TRUE SVD reparam, skipped for margins that opt out (cr/cc/cs set
         # noterp=TRUE — their basis is already "nicely parameterised").
         if do_np and len(spec["term"]) == 1 and not noterp_i:
-            x_vals = data[spec["term"][0]].to_numpy(dtype=float)
+            x_vals = data[spec["term"][0]].to_numpy().astype(float)
             Xi, S_list_new, _XP = _te_reparam_margin(Xi, [S_i], x_vals, predict_i)
             S_i = S_list_new[0]
 
@@ -4497,7 +4560,7 @@ def _build_te_smooth(call: Call, data: pd.DataFrame, *, inter: bool = False,
     return _apply_by_and_absorb(call, data, X, S_list, cls, term_all)
 
 
-def _build_ti_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_ti_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`ti(...)` — like te but each margin is centered (absorb.cons
     applied) before the tensor, and the outer absorb.cons is skipped.
 
@@ -4513,7 +4576,7 @@ def _build_ti_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
 
 
 def _t2_margin_raw_and_rank(
-    spec: dict, data: pd.DataFrame,
+    spec: dict, data: pl.DataFrame,
 ) -> tuple[np.ndarray, np.ndarray, int]:
     """Build a t2 margin (no absorb.cons) and return `(X, S, rank)`.
     The marginal penalty rank determines the range/null split used by
@@ -4583,7 +4646,7 @@ def _t2_model_matrix(
     return X, sub_cols
 
 
-def _build_t2_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     """`t2(...)` — Wood's alternative tensor product.
 
     Each margin is reparameterized by `nat.param(type=3, unit.fnorm=TRUE)`
@@ -4670,7 +4733,7 @@ def _build_t2_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
 
 
 def materialize_smooths(
-    expanded: ExpandedFormula, data: pd.DataFrame,
+    expanded: ExpandedFormula, data: pl.DataFrame,
 ) -> list[list[SmoothBlock]]:
     """Materialize each smooth in `expanded.smooths` to one or more blocks.
 
@@ -4686,7 +4749,7 @@ def materialize_smooths(
             if v in data.columns:
                 referenced.add(v)
     if referenced:
-        data = data.dropna(subset=list(referenced)).reset_index(drop=True)
+        data = data.drop_nulls(subset=list(referenced))
 
     out: list[list[SmoothBlock]] = []
     for call in expanded.smooths:

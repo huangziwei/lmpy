@@ -9,7 +9,7 @@ test_wr_fixtures.py, which compared formulaic against R.
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import pytest
 
 from conftest import FIXTURE_ROOT, fixture_meta, fixtures_by_kind, load_dataset
@@ -19,13 +19,17 @@ WR_FIXTURES = fixtures_by_kind("wr")
 WR_IDS = [e["id"] for e in WR_FIXTURES]
 
 
-def _load_X_ref(fx_id: str, n_rows: int) -> pd.DataFrame:
-    try:
-        return pd.read_csv(FIXTURE_ROOT / fx_id / "X.csv")
-    except pd.errors.EmptyDataError:
-        # R emitted a zero-column X (e.g. `y ~ 0`). Build an empty frame
-        # with the right row count.
-        return pd.DataFrame(index=range(n_rows))
+def _load_X_ref(fx_id: str, n_rows: int) -> pl.DataFrame:
+    path = FIXTURE_ROOT / fx_id / "X.csv"
+    head = path.read_text().splitlines()[:1]
+    # Zero-column X (e.g. `y ~ 0`) lands as either an empty file or a
+    # file of bare newlines with no header.
+    if not head or not head[0].strip() or "," not in head[0] and '"' not in head[0]:
+        return pl.DataFrame()
+    # infer_schema_length=0 forces all columns to Float64 — X fixtures are
+    # always numeric, and the default-100 inference picks i64 for columns
+    # whose first rows happen to be integral and then chokes on later floats.
+    return pl.read_csv(path, null_values="NA", infer_schema_length=0).cast(pl.Float64)
 
 
 @pytest.mark.parametrize("fx_id", WR_IDS)
@@ -41,18 +45,23 @@ def test_wr_materialize_matches_R(fx_id: str):
     ef = expand(f, data_columns=data_cols)
     X_got = materialize(ef, data)
 
-    assert X_got.shape == X_ref.shape, (
-        f"shape: got {X_got.shape} want {X_ref.shape}  formula={meta['formula']!r}"
+    # polars collapses a 0-column frame to (0, 0) — treat that as the
+    # R-equivalent zero-column case for this assertion.
+    got_shape = X_got.shape if X_got.width > 0 else (len(data), 0)
+    ref_shape = X_ref.shape if X_ref.width > 0 else (len(data), 0)
+    assert got_shape == ref_shape, (
+        f"shape: got {got_shape} want {ref_shape}  formula={meta['formula']!r}"
     )
 
-    np.testing.assert_allclose(
-        X_got.values.astype(float),
-        X_ref.values.astype(float),
-        rtol=1e-6,
-        atol=1e-8,
-        err_msg=(
-            f"formula={meta['formula']!r}\n"
-            f"  got cols: {list(X_got.columns)}\n"
-            f"  ref cols: {list(X_ref.columns)}"
-        ),
-    )
+    if X_got.width > 0:
+        np.testing.assert_allclose(
+            X_got.to_numpy().astype(float),
+            X_ref.to_numpy().astype(float),
+            rtol=1e-6,
+            atol=1e-8,
+            err_msg=(
+                f"formula={meta['formula']!r}\n"
+                f"  got cols: {list(X_got.columns)}\n"
+                f"  ref cols: {list(X_ref.columns)}"
+            ),
+        )

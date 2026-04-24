@@ -19,7 +19,7 @@ Models Using lme4", J. Stat. Software 67(1), §5 ("Profiled Deviance").
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
+import polars as pl
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
 from sksparse.cholmod import (
@@ -119,7 +119,7 @@ class lme:
     formula : str
         lme4-style mixed model formula, e.g.
         ``"Reaction ~ 1 + Days + (1+Days|Subject)"``.
-    data : pandas.DataFrame
+    data : polars.DataFrame
         Data table; rows with NA in any referenced column are dropped
         before fitting.
     REML : bool, default True
@@ -134,7 +134,7 @@ class lme:
         Number of unique levels per (raw) grouping factor.
     sigma : float
         Residual SD (σ̂).
-    bhat, se_bhat, t_values : pandas.DataFrame
+    bhat, se_bhat, t_values : polars.DataFrame
         Fixed-effect estimates / SEs / t-values, one row each, columns
         keyed by R-canonical fixed-effect names (``(Intercept)``,
         ``MachineB``, …).
@@ -164,7 +164,7 @@ class lme:
         ``n - npar`` (matches lme4's printed ``df.resid``).
     """
 
-    def __init__(self, formula: str, data: pd.DataFrame, REML: bool = True):
+    def __init__(self, formula: str, data: pl.DataFrame, REML: bool = True):
         self.formula = formula
         self.REML = REML
 
@@ -178,8 +178,8 @@ class lme:
         # resulting Z stays row-aligned with X.
         re = materialize_bars(d.expanded, d.data)
         X_df = d.X
-        y = d.y.to_numpy(dtype=float)
-        X = X_df.to_numpy(dtype=float)
+        y = d.y.to_numpy().astype(float)
+        X = X_df.to_numpy().astype(float)
         Z = re.Z
         n, p = X.shape
         q = Z.shape[1]
@@ -292,19 +292,22 @@ class lme:
         Rx_inv = solve_triangular(Rx, np.eye(p), lower=True)
         vcov_beta = sigma2 * np.einsum("ij,ik->jk", Rx_inv, Rx_inv)
         se_beta = np.sqrt(np.diag(vcov_beta))
-        self.vcov_beta = pd.DataFrame(
-            vcov_beta, index=self.column_names, columns=self.column_names,
+        self._vcov_beta_arr = vcov_beta
+        self.vcov_beta = pl.DataFrame(
+            {c: vcov_beta[:, i] for i, c in enumerate(self.column_names)}
         )
 
-        self.bhat = pd.DataFrame(
-            beta.reshape(1, -1), columns=self.column_names, index=["Estimate"],
+        self._beta = beta
+        self._se_beta = se_beta
+        self.bhat = pl.DataFrame(
+            {c: [float(beta[i])] for i, c in enumerate(self.column_names)}
         )
-        self.se_bhat = pd.DataFrame(
-            se_beta.reshape(1, -1), columns=self.column_names, index=["Std. Error"],
+        self.se_bhat = pl.DataFrame(
+            {c: [float(se_beta[i])] for i, c in enumerate(self.column_names)}
         )
-        self.t_values = pd.DataFrame(
-            (beta / se_beta).reshape(1, -1),
-            columns=self.column_names, index=["t value"],
+        t_vals = beta / se_beta
+        self.t_values = pl.DataFrame(
+            {c: [float(t_vals[i])] for i, c in enumerate(self.column_names)}
         )
 
         # ------------- per-bar variance components -------------------------
@@ -369,7 +372,7 @@ class lme:
         ``log|Lz|`` is computed as ½·``factor.logdet()`` since
         ``Lz Lzᵀ = M`` means ``|M| = |Lz|²``."""
         y = self.y if y is None else y
-        X = self.X.to_numpy() if X is None else X
+        X = self.X.to_numpy().astype(float) if X is None else X
         XtX = self._XtX if XtX is None else XtX
         Xty = self._Xty if Xty is None else Xty
         yty = self._yty if yty is None else yty
@@ -461,7 +464,7 @@ class lme:
         """Min ML deviance with β_j = ``beta_j_tgt``. Trick: subtract
         ``x_j · β_j_tgt`` from y and drop column j — the remaining fit has
         the same functional form."""
-        X_full = self.X.to_numpy()
+        X_full = self.X.to_numpy().astype(float)
         x_j = X_full[:, j]
         X_rest = np.delete(X_full, j, axis=1)
         y_adj = self.y - x_j * beta_j_tgt
@@ -545,7 +548,7 @@ class lme:
         theta_hat = self.theta.copy()
         sigma_hat = self.sigma
 
-        data: dict[str, pd.DataFrame] = {}
+        data: dict[str, pl.DataFrame] = {}
         estimate: dict[str, float] = {}
 
         # Grid widths are picked to comfortably cover |ζ| ≤ 3 (so the
@@ -568,7 +571,7 @@ class lme:
                     slot_i, v, sigma_warm, theta_warm,
                 )
                 zetas[k] = np.sign(v - sd_i) * np.sqrt(max(0.0, d_k - d_hat))
-            data[label] = pd.DataFrame({"value": grid, "zeta": zetas})
+            data[label] = pl.DataFrame({"value": grid, "zeta": zetas})
 
         # -- σ ----------------------------------------------------------------
         estimate[".sigma"] = sigma_hat
@@ -579,12 +582,12 @@ class lme:
         for k, s in enumerate(sigma_grid):
             d_k, theta_warm = self._dev_with_sigma_fixed(s, theta_warm)
             zetas[k] = np.sign(s - sigma_hat) * np.sqrt(max(0.0, d_k - d_hat))
-        data[".sigma"] = pd.DataFrame({"value": sigma_grid, "zeta": zetas})
+        data[".sigma"] = pl.DataFrame({"value": sigma_grid, "zeta": zetas})
 
         # -- β_j --------------------------------------------------------------
         for j, name in enumerate(self.column_names):
-            beta_j = float(self.bhat.iloc[0, j])
-            se_j = float(self.se_bhat.iloc[0, j])
+            beta_j = float(self._beta[j])
+            se_j = float(self._se_beta[j])
             estimate[name] = beta_j
             grid = np.linspace(beta_j - 4 * se_j, beta_j + 4 * se_j, n_grid)
             zetas = np.empty(n_grid)
@@ -592,7 +595,7 @@ class lme:
             for k, b in enumerate(grid):
                 d_k, theta_warm = self._dev_with_beta_fixed(j, b, theta_warm)
                 zetas[k] = np.sign(b - beta_j) * np.sqrt(max(0.0, d_k - d_hat))
-            data[name] = pd.DataFrame({"value": grid, "zeta": zetas})
+            data[name] = pl.DataFrame({"value": grid, "zeta": zetas})
 
         return Profile(data, estimate)
 
@@ -691,17 +694,22 @@ class lme:
 
         return [fmt(header)] + [fmt(r) for r in rows]
 
-    def _fixef_table(self) -> pd.DataFrame:
-        df = pd.concat([self.bhat, self.se_bhat, self.t_values], axis=0).T
-        df.columns = ["Estimate", "Std. Error", "t value"]
-        return df
+    def _fixef_table(self) -> pl.DataFrame:
+        return pl.DataFrame(
+            {
+                "coef": self.column_names,
+                "Estimate": self._beta.astype(float),
+                "Std. Error": self._se_beta.astype(float),
+                "t value": (self._beta / self._se_beta).astype(float),
+            }
+        )
 
     def _fixef_corr_lines(self) -> list[str]:
         """Correlation-of-fixed-effects block, lme4-style (lower-triangular)."""
-        p = self.vcov_beta.shape[0]
+        p = self._vcov_beta_arr.shape[0]
         if p <= 1:
             return []
-        vcov = self.vcov_beta.values
+        vcov = self._vcov_beta_arr
         d = np.sqrt(np.diag(vcov))
         with np.errstate(invalid="ignore", divide="ignore"):
             corr = vcov / np.outer(d, d)
@@ -725,8 +733,8 @@ class lme:
         out.extend(self._re_table_lines(include_variance=False))
         out.append(self._n_obs_line())
         out.append("Fixed Effects:")
-        compact = self.bhat.rename(index={"Estimate": ""})
-        out.append(compact.to_string())
+        with pl.Config(tbl_rows=-1, tbl_cols=-1):
+            out.append(str(self.bhat))
         return "\n".join(out)
 
     def __str__(self) -> str:
@@ -753,7 +761,12 @@ class lme:
         out.append(self._n_obs_line())
         out.append("")
         out.append("Fixed effects:")
-        out.append(self._fixef_table().round(digits).to_string())
+        tbl = self._fixef_table()
+        tbl = tbl.with_columns(
+            [pl.col(c).round(digits) for c in tbl.columns if tbl[c].dtype.is_numeric()]
+        )
+        with pl.Config(tbl_rows=-1, tbl_cols=-1):
+            out.append(str(tbl))
         corr_lines = self._fixef_corr_lines()
         if corr_lines:
             out.append("")
@@ -780,7 +793,7 @@ class Profile:
 
     Attributes
     ----------
-    data : dict[str, pandas.DataFrame]
+    data : dict[str, polars.DataFrame]
         Per-parameter table with columns ``value`` and ``zeta``. Keys are
         ``.sig01``, ``.sig02``, … for variance-component SDs, ``.sigma``
         for the residual SD, and the R-canonical fixed-effect names
@@ -789,11 +802,11 @@ class Profile:
         MLE for each profiled parameter, keyed the same way.
     """
 
-    def __init__(self, data: dict[str, pd.DataFrame], estimate: dict[str, float]):
+    def __init__(self, data: dict[str, pl.DataFrame], estimate: dict[str, float]):
         self.data = data
         self.estimate = estimate
 
-    def confint(self, level: float = 0.95) -> pd.DataFrame:
+    def confint(self, level: float = 0.95) -> pl.DataFrame:
         """Profile-based confidence intervals at ``level`` (default 95%).
 
         Inverts each ζ-curve at ±Φ⁻¹((1+level)/2). A bound is ``NaN`` when
@@ -805,12 +818,16 @@ class Profile:
         z = float(norm.ppf(0.5 + level / 2))
         lo_lbl = f"{100 * (1 - level) / 2:.1f}%"
         hi_lbl = f"{100 * (0.5 + level / 2):.1f}%"
-        rows: dict[str, list[float]] = {}
+        names: list[str] = []
+        lo: list[float] = []
+        hi: list[float] = []
         for name, df in self.data.items():
             v = df["value"].to_numpy()
             s = df["zeta"].to_numpy()
-            rows[name] = [_invert_zeta(v, s, -z), _invert_zeta(v, s, +z)]
-        return pd.DataFrame(rows, index=[lo_lbl, hi_lbl]).T
+            names.append(name)
+            lo.append(_invert_zeta(v, s, -z))
+            hi.append(_invert_zeta(v, s, +z))
+        return pl.DataFrame({"parameter": names, lo_lbl: lo, hi_lbl: hi})
 
     def plot(
         self, absolute: bool = False, figsize: tuple[float, float] | None = None,

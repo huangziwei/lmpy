@@ -26,7 +26,6 @@ The post-migration lme is expected to expose, at minimum:
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 from scipy.stats import chi2
 
 from conftest import load_dataset
@@ -41,11 +40,11 @@ from lmpy.lme import lme
 def _assert_fixed(m, col, est, se=None, tval=None, *, atol=5e-3):
     if col not in m.bhat.columns:
         raise KeyError(f"{col!r} not in {list(m.bhat.columns)!r}")
-    np.testing.assert_allclose(m.bhat[col].iloc[0], est, atol=atol)
+    np.testing.assert_allclose(m.bhat[col][0], est, atol=atol)
     if se is not None:
-        np.testing.assert_allclose(m.se_bhat[col].iloc[0], se, atol=atol)
+        np.testing.assert_allclose(m.se_bhat[col][0], se, atol=atol)
     if tval is not None:
-        np.testing.assert_allclose(m.t_values[col].iloc[0], tval, atol=5e-2)
+        np.testing.assert_allclose(m.t_values[col][0], tval, atol=5e-2)
 
 
 def _assert_re_scalar(m, group, sd, *, atol=5e-3):

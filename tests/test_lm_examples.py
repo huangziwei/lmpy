@@ -23,16 +23,16 @@ from lmpy import lm
 def _assert_coef(m, col, est, se=None, tval=None, pval=None):
     if col not in m.bhat.columns:
         raise KeyError(f"{col!r} not in {list(m.bhat.columns)!r}")
-    np.testing.assert_allclose(m.bhat[col].iloc[0], est, atol=5e-3)
+    np.testing.assert_allclose(m.bhat[col][0], est, atol=5e-3)
     if se is not None:
-        np.testing.assert_allclose(m.se_bhat[col].iloc[0], se, atol=5e-3)
+        np.testing.assert_allclose(m.se_bhat[col][0], se, atol=5e-3)
     if tval is not None:
-        np.testing.assert_allclose(m.t_values[col].iloc[0], tval, atol=5e-3)
+        np.testing.assert_allclose(m.t_values[col][0], tval, atol=5e-3)
     if pval is not None:
         if pval == 0.0:
-            assert m.p_values[col].iloc[0] < 1e-3
+            assert m.p_values[col][0] < 1e-3
         else:
-            np.testing.assert_allclose(m.p_values[col].iloc[0], pval, atol=5e-3)
+            np.testing.assert_allclose(m.p_values[col][0], pval, atol=5e-3)
 
 
 def _assert_summary(m, *, n, p, df_residuals, sigma, r2, r2adj,
@@ -107,7 +107,7 @@ def test_faraway_2_10_odor():
 
     # cor=True path: odor is an orthogonal design — feature corr ≈ I.
     feats = [c for c in m.X.columns if c != "(Intercept)"]
-    corr = m.X[feats].corr().values
+    corr = m.X[feats].corr().to_numpy()
     np.testing.assert_allclose(corr, np.eye(len(feats)), atol=1e-2)
 
 
@@ -167,16 +167,16 @@ def test_faraway_4_2_fat_predict():
     )
 
     # Prediction at the per-feature median (notebook 4.2 cells 1cae/ee3a).
-    x0 = m.X.median().to_frame().T
+    x0 = m.X.median()
     pred_pi = m.predict(new=x0, interval="prediction")
-    np.testing.assert_allclose(pred_pi["Fitted"].iloc[0],    17.49322,  atol=5e-4)
-    np.testing.assert_allclose(pred_pi["PI[2.5%]"].iloc[0],   9.337654, atol=5e-4)
-    np.testing.assert_allclose(pred_pi["PI[97.5]%"].iloc[0], 25.648786, atol=5e-4)
+    np.testing.assert_allclose(pred_pi["Fitted"][0],    17.49322,  atol=5e-4)
+    np.testing.assert_allclose(pred_pi["PI[2.5%]"][0],   9.337654, atol=5e-4)
+    np.testing.assert_allclose(pred_pi["PI[97.5]%"][0], 25.648786, atol=5e-4)
 
     pred_ci = m.predict(new=x0, interval="confidence")
-    np.testing.assert_allclose(pred_ci["Fitted"].iloc[0],    17.49322,  atol=5e-4)
-    np.testing.assert_allclose(pred_ci["CI[2.5%]"].iloc[0],  15.303962, atol=5e-4)
-    np.testing.assert_allclose(pred_ci["CI[97.5]%"].iloc[0], 19.682478, atol=5e-4)
+    np.testing.assert_allclose(pred_ci["Fitted"][0],    17.49322,  atol=5e-4)
+    np.testing.assert_allclose(pred_ci["CI[2.5%]"][0],  15.303962, atol=5e-4)
+    np.testing.assert_allclose(pred_ci["CI[97.5]%"][0], 19.682478, atol=5e-4)
 
 
 # ---------------------------------------------------------------------------

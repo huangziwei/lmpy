@@ -2,7 +2,7 @@ from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+import polars as pl
 from scipy.linalg import cholesky, lu, qr, solve_triangular
 from scipy.optimize import minimize
 from scipy.stats import f, norm, t
@@ -13,11 +13,17 @@ from .utils import prepare_design, significance_code
 __all__ = ["lm"]
 
 
+def _row_frame(values: np.ndarray, columns: list[str]) -> pl.DataFrame:
+    """Build a 1-row pl.DataFrame from a flat numpy array + column names."""
+    flat = np.asarray(values).reshape(-1)
+    return pl.DataFrame({c: [float(flat[i])] for i, c in enumerate(columns)})
+
+
 class lm:
     def __init__(
         self,
         formula: str,
-        data: pd.DataFrame,
+        data: pl.DataFrame,
         weights: Union[None, np.array] = None,
         method: str = "qr",
     ):
@@ -31,17 +37,17 @@ class lm:
         d = prepare_design(formula, data)
         self._expanded = d.expanded
         self.X = d.X
-        self.y = d.y.to_frame()
+        self.y = d.y  # pl.Series
 
-        self.column_names = self.X.columns
+        self.column_names = list(self.X.columns)
         self.feature_names = (
             self.column_names[1:]
             if "(Intercept)" in self.column_names
             else self.column_names
         )
 
-        X = self.X.values
-        y = self.y.values.flatten()
+        X = self.X.to_numpy().astype(float)
+        y = self.y.to_numpy().astype(float).flatten()
 
         self.n, self.p = (
             n,
@@ -80,20 +86,20 @@ class lm:
         else:
             bhat, self.XtX, self.Xty = self.compute_bhat(X, y, W, method)
 
-        self.bhat = pd.DataFrame(
-            bhat.reshape(1, -1), columns=self.column_names, index=["Estimate"]
-        )
+        self._bhat_arr = np.asarray(bhat).reshape(-1)
+        self.bhat = _row_frame(self._bhat_arr, self.column_names)
 
         # compute predicted (fitted values ŷ = Xβ̂)
         self.yhat = self.compute_yhat()
-        yhat = self.yhat.values.flatten()
+        yhat = self.yhat["Fitted"].to_numpy().astype(float)
 
         # compute residuals ϵ̂
         residuals = y - yhat
-        self.residuals = pd.DataFrame(residuals[:, None], columns=["residuals"])
+        self._residuals_arr = residuals
+        self.residuals = pl.DataFrame({"residuals": residuals})
 
         # compute residual sum of squares (RSS)
-        self.rss = np.squeeze(residuals.T @ residuals)
+        self.rss = float(residuals @ residuals)
 
         # compute standard deviation of model coefficients
         # aka Residual SE: σ^2 = RSS / df_residuals
@@ -108,9 +114,8 @@ class lm:
 
         se_bhat, V_bhat = self.compute_se_bhat()
         self.V_bhat = V_bhat
-        self.se_bhat = pd.DataFrame(
-            se_bhat.reshape(1, -1), columns=self.column_names, index=["Std. Error"]
-        )
+        self._se_bhat_arr = np.asarray(se_bhat).reshape(-1)
+        self.se_bhat = _row_frame(self._se_bhat_arr, self.column_names)
 
         # compute confidence interval for β̂
         self.ci_bhat = self.compute_ci_bhat()
@@ -148,7 +153,8 @@ class lm:
 
         docstring = f"""Formula: {self.formula}\n\n"""
         docstring += "Coefficients:\n"
-        docstring += self.bhat.to_string()
+        with pl.Config(tbl_rows=-1, tbl_cols=-1):
+            docstring += str(self.bhat)
 
         return docstring
 
@@ -206,24 +212,25 @@ class lm:
 
     def compute_ci_bhat(self, alpha=0.05):
 
-        se_bhat = self.se_bhat.values.T
-        bhat = self.bhat.values.T
-        ci_bhat = (
+        se_bhat = self._se_bhat_arr[:, None]
+        bhat = self._bhat_arr[:, None]
+        ci = (
             t.ppf(1 - alpha / 2, self.df_residuals) * se_bhat * np.array([-1, 1]) + bhat
         )
-        ci_bhat = pd.DataFrame(
-            ci_bhat,
-            index=self.column_names,
-            columns=[f"CI[{alpha/2*100}%]", f"CI[{100-alpha/2*100}]%"],
+        return pl.DataFrame(
+            {
+                "coef": self.column_names,
+                f"CI[{alpha/2*100}%]": ci[:, 0],
+                f"CI[{100-alpha/2*100}]%": ci[:, 1],
+            }
         )
-        return ci_bhat
 
     def compute_ci_bhat_bootstrap(self, num_bootstrap=4000, alpha=0.05):
 
-        X = self.X.values
+        X = self.X.to_numpy().astype(float)
         W = self.W
-        bhat = self.bhat.values.T
-        residuals = self.residuals.values.flatten()
+        bhat = self._bhat_arr[:, None]
+        residuals = self._residuals_arr
         bhat_stars = np.zeros([num_bootstrap, self.p])
         for i in range(num_bootstrap):
             residuals_star = np.random.choice(
@@ -233,27 +240,32 @@ class lm:
             bhat_star = self.compute_bhat(X, y_star.flatten(), W, return_ss=False)
             bhat_stars[i] = bhat_star
 
-        ci_bhat_bootstrap = np.quantile(
+        quantiles = np.quantile(
             bhat_stars, q=[alpha / 2, 1 - alpha / 2], axis=0
         ).T
-        self.ci_bhat_bootstrap = ci_bhat_bootstrap = pd.DataFrame(
-            ci_bhat_bootstrap,
-            index=self.column_names,
-            columns=[f"CI[{alpha/2*100}%]", f"CI[{100-alpha/2*100}]%"],
+        ci_bhat_bootstrap = pl.DataFrame(
+            {
+                "coef": self.column_names,
+                f"CI[{alpha/2*100}%]": quantiles[:, 0],
+                f"CI[{100-alpha/2*100}]%": quantiles[:, 1],
+            }
         )
-        self.bhat_bootstrap = pd.DataFrame(bhat_stars, columns=self.column_names)
+        self.ci_bhat_bootstrap = ci_bhat_bootstrap
+        self.bhat_bootstrap = pl.DataFrame(
+            {c: bhat_stars[:, i] for i, c in enumerate(self.column_names)}
+        )
 
         return ci_bhat_bootstrap
 
     def compute_yhat(self, Xnew=None, interval=None, alpha=0.05):
         if Xnew is None:
-            X = self.X.values
+            X = self.X.to_numpy().astype(float)
         else:
-            X = materialize(self._expanded, Xnew).values
+            X = materialize(self._expanded, Xnew).to_numpy().astype(float)
         # compute predicted or fitted values ŷ = Xβ̂
-        bhat = self.bhat.values.T
-        yhat = X @ bhat
-        yhat = pd.DataFrame(yhat, columns=["Fitted"])
+        bhat = self._bhat_arr[:, None]
+        yhat_vals = (X @ bhat).flatten()
+        yhat = pl.DataFrame({"Fitted": yhat_vals})
 
         match interval:
             case None:
@@ -261,13 +273,13 @@ class lm:
             case True:
                 ci_yhat = self.compute_ci_yhat(yhat, Xnew, alpha)
                 pi_yhat = self.compute_pi_yhat(yhat, Xnew, alpha)
-                return pd.concat([yhat, ci_yhat, pi_yhat], axis=1)
+                return pl.concat([yhat, ci_yhat, pi_yhat], how="horizontal")
             case "prediction":
                 pi_yhat = self.compute_pi_yhat(yhat, Xnew, alpha)
-                return pd.concat([yhat, pi_yhat], axis=1)
+                return pl.concat([yhat, pi_yhat], how="horizontal")
             case "confidence":
                 ci_yhat = self.compute_ci_yhat(yhat, Xnew, alpha)
-                return pd.concat([yhat, ci_yhat], axis=1)
+                return pl.concat([yhat, ci_yhat], how="horizontal")
             case _:
                 raise ValueError(
                     "Please enter a valid value: [None, True, 'prediction', 'confidence']"
@@ -276,9 +288,9 @@ class lm:
     def compute_ci_yhat(self, yhat, Xnew=None, alpha=0.05):
 
         if Xnew is None:
-            X = self.X.values
+            X = self.X.to_numpy().astype(float)
         else:
-            X = materialize(self._expanded, Xnew).values
+            X = materialize(self._expanded, Xnew).to_numpy().astype(float)
 
         sigma = self.sigma
         sigma_squared = self.sigma_squared
@@ -286,24 +298,26 @@ class lm:
         V_yhat = X @ self.XtXinv @ X.T * sigma_squared
 
         se_yhat_mean = np.sqrt(np.diag(V_yhat)) * sigma
-        ci_yhat = (
+        yhat_vals = yhat["Fitted"].to_numpy().astype(float)[:, None]
+        ci = (
             t.ppf(1 - alpha / 2, self.df_residuals)
             * se_yhat_mean[:, None]
             * np.array([-1, 1])
-            + yhat.values
+            + yhat_vals
         )
-        ci_yhat = pd.DataFrame(
-            ci_yhat, columns=[f"CI[{alpha/2*100}%]", f"CI[{100-alpha/2*100}]%"]
+        return pl.DataFrame(
+            {
+                f"CI[{alpha/2*100}%]": ci[:, 0],
+                f"CI[{100-alpha/2*100}]%": ci[:, 1],
+            }
         )
-
-        return ci_yhat
 
     def compute_pi_yhat(self, yhat, Xnew=None, alpha=0.05):
 
         if Xnew is None:
-            X = self.X.values
+            X = self.X.to_numpy().astype(float)
         else:
-            X = materialize(self._expanded, Xnew).values
+            X = materialize(self._expanded, Xnew).to_numpy().astype(float)
 
         sigma = self.sigma
         sigma_squared = self.sigma_squared
@@ -311,39 +325,42 @@ class lm:
         V_yhat = X @ self.XtXinv @ X.T * sigma_squared
 
         se_yhat = np.sqrt(1 + np.diag(V_yhat)) * sigma
-        pi_yhat = (
+        yhat_vals = yhat["Fitted"].to_numpy().astype(float)[:, None]
+        pi = (
             t.ppf(1 - alpha / 2, self.df_residuals)
             * se_yhat[:, None]
             * np.array([-1, 1])
-            + yhat.values
+            + yhat_vals
         )
-        pi_yhat = pd.DataFrame(
-            pi_yhat, columns=[f"PI[{alpha/2*100}%]", f"PI[{100-alpha/2*100}]%"]
+        return pl.DataFrame(
+            {
+                f"PI[{alpha/2*100}%]": pi[:, 0],
+                f"PI[{100-alpha/2*100}]%": pi[:, 1],
+            }
         )
-
-        return pi_yhat
 
     def compute_t_values(self):
 
-        t_values = self.bhat.values / self.se_bhat.values
+        t_values = self._bhat_arr / self._se_bhat_arr
 
-        return pd.DataFrame(t_values, columns=self.column_names, index=["t values"])
+        return _row_frame(t_values, self.column_names)
 
     def compute_p_values(self):
         # compute p values of model coefficients with scipy.stats.t.sf
         # H0: βi==0
         # H1: βi!=0
-        p_values = 2 * t.sf(np.abs(self.t_values.values), self.df_residuals)
-        return pd.DataFrame(p_values, columns=self.column_names, index=["Pr(>|t|)"])
+        t_arr = self._bhat_arr / self._se_bhat_arr
+        p_values = 2 * t.sf(np.abs(t_arr), self.df_residuals)
+        return _row_frame(p_values, self.column_names)
 
     def compute_goodness_of_fit(self):
 
-        y = self.y.values
+        y = self.y.to_numpy().astype(float)
 
         if "(Intercept)" in self.column_names:
             tss = np.sum((y - y.mean()) ** 2)
             # Eq: r2 = 1 - RSS / TSS = 1 -  sum((ŷ - yi)**2) / sum((y - ȳ)**2)
-            r_squared = (1 - self.rss / tss).squeeze()
+            r_squared = float(1 - self.rss / tss)
             # Eq: r2adj = 1 - (1 - r2) * (n - 1) / df_residuals
             r_squared_adjusted = 1 - (1 - r_squared) * (self.n - 1) / (
                 self.df_residuals
@@ -351,7 +368,7 @@ class lm:
         else:
             tss = np.sum(y**2)
             # Eq: r2 = 1 - RSS / TSS = 1 -  sum((ŷ - yi)**2) / sum((y)**2)
-            r_squared = (1 - self.rss / tss).squeeze()
+            r_squared = float(1 - self.rss / tss)
             # Eq: r2adj = 1 - (1 - r2) * n / df_residuals
             r_squared_adjusted = 1 - (1 - r_squared) * self.n / (self.df_residuals)
 
@@ -359,16 +376,16 @@ class lm:
 
     def compute_fstats(self):
         if self.df_model != 0:
-            fstats = np.squeeze(
+            fstats = float(
                 ((self.tss - self.rss) / self.df_model) / (self.rss / self.df_residuals)
             )
-            f_p_value = f.sf(fstats, self.df_model, self.df_residuals).squeeze()
+            f_p_value = float(f.sf(fstats, self.df_model, self.df_residuals))
         else:
             fstats, f_p_value = None, None
         return fstats, f_p_value
 
     def compute_loglikelihood(self):
-        return np.squeeze(
+        return float(
             -0.5 * self.n * (np.log(self.rss / self.n) + np.log(2 * np.pi) + 1)
         )
 
@@ -388,16 +405,26 @@ class lm:
         docstring = f"""Formula: {self.formula}\n\n"""
         docstring += "Coefficients:\n"
 
-        sig = significance_code(self.p_values.values.T)
-        res = pd.concat(
-            [self.bhat, self.se_bhat, self.ci_bhat.T, self.t_values, self.p_values],
-            axis=0,
-        ).T.round(digits)
-
-        res[""] = sig
+        t_arr = self._bhat_arr / self._se_bhat_arr
+        p_arr = np.asarray(self.p_values.row(0), dtype=float)
+        sig = significance_code(p_arr)
+        ci_low_col, ci_hi_col = self.ci_bhat.columns[1], self.ci_bhat.columns[2]
+        res = pl.DataFrame(
+            {
+                "coef": self.column_names,
+                "Estimate": np.round(self._bhat_arr, digits),
+                "Std. Error": np.round(self._se_bhat_arr, digits),
+                ci_low_col: np.round(self.ci_bhat[ci_low_col].to_numpy(), digits),
+                ci_hi_col: np.round(self.ci_bhat[ci_hi_col].to_numpy(), digits),
+                "t values": np.round(t_arr, digits),
+                "Pr(>|t|)": np.round(p_arr, digits),
+                "": sig,
+            }
+        )
         self.results = res
 
-        docstring += res.to_string()
+        with pl.Config(tbl_rows=-1, tbl_cols=-1):
+            docstring += str(res)
         docstring += "\n---"
         docstring += "\nSignif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
 
@@ -413,17 +440,11 @@ class lm:
 
             docstring += f"\n\nCorrelation of Coefficients:\n"
             if "(Intercept)" in self.column_names:
-                docstring += (
-                    self.X.drop("(Intercept)", axis=1)
-                    .corr()
-                    .to_string(
-                        formatters={col: "{:.2f}".format for col in self.X.columns}
-                    )
-                )
+                corr_df = self.X.drop("(Intercept)").corr()
             else:
-                docstring += self.X.corr().to_string(
-                    formatters={col: "{:.2f}".format for col in self.X.columns}
-                )
+                corr_df = self.X.corr()
+            with pl.Config(tbl_rows=-1, tbl_cols=-1, float_precision=2):
+                docstring += str(corr_df)
 
         print(docstring)
 
@@ -434,8 +455,8 @@ class lm:
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         ax.scatter(
-            self.yhat["Fitted"],
-            self.residuals,
+            self.yhat["Fitted"].to_numpy(),
+            self._residuals_arr,
             facecolor=facecolor,
             edgecolor=edgecolor,
         )
@@ -484,31 +505,31 @@ class lm:
 
         for i, name in enumerate(features):
 
-            xx = self.X[name].values
+            xx = self.X[name].to_numpy().astype(float)
 
             if away_from == "median":
-                xxbar = np.median(xx)
+                xxbar = float(np.median(xx))
             elif away_from == "mean":
-                xxbar = np.mean(xx)
+                xxbar = float(np.mean(xx))
             elif away_from == "0":
-                xxbar = 0
+                xxbar = 0.0
             else:
                 raise ValueError(f'The Input value for "{away_from}" is not supported.')
 
-            rj = self.y - self.X.assign(**{name: xxbar}).values @ self.bhat.values.T
-            ax[i].scatter(
-                self.X[name], rj, color="gray", facecolor="none", edgecolor="black"
-            )
+            X_arr = self.X.with_columns(pl.lit(xxbar).alias(name)).to_numpy().astype(float)
+            rj = self.y.to_numpy().astype(float) - (X_arr @ self._bhat_arr)
+            ax[i].scatter(xx, rj, color="gray", facecolor="none", edgecolor="black")
             ax[i].set_xlabel(name)
-            ax[i].set_ylabel("Δ" + self.y.columns[0])
+            ax[i].set_ylabel("Δ" + self.y.name)
             ax[i].spines["top"].set_visible(False)
             ax[i].spines["right"].set_visible(False)
 
-            Vx = (xx - xxbar) ** 2 * self.se_bhat.loc["Std. Error", name] ** 2
+            se_scalar = float(self.se_bhat[name].item())
+            Vx = (xx - xxbar) ** 2 * se_scalar ** 2
             se = np.sqrt(Vx)
 
             tt = t.ppf(1 - 0.05 / 2, self.df_residuals)
-            yy = (xx - xxbar) * self.bhat[name].values
+            yy = (xx - xxbar) * float(self.bhat[name].item())
             idx_sorted = np.argsort(xx)
             ax[i].plot(xx[idx_sorted], yy[idx_sorted], color="black")
             ax[i].fill_between(
@@ -558,37 +579,33 @@ class lm:
 
         for i, name in enumerate(features):
 
-            xx = self.X[name].values
+            xx = self.X[name].to_numpy().astype(float)
 
             if away_from == "median":
-                Xnew = self.X.assign(
-                    **{
-                        name1: self.X[name1].median()
-                        for name1 in self.column_names
-                        if name1 != name
-                    }
-                ).values
+                repl = {
+                    name1: float(self.X[name1].median())
+                    for name1 in self.column_names
+                    if name1 != name
+                }
             elif away_from == "mean":
-                Xnew = self.X.assign(
-                    **{
-                        name1: self.X[name1].mean()
-                        for name1 in self.column_names
-                        if name1 != name
-                    }
-                ).values
+                repl = {
+                    name1: float(self.X[name1].mean())
+                    for name1 in self.column_names
+                    if name1 != name
+                }
             elif away_from == "0":
-                Xnew = self.X.assign(
-                    **{name1: 0 for name1 in self.column_names if name1 != name}
-                ).values
+                repl = {name1: 0.0 for name1 in self.column_names if name1 != name}
             else:
                 raise ValueError('The Input value for "away_from" is not supported.')
 
-            rj = self.residuals + Xnew @ self.bhat.values.T
-            ax[i].scatter(
-                self.X[name], rj, color="gray", facecolor="none", edgecolor="black"
-            )
+            Xnew = self.X.with_columns(
+                [pl.lit(v).alias(k) for k, v in repl.items()]
+            ).to_numpy().astype(float)
+
+            rj = self._residuals_arr + (Xnew @ self._bhat_arr)
+            ax[i].scatter(xx, rj, color="gray", facecolor="none", edgecolor="black")
             ax[i].set_xlabel(name)
-            ax[i].set_ylabel(self.y.columns[0])
+            ax[i].set_ylabel(self.y.name)
             ax[i].spines["top"].set_visible(False)
             ax[i].spines["right"].set_visible(False)
 
@@ -596,7 +613,7 @@ class lm:
             se = np.sqrt(np.diag(Vx))
 
             tt = t.ppf(1 - 0.05 / 2, self.df_residuals)
-            yy = (Xnew @ self.bhat.values.T).flatten()
+            yy = (Xnew @ self._bhat_arr).flatten()
 
             ax[i].plot(xx[np.argsort(xx)], yy[np.argsort(xx)], color="black")
             ax[i].fill_between(
@@ -738,5 +755,3 @@ def _sse(X, y):
 
     res = minimize(cost, p, args=(X, y), method="L-BFGS-B")
     return res.x, res.fun
-
-

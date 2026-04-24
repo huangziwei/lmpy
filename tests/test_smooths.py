@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 
 import numpy as np
-import pandas as pd
 import pytest
 from scipy.io import mmread
 
@@ -50,7 +49,7 @@ def test_mgcv_smooths_match_R(fx_id: str):
     # R's gam drops rows with NA in ANY formula variable — match that.
     need = set(meta.get("need_vars", [])) & set(data.columns)
     if need:
-        data = data.dropna(subset=list(need)).reset_index(drop=True)
+        data = data.drop_nulls(subset=list(need))
 
     ours = materialize_smooths(ef, data)
 

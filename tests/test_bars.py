@@ -8,7 +8,7 @@ Lambdat template (integer-indexed), and theta match R's output.
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import pytest
 from scipy.io import mmread
 
@@ -20,7 +20,7 @@ LME4_IDS = [e["id"] for e in LME4_FIXTURES]
 
 
 def _load_theta(path) -> np.ndarray:
-    return pd.read_csv(path).iloc[:, 0].to_numpy(dtype=float)
+    return pl.read_csv(path)[:, 0].to_numpy().astype(float)
 
 
 @pytest.mark.parametrize("fx_id", LME4_IDS)

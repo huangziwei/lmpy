@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures"
 DATA_ROOT = Path(__file__).parent.parent / "datasets"
@@ -15,17 +15,19 @@ def load_manifest():
 
 def fixtures_by_kind(kind: str):
     m = load_manifest()
-    return [e for e in m["entries"] if e.get("status") == "ok" and e.get("kind") == kind]
+    return [
+        e for e in m["entries"] if e.get("status") == "ok" and e.get("kind") == kind
+    ]
 
 
-_data_cache: dict[tuple[str, str], pd.DataFrame] = {}
+_data_cache: dict[tuple[str, str], pl.DataFrame] = {}
 
 
-def load_dataset(pkg: str, name: str) -> pd.DataFrame:
+def load_dataset(pkg: str, name: str) -> pl.DataFrame:
     key = (pkg, name)
     if key not in _data_cache:
-        _data_cache[key] = pd.read_csv(DATA_ROOT / pkg / f"{name}.csv")
-    return _data_cache[key].copy()
+        _data_cache[key] = pl.read_csv(DATA_ROOT / pkg / f"{name}.csv", null_values="NA")
+    return _data_cache[key].clone()
 
 
 def fixture_meta(fx_id: str) -> tuple[dict, dict]:
@@ -36,5 +38,5 @@ def fixture_meta(fx_id: str) -> tuple[dict, dict]:
     )
 
 
-def fixture_X_ref(fx_id: str) -> pd.DataFrame:
-    return pd.read_csv(FIXTURE_ROOT / fx_id / "X.csv")
+def fixture_X_ref(fx_id: str) -> pl.DataFrame:
+    return pl.read_csv(FIXTURE_ROOT / fx_id / "X.csv", null_values="NA")
