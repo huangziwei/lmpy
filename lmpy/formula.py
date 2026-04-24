@@ -3436,15 +3436,16 @@ def _tp_rlanczos(
     # Apple Accelerate's BLAS ddot / dnrm2 pick different summation kernels
     # across process invocations, giving bit-different results run-to-run.
     # That perturbs a_j / b_j just enough to rotate eigenvectors within near-
-    # degenerate subspaces of T_j, making X non-deterministic. einsum goes
-    # through a fixed pairwise reduction (no BLAS dispatch) and is process-
-    # deterministic — and ~1.5× faster than `np.sum(u*v)` since it fuses the
-    # multiply-reduce into one pass.
+    # degenerate subspaces of T_j, making X non-deterministic. np.sum(a*b)
+    # goes through a fixed pairwise reduction and is process-deterministic.
+    # (Not einsum: einsum's reduction differs from np.sum by ~1 ULP, which
+    # is enough to rotate eigenvectors away from the R-oracle basis that
+    # test_smooths calibrated against.)
     def _ddot(u, v):
-        return float(np.einsum("i,i->", u, v))
+        return float(np.sum(u * v))
 
     def _dnrm2(v):
-        return float(np.sqrt(np.einsum("i,i->", v, v)))
+        return float(np.sqrt(np.sum(v * v)))
 
     # mgcv's LCG-seeded start vector. The specific constants (106, 1283, 6075)
     # and the `jran=1` seed are load-bearing — changing them would pick a
