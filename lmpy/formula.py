@@ -3338,6 +3338,30 @@ def _tp_fast_eta(m: int, d: int, rsq: float, f0: float) -> float:
     return f
 
 
+def _tp_fast_eta_vec(m: int, d: int, rsq: np.ndarray, f0: float) -> np.ndarray:
+    """Broadcasted `_tp_fast_eta`. Replicates the scalar form's iterated-
+    multiplication order so the output matches bit-for-bit on shared ops
+    (sign of Ritz vectors inside _tp_rlanczos is sensitive to any drift)."""
+    out = np.zeros_like(rsq, dtype=float)
+    mask = rsq > 0.0
+    if not np.any(mask):
+        return out
+    r = rsq[mask]
+    d2 = d // 2
+    if d % 2 == 0:
+        f = np.log(r) * 0.5
+        f *= f0
+        for _ in range(m - d2):
+            f *= r
+    else:
+        f = np.full_like(r, f0)
+        for _ in range(m - d2 - 1):
+            f *= r
+        f *= np.sqrt(r)
+    out[mask] = f
+    return out
+
+
 def _tp_null_space_dim(d: int, m: int) -> int:
     """Dim of penalty null space = C(m+d-1, d).
 
@@ -3444,14 +3468,17 @@ def _tp_E(Xu: np.ndarray, m: int, d: int) -> np.ndarray:
     """
     nu = Xu.shape[0]
     eta0 = _tp_eta_const(m, d)
-    E = np.zeros((nu, nu))
-    for i in range(nu):
-        for j in range(i):
-            diff = Xu[i] - Xu[j]
-            rsq = float(np.dot(diff, diff))
-            v = _tp_fast_eta(m, d, rsq, eta0)
-            E[i, j] = E[j, i] = v
-    return E
+    if nu == 0:
+        return np.zeros((0, 0))
+    # Pairwise squared distances. `(diff*diff).sum(axis=-1)` matches the scalar
+    # `np.dot(diff, diff)` summation order for d ≤ 2 (trivially); for d ≥ 3 the
+    # reduction order could differ by a ULP from BLAS ddot, which would rotate
+    # Ritz vectors inside near-degenerate eigenspaces — tests catch that.
+    diff = Xu[:, None, :] - Xu[None, :, :]
+    rsq = (diff * diff).sum(axis=-1)
+    # Diagonal is exactly 0 from the subtraction; the vec helper also returns
+    # 0 there because its `rsq > 0` mask excludes it, so no fill is needed.
+    return _tp_fast_eta_vec(m, d, rsq, eta0)
 
 
 def _tp_qt_factor(A_in: np.ndarray) -> np.ndarray:
