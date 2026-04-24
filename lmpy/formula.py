@@ -3875,6 +3875,247 @@ def _build_sz_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     )
 
 
+# ---- ad (adaptive P-spline) -------------------------------------------------
+#
+# Port of mgcv's smooth.construct.ad.smooth.spec (smooth.r:2435).
+#
+# The construction of the spline basis is the same as `ps`, but the single
+# penalty is replaced with multiple adaptive penalties. In 1D, the k-th
+# adaptive penalty is `Db^T diag(V[:, k]) Db` where Db is the 2nd-order
+# finite difference on a k_pen-length coefficient grid and V is a smaller
+# ps basis of penalty-coefficient weights. In 2D, a tensor of two ps
+# bases is built (matching `te(...,bs="ps",...,np=FALSE)` in mgcv), then
+# a discretized thin-plate penalty (`Drr^T Drr + Dcc^T Dcc + Dcr^T Dcr`
+# from `D2`) is optionally weighted element-wise by V columns to produce
+# kp[0]*kp[1] adaptive penalties. The unweighted (m=1 kp.tot=1) case is a
+# single fixed penalty.
+
+
+def _ad_order_m(call: Call, d: int) -> tuple[int, int]:
+    """Parse `m` for ad; default 5 in 1D, 3 in 2D. Single value reused per dim."""
+    m_src = call.kwargs.get("m")
+    vals = _eval_c_vec_ints(m_src) if m_src is not None else None
+    if d == 1:
+        if not vals:
+            return (5, 0)
+        return (vals[0], 0)
+    # 2D
+    if not vals:
+        return (3, 3)
+    if len(vals) == 1:
+        return (vals[0], vals[0])
+    return (vals[0], vals[1])
+
+
+def _ad_default_k(call: Call, d: int) -> tuple[int, ...]:
+    """Default k: 40 in 1D, 15 per-margin in 2D."""
+    k_src = call.kwargs.get("k")
+    default = 40 if d == 1 else 15
+    if k_src is None:
+        return tuple([default] * d)
+    if isinstance(k_src, Literal) and k_src.kind == "num":
+        return tuple([int(k_src.value)] * d)
+    vals = _eval_c_vec_ints(k_src)
+    if not vals:
+        return tuple([default] * d)
+    if len(vals) == 1:
+        return tuple([vals[0]] * d)
+    return tuple(vals[:d])
+
+
+def _ad_Db_1d(nk: int) -> np.ndarray:
+    """2nd-order finite difference matrix on R^nk — mgcv's `diff(diff(diag(nk)))`."""
+    D = np.eye(nk)
+    return np.diff(np.diff(D, axis=0), axis=0)
+
+
+def _ad_penalty_basis_1d(nk: int, k_pen: int) -> np.ndarray:
+    """The inner ps basis V (shape (nk-2, k_pen)) used to weight the
+    rows of the outer 2nd-difference matrix Db. Matches mgcv:
+
+        x <- 1:(nk-2)/nk
+        s(x, k=k_pen, bs="ps", m=2, fx=TRUE)
+    """
+    x_v = np.arange(1, nk - 1, dtype=float) / nk
+    knots = _ps_knots(x_v, m0=2, k=k_pen)
+    return _ps_basis(x_v, knots, m0=2)
+
+
+def _ad_D2(ni: int, nj: int) -> dict:
+    """Port of mgcv's `D2(ni, nj)` (smooth.r:2377).
+
+    Returns second-difference matrices (`Drr`, `Dcc`, `Dcr`) on a ni-by-nj
+    coefficient grid, plus the row/col indices of each D's central
+    stencil (used to evaluate the penalty-weighting basis at those
+    locations). The mixed-derivative factor `sqrt(0.125)` bakes the `2`
+    from the thin-plate penalty into Dcr, so
+    `Drr^T Drr + Dcc^T Dcc + Dcr^T Dcr` is the discrete TPS penalty.
+    """
+    Ind = np.arange(ni * nj).reshape(nj, ni).T  # column-major like R
+    rmt = np.tile(np.arange(1, ni + 1), nj)
+    cmt = np.repeat(np.arange(1, nj + 1), ni)
+
+    def _mfil(shape, rows, flat_cols, vals):
+        M = np.zeros(shape, dtype=float)
+        M[rows, flat_cols] = vals
+        return M
+
+    # Drr: 2nd diff along rows (i direction), fixed j.
+    ci0 = Ind[1 : ni - 1, 0:nj].ravel(order="F")
+    n_ci = len(ci0)
+    rows = np.arange(n_ci)
+    Drr = _mfil((n_ci, ni * nj), rows, ci0, -2.0)
+    ci_back = Ind[0 : ni - 2, 0:nj].ravel(order="F")
+    Drr[rows, ci_back] = 1.0
+    ci_fwd = Ind[2:ni, 0:nj].ravel(order="F")
+    Drr[rows, ci_fwd] = 1.0
+    rr_ri = rmt[ci0]
+    rr_ci = cmt[ci0]
+
+    # Dcc: 2nd diff along cols.
+    ci0 = Ind[0:ni, 1 : nj - 1].ravel(order="F")
+    n_ci = len(ci0)
+    rows = np.arange(n_ci)
+    Dcc = _mfil((n_ci, ni * nj), rows, ci0, -2.0)
+    ci_back = Ind[0:ni, 0 : nj - 2].ravel(order="F")
+    Dcc[rows, ci_back] = 1.0
+    ci_fwd = Ind[0:ni, 2:nj].ravel(order="F")
+    Dcc[rows, ci_fwd] = 1.0
+    cc_ri = rmt[ci0]
+    cc_ci = cmt[ci0]
+
+    # Dcr: cross derivative.
+    ci0 = Ind[1 : ni - 1, 1 : nj - 1].ravel(order="F")
+    n_ci = len(ci0)
+    rows = np.arange(n_ci)
+    cr_ri = rmt[ci0]
+    cr_ci = cmt[ci0]
+    Dcr = np.zeros((n_ci, ni * nj))
+    s = np.sqrt(0.125)
+    ci_mm = Ind[0 : ni - 2, 0 : nj - 2].ravel(order="F")
+    Dcr[rows, ci_mm] = s
+    ci_pp = Ind[2:ni, 2:nj].ravel(order="F")
+    Dcr[rows, ci_pp] = s
+    ci_mp = Ind[0 : ni - 2, 2:nj].ravel(order="F")
+    Dcr[rows, ci_mp] = -s
+    ci_pm = Ind[2:ni, 0 : nj - 2].ravel(order="F")
+    Dcr[rows, ci_pm] = -s
+
+    return dict(
+        Drr=Drr, Dcc=Dcc, Dcr=Dcr,
+        rr_ri=rr_ri, rr_ci=rr_ci,
+        cc_ri=cc_ri, cc_ci=cc_ci,
+        cr_ri=cr_ri, cr_ci=cr_ci,
+        rmt=rmt, cmt=cmt,
+    )
+
+
+def _ad_inner_2d_basis(kp: tuple[int, int], Db: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build the inner penalty-weight matrices Vrr, Vcc, Vcr (one column per
+    adaptive penalty) for the 2D adaptive case with `kp.tot > 1`.
+
+    Mirrors mgcv:
+        m <- min(min(kp)-2, 1); m <- c(m, m)
+        ps2 <- smooth.construct(te(i, j, bs="ps", k=kp, fx=TRUE, m=m, np=FALSE),
+                                data=data.frame(i=rmt, j=cmt))
+        Vrr/Vcc/Vcr <- Predict.matrix(ps2, <rr/cc/cr indices>)
+
+    With `np=FALSE`, te's basis is the row-wise Kronecker product of
+    two ps bases, so Predict.matrix evaluates each margin at the given
+    (i, j) grid coordinates and tensor-multiplies.
+    """
+    kp_tot = kp[0] * kp[1]
+    if kp_tot == 3:
+        # "Planar adaptiveness": V = [1, Drr_flat, Dcc_flat] — but Drr/Dcc
+        # here are the indices, not the matrices. Use the rr/cc/cr indices
+        # directly as the two planar coordinates.
+        raise NotImplementedError("ad 2D kp.tot=3 planar adaptiveness not implemented")
+    # General adaptive: build an inner ps basis per margin, then Kronecker.
+    m_inner = min(min(kp) - 2, 1)
+    # Inner basis on each margin — the grid is the full (rmt, cmt) grid.
+    rmt = Db["rmt"].astype(float)
+    cmt = Db["cmt"].astype(float)
+    # Each ps basis needs knots over the relevant range.
+    ki, kj = kp
+    knots_i = _ps_knots(rmt, m0=m_inner, k=ki)
+    knots_j = _ps_knots(cmt, m0=m_inner, k=kj)
+
+    def _eval_V(ri: np.ndarray, ci: np.ndarray) -> np.ndarray:
+        Bi = _ps_basis(ri.astype(float), knots_i, m0=m_inner)
+        Bj = _ps_basis(ci.astype(float), knots_j, m0=m_inner)
+        n = Bi.shape[0]
+        # te(i, j) has margin-i as outermost in tensor.prod.model.matrix,
+        # so V[r, a*kj + b] = Bi[r, a] * Bj[r, b].
+        return (Bi[:, :, None] * Bj[:, None, :]).reshape(n, ki * kj)
+
+    Vrr = _eval_V(Db["rr_ri"], Db["rr_ci"])
+    Vcc = _eval_V(Db["cc_ri"], Db["cc_ci"])
+    Vcr = _eval_V(Db["cr_ri"], Db["cr_ci"])
+    return Vrr, Vcc, Vcr
+
+
+def _build_ad_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """`bs="ad"` — adaptive P-spline (1D or 2D).
+
+    1D: builds a standard ps basis, then replaces its single penalty with
+    `k_pen = m` adaptive penalties of the form `Db^T diag(V[:,i]) Db`.
+    2D: builds a tensor of two ps bases (equivalent to the X matrix of
+    `te(..., bs="ps", np=FALSE)`), then replaces penalties with either a
+    single discrete-TPS penalty (kp.tot=1) or `kp[0]*kp[1]` adaptive
+    versions weighted by an inner ps basis.
+    """
+    term = _smooth_term_vars(call)
+    d = len(term)
+    if d > 2:
+        raise ValueError("ad smooth supports only 1 or 2 covariates")
+
+    if d == 1:
+        x = data[term[0]].to_numpy(dtype=float)
+        m = _ad_order_m(call, 1)
+        k = _ad_default_k(call, 1)[0]
+        knots = _ps_knots(x, m0=2, k=k)
+        X = _ps_basis(x, knots, m0=2)
+        nk = X.shape[1]
+        k_pen = m[0]
+        if k_pen >= nk - 2:
+            raise ValueError("ad penalty basis too large for smoothing basis")
+        Db = _ad_Db_1d(nk)
+        V = _ad_penalty_basis_1d(nk, k_pen)
+        S_list = [Db.T @ (V[:, i : i + 1] * Db) for i in range(k_pen)]
+        return _apply_by_and_absorb(call, data, X, S_list, "pspline.smooth", term)
+
+    # d == 2
+    k_vec = _ad_default_k(call, 2)
+    ki, kj = int(k_vec[0]), int(k_vec[1])
+    kp = _ad_order_m(call, 2)
+    xi = data[term[0]].to_numpy(dtype=float)
+    xj = data[term[1]].to_numpy(dtype=float)
+    knots_i = _ps_knots(xi, m0=2, k=ki)
+    knots_j = _ps_knots(xj, m0=2, k=kj)
+    Xi = _ps_basis(xi, knots_i, m0=2)
+    Xj = _ps_basis(xj, knots_j, m0=2)
+    # Row-wise Kronecker (tensor.prod.model.matrix on two matrices). mgcv
+    # iterates column of Xj outermost: X[r, a + ki*b] = Xi[r, a] * Xj[r, b].
+    n = Xi.shape[0]
+    X = (Xi[:, :, None] * Xj[:, None, :]).reshape(n, ki * kj)
+    Db = _ad_D2(ki, kj)
+    kp_tot = kp[0] * kp[1]
+    if kp_tot == 1:
+        Drr, Dcc, Dcr = Db["Drr"], Db["Dcc"], Db["Dcr"]
+        S = Drr.T @ Drr + Dcc.T @ Dcc + Dcr.T @ Dcr
+        S_list = [S]
+    else:
+        Vrr, Vcc, Vcr = _ad_inner_2d_basis(kp, Db)
+        Drr, Dcc, Dcr = Db["Drr"], Db["Dcc"], Db["Dcr"]
+        S_list = []
+        for i in range(kp_tot):
+            S = (Drr.T @ (Vrr[:, i : i + 1] * Drr)
+                 + Dcc.T @ (Vcc[:, i : i + 1] * Dcc)
+                 + Dcr.T @ (Vcr[:, i : i + 1] * Dcr))
+            S_list.append(S)
+    return _apply_by_and_absorb(call, data, X, S_list, "pspline.smooth", term)
+
+
 def materialize_smooths(
     expanded: ExpandedFormula, data: pd.DataFrame,
 ) -> list[list[SmoothBlock]]:
@@ -3917,6 +4158,8 @@ def materialize_smooths(
             out.append(_build_fs_smooth(call, data))
         elif bs == "sz":
             out.append(_build_sz_smooth(call, data))
+        elif bs == "ad":
+            out.append(_build_ad_smooth(call, data))
         else:
             raise NotImplementedError(
                 f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
