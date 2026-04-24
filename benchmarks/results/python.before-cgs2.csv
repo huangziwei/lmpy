@@ -1,0 +1,907 @@
+library,version,fixture_id,kind,formula,dataset,n_rows,scale,scope,status,error,n_reps,min_s,median_s,max_s
+lmpy,0.0.1,cur_0036,lme4,Reaction ~ Days + (1 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0015534469857811928,0.001692532008746639,0.0020225119951646775
+formulaic,1.2.1,cur_0036,lme4,Reaction ~ Days + (1 + Days | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0036,lme4,Reaction ~ Days + (1 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0047912910231389105,0.005320334021234885,0.005899448005948216
+lmpy,0.0.1,cur_0037,lme4,Reaction ~ Days + (1 + Days + I(Days^2) | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0017291660187765956,0.0018031710060313344,0.0023138340038713068
+formulaic,1.2.1,cur_0037,lme4,Reaction ~ Days + (1 + Days + I(Days^2) | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0037,lme4,Reaction ~ Days + (1 + Days + I(Days^2) | Subject),lme4/sleepstudy,180,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,cur_0038,lme4,Reaction ~ Days + (1 + Days + I(Days^2) || Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0017925479914993048,0.0019221209804527462,0.0021251939760986716
+formulaic,1.2.1,cur_0038,lme4,Reaction ~ Days + (1 + Days + I(Days^2) || Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0038,lme4,Reaction ~ Days + (1 + Days + I(Days^2) || Subject),lme4/sleepstudy,180,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,cur_0039,lme4,angle ~ recipe + (recipe | replicate),lme4/cake,270,1,full,ok,,7,0.002322512009413913,0.0023767630045767874,0.0028934380097780377
+formulaic,1.2.1,cur_0039,lme4,angle ~ recipe + (recipe | replicate),lme4/cake,270,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0039,lme4,angle ~ recipe + (recipe | replicate),lme4/cake,270,1,full,ok,,7,0.0068930109846405685,0.00732413399964571,0.008164864993887022
+lmpy,0.0.1,cur_0040,lme4,angle ~ recipe + (recipe || replicate),lme4/cake,270,1,full,ok,,7,0.0023794170119799674,0.0024553629918955266,0.0029557969828601927
+formulaic,1.2.1,cur_0040,lme4,angle ~ recipe + (recipe || replicate),lme4/cake,270,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0040,lme4,angle ~ recipe + (recipe || replicate),lme4/cake,270,1,full,error,ParseError: Don't know how to parse '|',7,,,
+lmpy,0.0.1,cur_0041,lme4,Reaction ~ Days + (0 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0015130190004128963,0.0015383999852929264,0.0016965199902188033
+formulaic,1.2.1,cur_0041,lme4,Reaction ~ Days + (0 + Days | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0041,lme4,Reaction ~ Days + (0 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.003394339990336448,0.0034839290019590408,0.0036035149823874235
+lmpy,0.0.1,cur_0042,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,ok,,7,0.002200065995566547,0.002407014020718634,0.002589443000033498
+formulaic,1.2.1,cur_0042,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0042,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,ok,,7,0.005589159001829103,0.006050635012798011,0.006339757004752755
+lmpy,0.0.1,cur_0043,lme4,yield ~ nitro + (nitro | Block/Variety),nlme/Oats,72,1,full,ok,,7,0.002352479990804568,0.002410916000371799,0.002692335983738303
+formulaic,1.2.1,cur_0043,lme4,yield ~ nitro + (nitro | Block/Variety),nlme/Oats,72,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0043,lme4,yield ~ nitro + (nitro | Block/Variety),nlme/Oats,72,1,full,ok,,7,0.009511739015579224,0.010062512999866158,0.010620735003612936
+lmpy,0.0.1,cur_0044,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,ok,,7,0.0018429360061418265,0.0019056170131079853,0.0021326339920051396
+formulaic,1.2.1,cur_0044,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0044,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,ok,,7,0.004559230001177639,0.0049915609997697175,0.0053791220125276595
+lmpy,0.0.1,cur_0045,lme4,Reaction ~ 1 + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0014977059909142554,0.0016710259951651096,0.00184330900083296
+formulaic,1.2.1,cur_0045,lme4,Reaction ~ 1 + (Days | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0045,lme4,Reaction ~ 1 + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.004823362018214539,0.00524096901062876,0.006132632988737896
+lmpy,0.0.1,cur_0046,lme4,strength ~ batch + (1 | batch),lme4/Pastes,60,1,full,ok,,7,0.001885077013866976,0.0019719180127140135,0.0020228160137776285
+formulaic,1.2.1,cur_0046,lme4,strength ~ batch + (1 | batch),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0046,lme4,strength ~ batch + (1 | batch),lme4/Pastes,60,1,full,ok,,7,0.004352268006186932,0.004520521993981674,0.005008031002944335
+lmpy,0.0.1,cur_0048,lme4,angle ~ recipe + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.002739265008131042,0.0028344219899736345,0.0029585789889097214
+formulaic,1.2.1,cur_0048,lme4,angle ~ recipe + (1 | recipe:replicate),lme4/cake,270,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0048,lme4,angle ~ recipe + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.006288414006121457,0.00658013200154528,0.00703279601293616
+lmpy,0.0.1,cur_0049,lme4,Yield ~ 1 + (1 | Batch),lme4/Dyestuff,30,1,full,ok,,7,0.0013588409929070622,0.0014366760151460767,0.0015701299998909235
+formulaic,1.2.1,cur_0049,lme4,Yield ~ 1 + (1 | Batch),lme4/Dyestuff,30,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0049,lme4,Yield ~ 1 + (1 | Batch),lme4/Dyestuff,30,1,full,ok,,7,0.002751596999587491,0.002986324980156496,0.003376885986654088
+lmpy,0.0.1,cur_0051,lme4,Reaction ~ Days + (Days || Subject) + (1 | Days),lme4/sleepstudy,180,1,full,ok,,7,0.002098886005114764,0.002231626014690846,0.0026931550237350166
+formulaic,1.2.1,cur_0051,lme4,Reaction ~ Days + (Days || Subject) + (1 | Days),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,cur_0051,lme4,Reaction ~ Days + (Days || Subject) + (1 | Days),lme4/sleepstudy,180,1,full,error,ParseError: Don't know how to parse '|',7,,,
+lmpy,0.0.1,lme4_0007,lme4,Yield ~ 1 | Batch,lme4/Dyestuff,30,1,full,ok,,7,0.0013807049836032093,0.0014610460202675313,0.0017303359927609563
+formulaic,1.2.1,lme4_0007,lme4,Yield ~ 1 | Batch,lme4/Dyestuff,30,1,full,ok,,7,0.007042304001515731,0.0072394959861412644,0.0077292509959079325
+formulae,0.6.2,lme4_0007,lme4,Yield ~ 1 | Batch,lme4/Dyestuff,30,1,full,ok,,7,0.001997502986341715,0.002091591013595462,0.002142718993127346
+lmpy,0.0.1,lme4_0008,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,ok,,7,0.0018636439926922321,0.0019808579818345606,0.00226206801016815
+formulaic,1.2.1,lme4_0008,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0008,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,ok,,7,0.004679203004343435,0.005140533990925178,0.005891459994018078
+lmpy,0.0.1,lme4_0009,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,ok,,7,0.0021905690082348883,0.002264842012664303,0.003133380989311263
+formulaic,1.2.1,lme4_0009,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0009,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,ok,,7,0.0061075180128682405,0.007323560013901442,0.052903723990311846
+lmpy,0.0.1,lme4_0010,lme4,strength ~ (1 | batch) + (1 | batch:cask),lme4/Pastes,60,1,full,ok,,7,0.002376100019318983,0.0024414589861407876,0.0032616829848848283
+formulaic,1.2.1,lme4_0010,lme4,strength ~ (1 | batch) + (1 | batch:cask),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0010,lme4,strength ~ (1 | batch) + (1 | batch:cask),lme4/Pastes,60,1,full,ok,,7,0.0059883939975406975,0.006253630999708548,0.00733566700364463
+lmpy,0.0.1,lme4_0011,lme4,strength ~ (1 | batch/sample),lme4/Pastes,60,1,full,ok,,7,0.002289235999342054,0.0023956309887580574,0.0028677259979303926
+formulaic,1.2.1,lme4_0011,lme4,strength ~ (1 | batch/sample),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0011,lme4,strength ~ (1 | batch/sample),lme4/Pastes,60,1,full,ok,,7,0.006708665023325011,0.007123871007934213,0.007680488022742793
+lmpy,0.0.1,lme4_0012,lme4,strength ~ (1 | batch) + (1 | cask),lme4/Pastes,60,1,full,ok,,7,0.0017463629774283618,0.0017770090198609978,0.001836573996115476
+formulaic,1.2.1,lme4_0012,lme4,strength ~ (1 | batch) + (1 | cask),lme4/Pastes,60,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0012,lme4,strength ~ (1 | batch) + (1 | cask),lme4/Pastes,60,1,full,ok,,7,0.004480358009459451,0.004822740011150017,0.005244630010565743
+lmpy,0.0.1,lme4_0013,lme4,diameter ~ (1 | plate) + (1 | sample),lme4/Penicillin,144,1,full,ok,,7,0.0018367500160820782,0.0018726619891822338,0.0020334080036263913
+formulaic,1.2.1,lme4_0013,lme4,diameter ~ (1 | plate) + (1 | sample),lme4/Penicillin,144,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0013,lme4,diameter ~ (1 | plate) + (1 | sample),lme4/Penicillin,144,1,full,ok,,7,0.0047108370054047555,0.004950789007125422,0.005884537007659674
+lmpy,0.0.1,lme4_0014,lme4,distance ~ age + (age | Subject),nlme/Orthodont,108,1,full,ok,,7,0.0015744529955554754,0.0016064400260802358,0.0018275250040460378
+formulaic,1.2.1,lme4_0014,lme4,distance ~ age + (age | Subject),nlme/Orthodont,108,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0014,lme4,distance ~ age + (age | Subject),nlme/Orthodont,108,1,full,ok,,7,0.00476984100532718,0.005014750990085304,0.005552774993702769
+lmpy,0.0.1,lme4_0015,lme4,r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item),lme4/VerbAgg,7584,1,full,ok,,7,0.03976233699359,0.04052589801722206,0.04177558599621989
+formulaic,1.2.1,lme4_0015,lme4,r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item),lme4/VerbAgg,7584,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0015,lme4,r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item),lme4/VerbAgg,7584,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,lme4_0016,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,ok,,7,0.0018713659956119955,0.001966584997717291,0.0023207419726531953
+formulaic,1.2.1,lme4_0016,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0016,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,unsupported,KeyError: 'cbind',7,,,
+lmpy,0.0.1,lme4_0017,lme4,angle ~ recipe * temperature + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.0043185419926885515,0.004418877011630684,0.004667039000196382
+formulaic,1.2.1,lme4_0017,lme4,angle ~ recipe * temperature + (1 | recipe:replicate),lme4/cake,270,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0017,lme4,angle ~ recipe * temperature + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.009771521989023313,0.009940944000845775,0.010184682992985472
+lmpy,0.0.1,lme4_0018,lme4,angle ~ recipe + temperature + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.0033281109936069697,0.0034523970098234713,0.003667780983960256
+formulaic,1.2.1,lme4_0018,lme4,angle ~ recipe + temperature + (1 | recipe:replicate),lme4/cake,270,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0018,lme4,angle ~ recipe + temperature + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.0069691270182374865,0.007303254009457305,0.007798614999046549
+lmpy,0.0.1,lme4_0019,lme4,angle ~ recipe + temp + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.002836280007613823,0.0028639070224016905,0.003218924015527591
+formulaic,1.2.1,lme4_0019,lme4,angle ~ recipe + temp + (1 | recipe:replicate),lme4/cake,270,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0019,lme4,angle ~ recipe + temp + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.0060628649953287095,0.0064849820046219975,0.007050760003039613
+lmpy,0.0.1,lme4_0020,lme4,incidence/size ~ period + (1 | herd),lme4/cbpp,56,1,full,ok,,7,0.0019155229965690523,0.002068686007987708,0.002303282992215827
+formulaic,1.2.1,lme4_0020,lme4,incidence/size ~ period + (1 | herd),lme4/cbpp,56,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0020,lme4,incidence/size ~ period + (1 | herd),lme4/cbpp,56,1,full,error,"ValueError: The response term must be of class Term, not <class 'formulae.terms.terms.Model'>.",7,,,
+lmpy,0.0.1,lme4_0022,lme4,incidence/size ~ period + treatment + avg_size + (1 | herd),lme4/cbpp2,56,1,full,ok,,7,0.002107337990310043,0.002171439991798252,0.002488769998308271
+formulaic,1.2.1,lme4_0022,lme4,incidence/size ~ period + treatment + avg_size + (1 | herd),lme4/cbpp2,56,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0022,lme4,incidence/size ~ period + treatment + avg_size + (1 | herd),lme4/cbpp2,56,1,full,error,"ValueError: The response term must be of class Term, not <class 'formulae.terms.terms.Model'>.",7,,,
+lmpy,0.0.1,lme4_0023,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.001619829999981448,0.0017764089861884713,0.0019387099891901016
+formulaic,1.2.1,lme4_0023,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0023,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.004824597999686375,0.0050129790033679456,0.005945076001808047
+lmpy,0.0.1,lme4_0024,lme4,Reaction ~ Days + (Days || Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0017067180015146732,0.0017624569882173091,0.001913076004711911
+formulaic,1.2.1,lme4_0024,lme4,Reaction ~ Days + (Days || Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0024,lme4,Reaction ~ Days + (Days || Subject),lme4/sleepstudy,180,1,full,error,ParseError: Don't know how to parse '|',7,,,
+lmpy,0.0.1,lme4_0025,lme4,predation ~ ttt2 + (1 | block),lme4/culcitalogreg,80,1,full,ok,,7,0.001863187993876636,0.0020625189936254174,0.002169624000089243
+formulaic,1.2.1,lme4_0025,lme4,predation ~ ttt2 + (1 | block),lme4/culcitalogreg,80,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0025,lme4,predation ~ ttt2 + (1 | block),lme4/culcitalogreg,80,1,full,ok,,7,0.0038307689828798175,0.003908992017386481,0.0044072110031265765
+lmpy,0.0.1,lme4_0030,lme4,"distance ~ age + (age | Subject) + (0 + dummy(Sex, ""Female"") | Subject)",nlme/Orthodont,108,1,full,ok,,7,0.002272479992825538,0.002298047998920083,0.0026238179998472333
+formulaic,1.2.1,lme4_0030,lme4,"distance ~ age + (age | Subject) + (0 + dummy(Sex, ""Female"") | Subject)",nlme/Orthodont,108,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0030,lme4,"distance ~ age + (age | Subject) + (0 + dummy(Sex, ""Female"") | Subject)",nlme/Orthodont,108,1,full,unsupported,KeyError: 'dummy',7,,,
+lmpy,0.0.1,lme4_0031,lme4,Reaction ~ Days + (1 | Subject) + (0 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.002009404997806996,0.0021337500074878335,0.0023036340135149658
+formulaic,1.2.1,lme4_0031,lme4,Reaction ~ Days + (1 | Subject) + (0 + Days | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0031,lme4,Reaction ~ Days + (1 | Subject) + (0 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.004821309994440526,0.00510056599159725,0.005390620994148776
+lmpy,0.0.1,lme4_0033,lme4,Reaction ~ Days + (1 | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0014947360032238066,0.0015075929986778647,0.0016596030036453158
+formulaic,1.2.1,lme4_0033,lme4,Reaction ~ Days + (1 | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0033,lme4,Reaction ~ Days + (1 | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0034574400051496923,0.0036777440109290183,0.004209031001664698
+lmpy,0.0.1,lme4_0034,lme4,shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site),lme4/gopherdat2,30,1,full,ok,,7,0.001963957998668775,0.0021268450072966516,0.002349708986002952
+formulaic,1.2.1,lme4_0034,lme4,shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site),lme4/gopherdat2,30,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0034,lme4,shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site),lme4/gopherdat2,30,1,full,unsupported,KeyError: 'factor',7,,,
+lmpy,0.0.1,lme4_0037,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.001583584991749376,0.001651591999689117,0.0018083009927067906
+formulaic,1.2.1,lme4_0037,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0037,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.005047709011705592,0.005492550000781193,0.005987882002955303
+lmpy,0.0.1,lme4_0038,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,ok,,7,0.0019699450058396906,0.0020460590021684766,0.002294610982062295
+formulaic,1.2.1,lme4_0038,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0038,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,unsupported,KeyError: 'cbind',7,,,
+lmpy,0.0.1,lme4_0039,lme4,Reaction ~ 1 | Subject,lme4/sleepstudy,180,1,full,ok,,7,0.00153422198491171,0.001776315999450162,0.001983707014005631
+formulaic,1.2.1,lme4_0039,lme4,Reaction ~ 1 | Subject,lme4/sleepstudy,180,1,full,ok,,7,0.008988088986370713,0.009405282005900517,0.01028995998785831
+formulae,0.6.2,lme4_0039,lme4,Reaction ~ 1 | Subject,lme4/sleepstudy,180,1,full,ok,,7,0.002055126999039203,0.002186953992350027,0.002426502003800124
+lmpy,0.0.1,lme4_0041,lme4,y ~ x + (1 | f),synthetic/seed_synth_singleton,100,1,full,ok,,7,0.0014692479744553566,0.0016936110041569918,0.0018123539921361953
+formulaic,1.2.1,lme4_0041,lme4,y ~ x + (1 | f),synthetic/seed_synth_singleton,100,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0041,lme4,y ~ x + (1 | f),synthetic/seed_synth_singleton,100,1,full,ok,,7,0.002834080019965768,0.0029223629971966147,0.0032237299892585725
+lmpy,0.0.1,lme4_0042,lme4,Mate ~ (1 | Female) + (1 | Male) + Cross,lme4/salamander,360,1,full,ok,,7,0.0025648860028013587,0.002888965012971312,0.002943572006188333
+formulaic,1.2.1,lme4_0042,lme4,Mate ~ (1 | Female) + (1 | Male) + Cross,lme4/salamander,360,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0042,lme4,Mate ~ (1 | Female) + (1 | Male) + Cross,lme4/salamander,360,1,full,ok,,7,0.005182057007914409,0.0057452280016150326,0.005938378977589309
+lmpy,0.0.1,lme4_0043,lme4,imps79 ~ TxDrug * Week + (1 | id),lme4/schizophrenia,1603,1,full,ok,,7,0.005252021015621722,0.005431294994195923,0.005881915014469996
+formulaic,1.2.1,lme4_0043,lme4,imps79 ~ TxDrug * Week + (1 | id),lme4/schizophrenia,1603,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0043,lme4,imps79 ~ TxDrug * Week + (1 | id),lme4/schizophrenia,1603,1,full,ok,,7,0.0058405429881531745,0.006289837008807808,0.006674309988738969
+lmpy,0.0.1,lme4_0044,lme4,outcome ~ time * treatment + (1 | patientID),lme4/toenail,1908,1,full,ok,,7,0.004926752008032054,0.005192554002860561,0.005455100996186957
+formulaic,1.2.1,lme4_0044,lme4,outcome ~ time * treatment + (1 | patientID),lme4/toenail,1908,1,full,unsupported,FormulaSyntaxError: Operator `|` is incorrectly used.,7,,,
+formulae,0.6.2,lme4_0044,lme4,outcome ~ time * treatment + (1 | patientID),lme4/toenail,1908,1,full,ok,,7,0.013794055004836991,0.014941672998247668,0.016828110005008057
+lmpy,0.0.1,cur_0052,mgcv,"y ~ te(x0, x1, bs = c(""tp"", ""cr""))",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: te/ti with bs='tp' margins not yet supported,7,,,
+formulaic,1.2.1,cur_0052,mgcv,"y ~ te(x0, x1, bs = c(""tp"", ""cr""))",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(x0, x1, bs=c('tp', 'cr'))`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,cur_0052,mgcv,"y ~ te(x0, x1, bs = c(""tp"", ""cr""))",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,cur_0053,mgcv,"y ~ te(x0, x1, k = c(5, 10))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.00016324801254086196,0.0001655060041230172,0.00020251699606887996
+formulaic,1.2.1,cur_0053,mgcv,"y ~ te(x0, x1, k = c(5, 10))",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(x0, x1, k=c(5, 10))`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,cur_0053,mgcv,"y ~ te(x0, x1, k = c(5, 10))",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,cur_0054,mgcv,"y ~ s(x0, by = x1)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001330130035057664,0.0001386259973514825,0.00017554100486449897
+formulaic,1.2.1,cur_0054,mgcv,"y ~ s(x0, by = x1)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, by=x1)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0054,mgcv,"y ~ s(x0, by = x1)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0055,mgcv,"yield ~ Variety + s(nitro, by = Variety)",nlme/Oats,72,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0006009119970258325,0.0006114529969636351,0.0006830999918747693
+formulaic,1.2.1,cur_0055,mgcv,"yield ~ Variety + s(nitro, by = Variety)",nlme/Oats,72,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(nitro, by=Variety)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0055,mgcv,"yield ~ Variety + s(nitro, by = Variety)",nlme/Oats,72,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0056,mgcv,"y ~ s(x0) + s(x1) + ti(x0, x1)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00017255099373869598,0.0001801289909053594,0.00021379601093940437
+formulaic,1.2.1,cur_0056,mgcv,"y ~ s(x0) + s(x1) + ti(x0, x1)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `ti(x0, x1)`. [NameError: name 'ti' is not defined]",7,,,
+formulae,0.6.2,cur_0056,mgcv,"y ~ s(x0) + s(x1) + ti(x0, x1)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0057,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 5),7,0.00022865599021315575,0.0002338110061828047,0.0002689050161279738
+formulaic,1.2.1,cur_0057,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=5)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0057,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0058,mgcv,"y ~ s(x0, k = 50)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 50),7,0.0001316550187766552,0.00013749802019447088,0.00017661601305007935
+formulaic,1.2.1,cur_0058,mgcv,"y ~ s(x0, k = 50)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=50)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0058,mgcv,"y ~ s(x0, k = 50)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0059,mgcv,"y ~ s(x0, k = 3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.0023297719890251756,0.0024840269761625677,0.0026530830073170364
+formulaic,1.2.1,cur_0059,mgcv,"y ~ s(x0, k = 3)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=3)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0059,mgcv,"y ~ s(x0, k = 3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0060,mgcv,"temp ~ s(day.of.year, bs = ""cc"", k = 20)",gamair/cairo,3780,1,full,ok,,7,0.00366575998486951,0.00414583200472407,0.004552130994852632
+formulaic,1.2.1,cur_0060,mgcv,"temp ~ s(day.of.year, bs = ""cc"", k = 20)",gamair/cairo,3780,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(day.of.year, bs='cc', k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0060,mgcv,"temp ~ s(day.of.year, bs = ""cc"", k = 20)",gamair/cairo,3780,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0061,mgcv,"distance ~ s(age, Subject, bs = ""fs"")",nlme/Orthodont,108,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00013819898595102131,0.00014655900304205716,0.00020080601098015904
+formulaic,1.2.1,cur_0061,mgcv,"distance ~ s(age, Subject, bs = ""fs"")",nlme/Orthodont,108,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(age, Subject, bs='fs')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0061,mgcv,"distance ~ s(age, Subject, bs = ""fs"")",nlme/Orthodont,108,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0062,mgcv,y ~ te(x0),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.00011811198783107102,0.0001227750035468489,0.0001644240110181272
+formulaic,1.2.1,cur_0062,mgcv,y ~ te(x0),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `te(x0)`. [NameError: name 'te' is not defined],7,,,
+formulae,0.6.2,cur_0062,mgcv,y ~ te(x0),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,cur_0063,mgcv,"uptake ~ s(Plant, bs = ""re"")",R/CO2,84,1,full,ok,,7,0.001192477997392416,0.0014572819927707314,0.0015166490047704428
+formulaic,1.2.1,cur_0063,mgcv,"uptake ~ s(Plant, bs = ""re"")",R/CO2,84,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(Plant, bs='re')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0063,mgcv,"uptake ~ s(Plant, bs = ""re"")",R/CO2,84,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0064,mgcv,"y ~ s(x0, bs = ""ts"") + s(x1, bs = ""ts"")",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='ts' (class dispatch for s(x0)) not yet implemented,7,,,
+formulaic,1.2.1,cur_0064,mgcv,"y ~ s(x0, bs = ""ts"") + s(x1, bs = ""ts"")",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, bs='ts')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0064,mgcv,"y ~ s(x0, bs = ""ts"") + s(x1, bs = ""ts"")",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0065,mgcv,"y ~ s(x0, bs = ""cs"", k = 10)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='cs' (class dispatch for s(x0)) not yet implemented,7,,,
+formulaic,1.2.1,cur_0065,mgcv,"y ~ s(x0, bs = ""cs"", k = 10)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, bs='cs', k=10)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0065,mgcv,"y ~ s(x0, bs = ""cs"", k = 10)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0066,mgcv,"y ~ s(x0, pc = 0.5)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00014074399950914085,0.00015258300118148327,0.00018182897474616766
+formulaic,1.2.1,cur_0066,mgcv,"y ~ s(x0, pc = 0.5)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, pc=0.5)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0066,mgcv,"y ~ s(x0, pc = 0.5)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0068,mgcv,"y ~ s(x0, bs = ""cr"", xt = list(border = 2))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.00016152698663063347,0.00017070199828594923,0.0002073190116789192
+formulaic,1.2.1,cur_0068,mgcv,"y ~ s(x0, bs = ""cr"", xt = list(border = 2))",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, bs='cr', xt=list(border=2))`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,cur_0068,mgcv,"y ~ s(x0, bs = ""cr"", xt = list(border = 2))",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0003,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Machine, Worker, bs = ""re"")",nlme/Machines,54,1,full,ok,,7,0.003139958018437028,0.0034345659951213747,0.004735847003757954
+formulaic,1.2.1,mgcv_0003,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Machine, Worker, bs = ""re"")",nlme/Machines,54,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(Worker, bs='re')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0003,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Machine, Worker, bs = ""re"")",nlme/Machines,54,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0004,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Worker, bs = ""re"", by = Machine)",nlme/Machines,54,1,full,ok,,7,0.0026534369972068816,0.0028141360089648515,0.00308339498587884
+formulaic,1.2.1,mgcv_0004,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Worker, bs = ""re"", by = Machine)",nlme/Machines,54,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(Worker, bs='re', by=Machine)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0004,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Worker, bs = ""re"", by = Machine)",nlme/Machines,54,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0005,mgcv,Volume ~ s(Height) + s(Girth),mgcv/trees,31,1,full,ok,,7,0.012101350002922118,0.012634384009288624,0.013257275015348569
+formulaic,1.2.1,mgcv_0005,mgcv,Volume ~ s(Height) + s(Girth),mgcv/trees,31,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(Height)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0005,mgcv,Volume ~ s(Height) + s(Girth),mgcv/trees,31,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0006,mgcv,"Volume ~ s(Height, bs = ""cr"") + s(Girth, bs = ""cr"")",mgcv/trees,31,1,full,ok,,7,0.0023356209858320653,0.0023801549978088588,0.002641575993038714
+formulaic,1.2.1,mgcv_0006,mgcv,"Volume ~ s(Height, bs = ""cr"") + s(Girth, bs = ""cr"")",mgcv/trees,31,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(Girth, bs='cr')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0006,mgcv,"Volume ~ s(Height, bs = ""cr"") + s(Girth, bs = ""cr"")",mgcv/trees,31,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0007,mgcv,"Volume ~ s(Height) + s(Girth, bs = ""cr"", k = 20)",mgcv/trees,31,1,full,ok,,7,0.007644940022146329,0.008279464003862813,0.008747715997742489
+formulaic,1.2.1,mgcv_0007,mgcv,"Volume ~ s(Height) + s(Girth, bs = ""cr"", k = 20)",mgcv/trees,31,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(Girth, bs='cr', k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0007,mgcv,"Volume ~ s(Height) + s(Girth, bs = ""cr"", k = 20)",mgcv/trees,31,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0008,mgcv,"Volume ~ s(Height, Girth, k = 25)",mgcv/trees,31,1,full,ok,,7,0.01109492700197734,0.011358184012351558,0.012076523998985067
+formulaic,1.2.1,mgcv_0008,mgcv,"Volume ~ s(Height, Girth, k = 25)",mgcv/trees,31,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(Height, Girth, k=25)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0008,mgcv,"Volume ~ s(Height, Girth, k = 25)",mgcv/trees,31,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0009,mgcv,"Volume ~ te(Height, Girth, k = 5)",mgcv/trees,31,1,full,ok,,7,0.002083803992718458,0.0022113019949756563,0.002546634990721941
+formulaic,1.2.1,mgcv_0009,mgcv,"Volume ~ te(Height, Girth, k = 5)",mgcv/trees,31,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(Height, Girth, k=5)`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,mgcv_0009,mgcv,"Volume ~ te(Height, Girth, k = 5)",mgcv/trees,31,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,mgcv_0010,mgcv,Volume ~ Height + s(Girth),mgcv/trees,31,1,full,ok,,7,0.006551074999151751,0.006661560997599736,0.05188811698462814
+formulaic,1.2.1,mgcv_0010,mgcv,Volume ~ Height + s(Girth),mgcv/trees,31,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(Girth)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0010,mgcv,Volume ~ Height + s(Girth),mgcv/trees,31,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0012,mgcv,"y ~ s(x0, bs = ""pl"", m = 2) + s(x1, bs = ""pl"", m = 2) + s(x2, bs = ""pl"", m = 3) + s(x3, bs = ""pl"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='pl' (class dispatch for s(x0)) not yet implemented,7,,,
+formulaic,1.2.1,mgcv_0012,mgcv,"y ~ s(x0, bs = ""pl"", m = 2) + s(x1, bs = ""pl"", m = 2) + s(x2, bs = ""pl"", m = 3) + s(x3, bs = ""pl"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, bs='pl', m=2)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0012,mgcv,"y ~ s(x0, bs = ""pl"", m = 2) + s(x1, bs = ""pl"", m = 2) + s(x2, bs = ""pl"", m = 3) + s(x3, bs = ""pl"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0013,mgcv,y ~ s(x),gamair/hubble,24,1,full,ok,,7,0.00620109899318777,0.006356425990816206,0.006492293992778286
+formulaic,1.2.1,mgcv_0013,mgcv,y ~ s(x),gamair/hubble,24,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0013,mgcv,y ~ s(x),gamair/hubble,24,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0014,mgcv,y ~ x,gamair/hubble,24,1,full,ok,,7,0.00014791599824093282,0.00015344598796218634,0.0002007870061788708
+formulaic,1.2.1,mgcv_0014,mgcv,y ~ x,gamair/hubble,24,1,full,ok,,7,0.002665564010385424,0.002714636008022353,0.002862160006770864
+formulae,0.6.2,mgcv_0014,mgcv,y ~ x,gamair/hubble,24,1,full,ok,,7,0.0017404170066583902,0.0019325200119055808,0.002063091000309214
+lmpy,0.0.1,mgcv_0015,mgcv,"accel ~ s(times, k = 40)",MASS/mcycle,133,1,full,ok,,7,0.04445269500138238,0.04519734199857339,0.04609106099815108
+formulaic,1.2.1,mgcv_0015,mgcv,"accel ~ s(times, k = 40)",MASS/mcycle,133,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(times, k=40)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0015,mgcv,"accel ~ s(times, k = 40)",MASS/mcycle,133,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0016,mgcv,"accel ~ s(times, k = 11, fx = TRUE)",MASS/mcycle,133,1,full,ok,,7,0.010351597011322156,0.010587867989670485,0.011476381012471393
+formulaic,1.2.1,mgcv_0016,mgcv,"accel ~ s(times, k = 11, fx = TRUE)",MASS/mcycle,133,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(times, k=11, fx=TRUE)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0016,mgcv,"accel ~ s(times, k = 11, fx = TRUE)",MASS/mcycle,133,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0017,mgcv,"accel ~ s(times, k = 11, fx = TRUE, bs = ""cr"")",MASS/mcycle,133,1,full,ok,,7,0.0010225589794572443,0.0011578309931792319,0.001433742989320308
+formulaic,1.2.1,mgcv_0017,mgcv,"accel ~ s(times, k = 11, fx = TRUE, bs = ""cr"")",MASS/mcycle,133,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(times, k=11, fx=TRUE, bs='cr')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0017,mgcv,"accel ~ s(times, k = 11, fx = TRUE, bs = ""cr"")",MASS/mcycle,133,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0018,mgcv,"accel ~ s(times, k = 40, m = 3)",MASS/mcycle,133,1,full,ok,,7,0.03268801802187227,0.03401102498173714,0.035548115003621206
+formulaic,1.2.1,mgcv_0018,mgcv,"accel ~ s(times, k = 40, m = 3)",MASS/mcycle,133,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(times, k=40, m=3)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0018,mgcv,"accel ~ s(times, k = 40, m = 3)",MASS/mcycle,133,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0020,mgcv,price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year),gamair/wine,47,1,full,ok,,7,0.02437190301134251,0.025180372002068907,0.02553310798248276
+formulaic,1.2.1,mgcv_0020,mgcv,price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year),gamair/wine,47,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(h.rain)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0020,mgcv,price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year),gamair/wine,47,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0026,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001909139973577112,0.00019771797815337777,0.00023859698558226228
+formulaic,1.2.1,mgcv_0026,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0026,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0027,mgcv,"y ~ s(x, k = 40)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.05302110101911239,0.05615935998503119,0.05969597797957249
+formulaic,1.2.1,mgcv_0027,mgcv,"y ~ s(x, k = 40)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, k=40)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0027,mgcv,"y ~ s(x, k = 40)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0028,mgcv,"z ~ s(x, y, k = 100)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.4876311880070716,0.4963660030043684,0.5027228769904468
+formulaic,1.2.1,mgcv_0028,mgcv,"z ~ s(x, y, k = 100)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, y, k=100)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0028,mgcv,"z ~ s(x, y, k = 100)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0030,mgcv,y ~ x0 + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,ok,,7,0.033894152991706505,0.03550947402254678,0.03587680499185808
+formulaic,1.2.1,mgcv_0030,mgcv,y ~ x0 + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0030,mgcv,y ~ x0 + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0031,mgcv,y ~ x0 + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,ok,,7,0.02333217501291074,0.02362514700507745,0.02510329001233913
+formulaic,1.2.1,mgcv_0031,mgcv,y ~ x0 + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x2)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0031,mgcv,y ~ x0 + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0036,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00023634100216440856,0.000243923015659675,0.00028060399927198887
+formulaic,1.2.1,mgcv_0036,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=6)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0036,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0041,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024246500106528401,0.0002462679985910654,0.00039327898412011564
+formulaic,1.2.1,mgcv_0041,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=6)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0041,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0042,mgcv,"y ~ s(x0) + s(x1, x2, k = 15) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00019154700567014515,0.00019359998987056315,0.0002409299777355045
+formulaic,1.2.1,mgcv_0042,mgcv,"y ~ s(x0) + s(x1, x2, k = 15) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x0)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0042,mgcv,"y ~ s(x0) + s(x1, x2, k = 15) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0044,mgcv,"y ~ s(x0) + te(x1, x2, k = 4) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001931200094986707,0.0002069189795292914,0.0002443650155328214
+formulaic,1.2.1,mgcv_0044,mgcv,"y ~ s(x0) + te(x1, x2, k = 4) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(x1, x2, k=4)`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,mgcv_0044,mgcv,"y ~ s(x0) + te(x1, x2, k = 4) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0046,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 5),7,0.00024132899125106633,0.0002469720202498138,0.0002766750112641603
+formulaic,1.2.1,mgcv_0046,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=5)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0046,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0047,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024038698757067323,0.00025113500305451453,0.00028333000955171883
+formulaic,1.2.1,mgcv_0047,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, k=12)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0047,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0048,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024019100237637758,0.0002454110071994364,0.00027845200384035707
+formulaic,1.2.1,mgcv_0048,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=6)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0048,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0049,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.0002476639929227531,0.00026021600933745503,0.00036461002309806645
+formulaic,1.2.1,mgcv_0049,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, k=6)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0049,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0061,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.0002363070088904351,0.00024139299057424068,0.0002797690103761852
+formulaic,1.2.1,mgcv_0061,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, bs='cr')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0061,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0062,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.05376849599997513,0.05535621699527837,0.0565554560162127
+formulaic,1.2.1,mgcv_0062,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0062,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0063,mgcv,"y ~ s(x0) + s(x1) + s(x1, fac, bs = ""sz"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.06379577101324685,0.06445985499885865,0.06593678498757072
+formulaic,1.2.1,mgcv_0063,mgcv,"y ~ s(x0) + s(x1) + s(x1, fac, bs = ""sz"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0063,mgcv,"y ~ s(x0) + s(x1) + s(x1, fac, bs = ""sz"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0064,mgcv,"y ~ te(x0, x1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 7),7,0.0001863950164988637,0.00019434798741713166,0.00023128101020120084
+formulaic,1.2.1,mgcv_0064,mgcv,"y ~ te(x0, x1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(x0, x1, k=7)`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,mgcv_0064,mgcv,"y ~ te(x0, x1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,mgcv_0065,mgcv,"y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00023237999994307756,0.00024068998754955828,0.0002766670077107847
+formulaic,1.2.1,mgcv_0065,mgcv,"y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0065,mgcv,"y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0066,mgcv,"y ~ s(x0, x1, k = 40) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.11695970600703731,0.12178828098694794,0.12425971601624042
+formulaic,1.2.1,mgcv_0066,mgcv,"y ~ s(x0, x1, k = 40) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, x1, k=40)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0066,mgcv,"y ~ s(x0, x1, k = 40) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0067,mgcv,"y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0002072589995805174,0.00021630898118019104,0.00024499400751665235
+formulaic,1.2.1,mgcv_0067,mgcv,"y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0067,mgcv,"y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0068,mgcv,"y ~ s(x0, k = 4, fx = TRUE, bs = ""tp"") + s(x1, k = 12) + s(x2, k = 15)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.04822520900052041,0.054158015991561115,0.05601839901646599
+formulaic,1.2.1,mgcv_0068,mgcv,"y ~ s(x0, k = 4, fx = TRUE, bs = ""tp"") + s(x1, k = 12) + s(x2, k = 15)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x1, k=12)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0068,mgcv,"y ~ s(x0, k = 4, fx = TRUE, bs = ""tp"") + s(x1, k = 12) + s(x2, k = 15)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0069,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.00020475802011787891,0.00021093300892971456,0.0002575300168246031
+formulaic,1.2.1,mgcv_0069,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"")",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, bs='cr')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0069,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"")",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0070,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00016722999862395227,0.0001711870136205107,0.0002082819992210716
+formulaic,1.2.1,mgcv_0070,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x0)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0070,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0071,mgcv,y ~ s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,ok,,7,0.022692578990245238,0.023766222002450377,0.02415779299917631
+formulaic,1.2.1,mgcv_0071,mgcv,y ~ s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x2)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0071,mgcv,y ~ s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0072,mgcv,"y ~ s(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.08649290900211781,0.08900610799901187,0.09472785601974465
+formulaic,1.2.1,mgcv_0072,mgcv,"y ~ s(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0072,mgcv,"y ~ s(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0073,mgcv,"y ~ s(x, z, k = 40)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.09406714799115434,0.09478492400376126,0.1478405400121119
+formulaic,1.2.1,mgcv_0073,mgcv,"y ~ s(x, z, k = 40)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, k=40)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0073,mgcv,"y ~ s(x, z, k = 40)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0074,mgcv,"y ~ s(x, z, k = 64)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.2128874609770719,0.21293116599554196,0.2143199940037448
+formulaic,1.2.1,mgcv_0074,mgcv,"y ~ s(x, z, k = 64)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, k=64)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0074,mgcv,"y ~ s(x, z, k = 64)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0076,mgcv,"y ~ s(x, k = 15)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.021380065998528153,0.022172882017912343,0.023583027999848127
+formulaic,1.2.1,mgcv_0076,mgcv,"y ~ s(x, k = 15)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, k=15)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0076,mgcv,"y ~ s(x, k = 15)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0077,mgcv,"y ~ s(x2, by = x1)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.011485575989354402,0.011997235007584095,0.012102062988560647
+formulaic,1.2.1,mgcv_0077,mgcv,"y ~ s(x2, by = x1)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, by=x1)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0077,mgcv,"y ~ s(x2, by = x1)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0078,mgcv,"y ~ fac + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.024004314007470384,0.025270386977354065,0.026077763992361724
+formulaic,1.2.1,mgcv_0078,mgcv,"y ~ fac + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, by=fac)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0078,mgcv,"y ~ fac + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0079,mgcv,"y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2)) + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1",mgcv/gamSim_eg4,400,1,full,ok,,7,0.04602808097843081,0.046734422008739784,0.04762230301275849
+formulaic,1.2.1,mgcv_0079,mgcv,"y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2)) + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1",mgcv/gamSim_eg4,400,1,full,error,"SyntaxError: invalid syntax (<unknown>, line 1)",7,,,
+formulae,0.6.2,mgcv_0079,mgcv,"y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2)) + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0080,mgcv,"y ~ fac + s(x2, by = fac, id = 1) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.024955382017651573,0.025588695018086582,0.026712664985097945
+formulaic,1.2.1,mgcv_0080,mgcv,"y ~ fac + s(x2, by = fac, id = 1) + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, by=fac, id=1)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0080,mgcv,"y ~ fac + s(x2, by = fac, id = 1) + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0081,mgcv,"y ~ fac + s(x2) + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.03627962700556964,0.036955829011276364,0.03913304000161588
+formulaic,1.2.1,mgcv_0081,mgcv,"y ~ fac + s(x2) + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, by=fac)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0081,mgcv,"y ~ fac + s(x2) + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0083,mgcv,"y ~ s(fac, bs = ""re"") + s(x0) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg6,400,1,full,ok,,7,0.0467878479976207,0.047954520996427163,0.04892764799296856
+formulaic,1.2.1,mgcv_0083,mgcv,"y ~ s(fac, bs = ""re"") + s(x0) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg6,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0083,mgcv,"y ~ s(fac, bs = ""re"") + s(x0) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg6,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0087,mgcv,"y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00019739300478249788,0.00020602799486368895,0.00026160801644437015
+formulaic,1.2.1,mgcv_0087,mgcv,"y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)",mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x0)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0087,mgcv,"y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0088,mgcv,"y ~ s(x, bs = ""cr"", k = 6) + s(z, bs = ""cr"", k = 6) + te(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0046356950188055634,0.004942464001942426,0.005388029996538535
+formulaic,1.2.1,mgcv_0088,mgcv,"y ~ s(x, bs = ""cr"", k = 6) + s(z, bs = ""cr"", k = 6) + te(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(x, z, k=6)`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,mgcv_0088,mgcv,"y ~ s(x, bs = ""cr"", k = 6) + s(z, bs = ""cr"", k = 6) + te(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0089,mgcv,"y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004885242000455037,0.00507374299922958,0.005242888000793755
+formulaic,1.2.1,mgcv_0089,mgcv,"y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `ti(z, k=6)`. [NameError: name 'ti' is not defined]",7,,,
+formulae,0.6.2,mgcv_0089,mgcv,"y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 'ti',7,,,
+lmpy,0.0.1,mgcv_0091,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00018923499737866223,0.00019830098608508706,0.0002384970139246434
+formulaic,1.2.1,mgcv_0091,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0091,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0092,mgcv,"y ~ te(x0, x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.0001790459791664034,0.00019253900973126292,0.00022034900030121207
+formulaic,1.2.1,mgcv_0092,mgcv,"y ~ te(x0, x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x2)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0092,mgcv,"y ~ te(x0, x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,mgcv_0093,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001722930173855275,0.00018254001042805612,0.00021284300601109862
+formulaic,1.2.1,mgcv_0093,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x0)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0093,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0094,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.02780274100950919,0.030907884996850044,0.0321993560064584
+formulaic,1.2.1,mgcv_0094,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0094,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0095,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0289106440031901,0.029221368982689455,0.031372072000522166
+formulaic,1.2.1,mgcv_0095,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0095,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0096,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.000237944012042135,0.00024386501172557473,0.00028631798340938985
+formulaic,1.2.1,mgcv_0096,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, bs='cr')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0096,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0097,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.13925583500531502,0.1398831869882997,0.14866483700461686
+formulaic,1.2.1,mgcv_0097,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, k=50)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0097,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0098,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.13882587998523377,0.14155183598631993,0.14443513401784003
+formulaic,1.2.1,mgcv_0098,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, k=50)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0098,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0110,mgcv,"y ~ s(x, bs = ""cc"", k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0012894209939986467,0.0013644080027006567,0.0017610139911994338
+formulaic,1.2.1,mgcv_0110,mgcv,"y ~ s(x, bs = ""cc"", k = 6)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, bs='cc', k=6)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0110,mgcv,"y ~ s(x, bs = ""cc"", k = 6)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0111,mgcv,"y ~ s(x, k = 10, bs = ""cr"")",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0015643539954908192,0.0017202500021085143,0.0018660190107766539
+formulaic,1.2.1,mgcv_0111,mgcv,"y ~ s(x, k = 10, bs = ""cr"")",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, k=10, bs='cr')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0111,mgcv,"y ~ s(x, k = 10, bs = ""cr"")",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0112,mgcv,"y ~ s(x, k = 10)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.011631162982666865,0.011984018987277523,0.012704038002993912
+formulaic,1.2.1,mgcv_0112,mgcv,"y ~ s(x, k = 10)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, k=10)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0112,mgcv,"y ~ s(x, k = 10)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0114,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 7),7,0.00021490699145942926,0.00022999499924480915,0.0002649870002642274
+formulaic,1.2.1,mgcv_0114,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `t2(x0, x1, bs='tp', m=1, k=7)`. [NameError: name 't2' is not defined]",7,,,
+formulae,0.6.2,mgcv_0114,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 't2',7,,,
+lmpy,0.0.1,mgcv_0115,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 7),7,0.00022940500639379025,0.00023245200281962752,0.00027089499053545296
+formulaic,1.2.1,mgcv_0115,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `t2(x0, x1, bs='tp', m=2, k=7, full=TRUE)`. [NameError: name 't2' is not defined]",7,,,
+formulae,0.6.2,mgcv_0115,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 't2',7,,,
+lmpy,0.0.1,mgcv_0116,mgcv,"y ~ x0 + s(x1, x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.10007300702272914,0.10050972001045011,0.10282497899606824
+formulaic,1.2.1,mgcv_0116,mgcv,"y ~ x0 + s(x1, x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x1, x2)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0116,mgcv,"y ~ x0 + s(x1, x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0117,mgcv,"y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: c(...) length 2 doesn't match margin count 3,7,0.0002172559907194227,0.00022807298228144646,0.00026371999410912395
+formulaic,1.2.1,mgcv_0117,mgcv,"y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0117,mgcv,"y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,mgcv_0118,mgcv,y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00023197499103844166,0.00023567400057800114,0.00027333199977874756
+formulaic,1.2.1,mgcv_0118,mgcv,y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(I(x1 ^ 2))`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0118,mgcv,y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3),mgcv/gamSim_eg5,400,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,mgcv_0119,mgcv,y ~ s(x0) + s(x1) + s(x2) + x3,mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00023845399846322834,0.0002441720280330628,0.0002865439746528864
+formulaic,1.2.1,mgcv_0119,mgcv,y ~ s(x0) + s(x1) + s(x2) + x3,mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x0)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0119,mgcv,y ~ s(x0) + s(x1) + s(x2) + x3,mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0120,mgcv,y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0003617009788285941,0.00039266698877327144,0.0005069909966550767
+formulaic,1.2.1,mgcv_0120,mgcv,y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x0)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0120,mgcv,y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,full,error,AttributeError: 'LazyVariable' object has no attribute 'callee',7,,,
+lmpy,0.0.1,mgcv_0121,mgcv,y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0003518810262903571,0.0003567179956007749,0.0005083070136606693
+formulaic,1.2.1,mgcv_0121,mgcv,y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(scale(x1))`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0121,mgcv,y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,full,error,AttributeError: 'LazyVariable' object has no attribute 'callee',7,,,
+lmpy,0.0.1,mgcv_0123,mgcv,"y ~ s(x, k = 5)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.011988505983026698,0.01236238400451839,0.012814659014111385
+formulaic,1.2.1,mgcv_0123,mgcv,"y ~ s(x, k = 5)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, k=5)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0123,mgcv,"y ~ s(x, k = 5)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0124,mgcv,"travel ~ s(Rail, bs = ""re"")",nlme/Rail,18,1,full,ok,,7,0.0010439699981361628,0.0010937339975498617,0.0017257380241062492
+formulaic,1.2.1,mgcv_0124,mgcv,"travel ~ s(Rail, bs = ""re"")",nlme/Rail,18,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(Rail, bs='re')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0124,mgcv,"travel ~ s(Rail, bs = ""re"")",nlme/Rail,18,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0125,mgcv,"y ~ fac + s(x1, by = fac) + x2",mgcv/gamSim_eg4,400,1,full,ok,,7,0.013440947979688644,0.013793928985251114,0.014325110998470336
+formulaic,1.2.1,mgcv_0125,mgcv,"y ~ fac + s(x1, by = fac) + x2",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x1, by=fac)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0125,mgcv,"y ~ fac + s(x1, by = fac) + x2",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0128,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='tr' (class dispatch for s(x0)) not yet implemented,7,,,
+formulaic,1.2.1,mgcv_0128,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, bs='tr', m=3)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0128,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0129,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='tr' (class dispatch for s(x0)) not yet implemented,7,,,
+formulaic,1.2.1,mgcv_0129,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, bs='tr', m=3)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0129,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0130,mgcv,"y ~ te(x, z, bs = c(""tr"", ""tr""), m = c(2, 2))",mgcv/gamSim_eg2,400,1,full,unsupported,NotImplementedError: te/ti margin with bs='tr' not yet supported,7,,,
+formulaic,1.2.1,mgcv_0130,mgcv,"y ~ te(x, z, bs = c(""tr"", ""tr""), m = c(2, 2))",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(x, z, bs=c('tr', 'tr'), m=c(2, 2))`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,mgcv_0130,mgcv,"y ~ te(x, z, bs = c(""tr"", ""tr""), m = c(2, 2))",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,mgcv_0131,mgcv,"y ~ s(x, bs = ""ad"", k = 40, m = 5)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0020959050161764026,0.0022078639885876328,0.002555782994022593
+formulaic,1.2.1,mgcv_0131,mgcv,"y ~ s(x, bs = ""ad"", k = 40, m = 5)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, bs='ad', k=40, m=5)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0131,mgcv,"y ~ s(x, bs = ""ad"", k = 40, m = 5)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0133,mgcv,"y ~ s(x, z, k = 150)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.933052280015545,0.9348666660080198,0.9839562520210166
+formulaic,1.2.1,mgcv_0133,mgcv,"y ~ s(x, z, k = 150)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, k=150)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0133,mgcv,"y ~ s(x, z, k = 150)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0134,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 1)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.005844490020535886,0.0061992830014787614,0.006882200017571449
+formulaic,1.2.1,mgcv_0134,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 1)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, bs='ad', k=15, m=1)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0134,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 1)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0135,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 3)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.03441843800828792,0.03575833601644263,0.03637517700553872
+formulaic,1.2.1,mgcv_0135,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 3)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, bs='ad', k=15, m=3)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0135,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 3)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0137,mgcv,"y ~ s(x, m = 1, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.03888027201173827,0.03936320298817009,0.0429118610045407
+formulaic,1.2.1,mgcv_0137,mgcv,"y ~ s(x, m = 1, k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, m=1, k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0137,mgcv,"y ~ s(x, m = 1, k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0138,mgcv,"y ~ s(x, bs = ""bs"", m = c(3, 1), k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0038323710032273084,0.004231877013808116,0.004428599000675604
+formulaic,1.2.1,mgcv_0138,mgcv,"y ~ s(x, bs = ""bs"", m = c(3, 1), k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, bs='bs', m=c(3, 1), k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0138,mgcv,"y ~ s(x, bs = ""bs"", m = c(3, 1), k = 20)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0139,mgcv,"y ~ s(x, bs = ""cc"", k = 12) + s(z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.012671560980379581,0.01318450301187113,0.013385378988459706
+formulaic,1.2.1,mgcv_0139,mgcv,"y ~ s(x, bs = ""cc"", k = 12) + s(z)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, bs='cc', k=12)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0139,mgcv,"y ~ s(x, bs = ""cc"", k = 12) + s(z)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0143,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.05228464800165966,0.05379826799617149,0.05621497402898967
+formulaic,1.2.1,mgcv_0143,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x2, k=20)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0143,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0144,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.05644126798142679,0.05690385401248932,0.0577623299905099
+formulaic,1.2.1,mgcv_0144,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, bs='gp', k=50)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0144,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0145,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(1, 0.5))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.06447378901066259,0.0650796550035011,0.06680523601244204
+formulaic,1.2.1,mgcv_0145,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(1, 0.5))",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, bs='gp', k=50, m=c(1, 0.5))`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0145,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(1, 0.5))",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0146,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(-1, 0.5))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.06211245298618451,0.06297597798402421,0.06537035998189822
+formulaic,1.2.1,mgcv_0146,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(-1, 0.5))",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, z, bs='gp', k=50, m=c(-1, 0.5))`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0146,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(-1, 0.5))",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0151,mgcv,"y ~ s(x, bs = ""cp"") + s(z, bs = ""ps"")",mgcv/gamSim_eg2,400,1,full,ok,,7,0.003949347999878228,0.004036363010527566,0.005091391998576
+formulaic,1.2.1,mgcv_0151,mgcv,"y ~ s(x, bs = ""cp"") + s(z, bs = ""ps"")",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, bs='cp')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0151,mgcv,"y ~ s(x, bs = ""cp"") + s(z, bs = ""ps"")",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0152,mgcv,"y ~ s(x, bs = ""cp"", k = 12) + s(z, bs = ""ps"", k = 13)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004565424023894593,0.004886403999989852,0.005119480018038303
+formulaic,1.2.1,mgcv_0152,mgcv,"y ~ s(x, bs = ""cp"", k = 12) + s(z, bs = ""ps"", k = 13)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(z, bs='ps', k=13)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0152,mgcv,"y ~ s(x, bs = ""cp"", k = 12) + s(z, bs = ""ps"", k = 13)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0162,mgcv,"y ~ s(x2) + s(fac, x2, bs = ""sz"") + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.03549652299261652,0.03615863298182376,0.03768158200546168
+formulaic,1.2.1,mgcv_0162,mgcv,"y ~ s(x2) + s(fac, x2, bs = ""sz"") + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(fac, x2, bs='sz')`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0162,mgcv,"y ~ s(x2) + s(fac, x2, bs = ""sz"") + s(x0)",mgcv/gamSim_eg4,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0164,mgcv,"y ~ s(x, m = c(2, 0)) + x",mgcv/gamSim_eg2,400,1,full,ok,,7,0.012281709001399577,0.012578616995597258,0.013836517988238484
+formulaic,1.2.1,mgcv_0164,mgcv,"y ~ s(x, m = c(2, 0)) + x",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, m=c(2, 0))`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0164,mgcv,"y ~ s(x, m = c(2, 0)) + x",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0165,mgcv,y ~ s(x),mgcv/gamSim_eg2,400,1,full,ok,,7,0.011762040987377986,0.011985054996330291,0.012485011015087366
+formulaic,1.2.1,mgcv_0165,mgcv,y ~ s(x),mgcv/gamSim_eg2,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0165,mgcv,y ~ s(x),mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0168,mgcv,"y ~ s(x, bs = ""cc"", k = 10) + s(z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.012901515990961343,0.013256579986773431,0.01342948799720034
+formulaic,1.2.1,mgcv_0168,mgcv,"y ~ s(x, bs = ""cc"", k = 10) + s(z)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, bs='cc', k=10)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0168,mgcv,"y ~ s(x, bs = ""cc"", k = 10) + s(z)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0172,mgcv,"y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = ""re"")",mgcv/gamSim_eg6,400,1,full,ok,,7,0.05352736701024696,0.05490305300918408,0.05634625698439777
+formulaic,1.2.1,mgcv_0172,mgcv,"y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = ""re"")",mgcv/gamSim_eg6,400,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `s(x3)`. [NameError: name 's' is not defined],7,,,
+formulae,0.6.2,mgcv_0172,mgcv,"y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = ""re"")",mgcv/gamSim_eg6,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0173,mgcv,"y ~ te(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.002766512014204636,0.002901445986935869,0.0030360980017576367
+formulaic,1.2.1,mgcv_0173,mgcv,"y ~ te(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `te(x, z)`. [NameError: name 'te' is not defined]",7,,,
+formulae,0.6.2,mgcv_0173,mgcv,"y ~ te(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 'te',7,,,
+lmpy,0.0.1,mgcv_0174,mgcv,"y ~ t2(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.003780594008276239,0.003875652007991448,0.003948791010770947
+formulaic,1.2.1,mgcv_0174,mgcv,"y ~ t2(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `t2(x, z)`. [NameError: name 't2' is not defined]",7,,,
+formulae,0.6.2,mgcv_0174,mgcv,"y ~ t2(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 't2',7,,,
+lmpy,0.0.1,mgcv_0175,mgcv,"y ~ t2(x, z, bs = c(""tp"", ""tp""))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.02399112199782394,0.024545199994463474,0.02488124999217689
+formulaic,1.2.1,mgcv_0175,mgcv,"y ~ t2(x, z, bs = c(""tp"", ""tp""))",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `t2(x, z, bs=c('tp', 'tp'))`. [NameError: name 't2' is not defined]",7,,,
+formulae,0.6.2,mgcv_0175,mgcv,"y ~ t2(x, z, bs = c(""tp"", ""tp""))",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 't2',7,,,
+lmpy,0.0.1,mgcv_0178,mgcv,"y ~ ti(x) + ti(z) + ti(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004796135996002704,0.004855164996115491,0.005077677982626483
+formulaic,1.2.1,mgcv_0178,mgcv,"y ~ ti(x) + ti(z) + ti(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `ti(x, z)`. [NameError: name 'ti' is not defined]",7,,,
+formulae,0.6.2,mgcv_0178,mgcv,"y ~ ti(x) + ti(z) + ti(x, z)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 'ti',7,,,
+lmpy,0.0.1,mgcv_0179,mgcv,"y ~ ti(x) + ti(x, z, mc = c(0, 1))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0036969009961467236,0.004064553009811789,0.0055189820122905076
+formulaic,1.2.1,mgcv_0179,mgcv,"y ~ ti(x) + ti(x, z, mc = c(0, 1))",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `ti(x, z, mc=c(0, 1))`. [NameError: name 'ti' is not defined]",7,,,
+formulae,0.6.2,mgcv_0179,mgcv,"y ~ ti(x) + ti(x, z, mc = c(0, 1))",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 'ti',7,,,
+lmpy,0.0.1,mgcv_0181,mgcv,"y ~ s(x, bs = ""cc"", k = 10)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0014079840038903058,0.0014796800096519291,0.0016322029987350106
+formulaic,1.2.1,mgcv_0181,mgcv,"y ~ s(x, bs = ""cc"", k = 10)",mgcv/gamSim_eg2,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x, bs='cc', k=10)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0181,mgcv,"y ~ s(x, bs = ""cc"", k = 10)",mgcv/gamSim_eg2,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,mgcv_0182,mgcv,"y ~ s(x0, x1, x2)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.490677288005827,0.5110764010169078,0.5214035719982348
+formulaic,1.2.1,mgcv_0182,mgcv,"y ~ s(x0, x1, x2)",mgcv/gamSim_eg5,400,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `s(x0, x1, x2)`. [NameError: name 's' is not defined]",7,,,
+formulae,0.6.2,mgcv_0182,mgcv,"y ~ s(x0, x1, x2)",mgcv/gamSim_eg5,400,1,full,unsupported,KeyError: 's',7,,,
+lmpy,0.0.1,cur_0001,wr,"Sepal.Length ~ C(Species, contr.treatment)",R/iris,150,1,full,ok,,7,0.0006242570234462619,0.0006305910064838827,0.0006755359936505556
+formulaic,1.2.1,cur_0001,wr,"Sepal.Length ~ C(Species, contr.treatment)",R/iris,150,1,full,ok,,7,0.006961531995330006,0.007425288000376895,0.008051939978031442
+formulae,0.6.2,cur_0001,wr,"Sepal.Length ~ C(Species, contr.treatment)",R/iris,150,1,full,unsupported,KeyError: 'contr.treatment',7,,,
+lmpy,0.0.1,cur_0002,wr,"Sepal.Length ~ C(Species, contr.sum)",R/iris,150,1,full,ok,,7,0.0005962290160823613,0.0006076160061638802,0.0006490869855042547
+formulaic,1.2.1,cur_0002,wr,"Sepal.Length ~ C(Species, contr.sum)",R/iris,150,1,full,ok,,7,0.007809991977410391,0.008171238005161285,0.008304900984512642
+formulae,0.6.2,cur_0002,wr,"Sepal.Length ~ C(Species, contr.sum)",R/iris,150,1,full,unsupported,KeyError: 'contr.sum',7,,,
+lmpy,0.0.1,cur_0003,wr,"Sepal.Length ~ C(Species, contr.helmert)",R/iris,150,1,full,ok,,7,0.0005895640060771257,0.0006002059963066131,0.0006422520091291517
+formulaic,1.2.1,cur_0003,wr,"Sepal.Length ~ C(Species, contr.helmert)",R/iris,150,1,full,ok,,7,0.008354060002602637,0.00861977698514238,0.009124750999035314
+formulae,0.6.2,cur_0003,wr,"Sepal.Length ~ C(Species, contr.helmert)",R/iris,150,1,full,unsupported,KeyError: 'contr.helmert',7,,,
+lmpy,0.0.1,cur_0004,wr,"Sepal.Length ~ C(Species, contr.poly)",R/iris,150,1,full,ok,,7,0.0007598709780722857,0.0007936900074128062,0.0009718539949972183
+formulaic,1.2.1,cur_0004,wr,"Sepal.Length ~ C(Species, contr.poly)",R/iris,150,1,full,ok,,7,0.008505414996761829,0.008761036995565519,0.010069679003208876
+formulae,0.6.2,cur_0004,wr,"Sepal.Length ~ C(Species, contr.poly)",R/iris,150,1,full,unsupported,KeyError: 'contr.poly',7,,,
+lmpy,0.0.1,cur_0005,wr,"Sepal.Length ~ C(Species, contr.SAS)",R/iris,150,1,full,ok,,7,0.0006255210028029978,0.0006697700009681284,0.000728398998035118
+formulaic,1.2.1,cur_0005,wr,"Sepal.Length ~ C(Species, contr.SAS)",R/iris,150,1,full,ok,,7,0.007385247008642182,0.007935851986985654,0.008679960999870673
+formulae,0.6.2,cur_0005,wr,"Sepal.Length ~ C(Species, contr.SAS)",R/iris,150,1,full,unsupported,KeyError: 'contr.SAS',7,,,
+lmpy,0.0.1,cur_0006,wr,"circumference ~ C(Tree, contr.poly) + age",R/Orange,35,1,full,ok,,7,0.0008614260004833341,0.0008822810195852071,0.0011001680104527622
+formulaic,1.2.1,cur_0006,wr,"circumference ~ C(Tree, contr.poly) + age",R/Orange,35,1,full,ok,,7,0.00869060299010016,0.009428028017282486,0.010278011002810672
+formulae,0.6.2,cur_0006,wr,"circumference ~ C(Tree, contr.poly) + age",R/Orange,35,1,full,unsupported,KeyError: 'contr.poly',7,,,
+lmpy,0.0.1,cur_0007,wr,mpg ~ wt + hp - hp,R/mtcars,32,1,full,ok,,7,0.00018756400095298886,0.000201247981749475,0.00029130399343557656
+formulaic,1.2.1,cur_0007,wr,mpg ~ wt + hp - hp,R/mtcars,32,1,full,ok,,7,0.003027968021342531,0.0033330429869238287,0.003540516016073525
+formulae,0.6.2,cur_0007,wr,mpg ~ wt + hp - hp,R/mtcars,32,1,full,ok,,7,0.0017790590063668787,0.0018152160046156496,0.0020440539810806513
+lmpy,0.0.1,cur_0008,wr,mpg ~ cyl:disp,R/mtcars,32,1,full,ok,,7,0.00021214000298641622,0.00021684201783500612,0.00027404300635680556
+formulaic,1.2.1,cur_0008,wr,mpg ~ cyl:disp,R/mtcars,32,1,full,ok,,7,0.003297788993222639,0.0036907829926349223,0.004254082014085725
+formulae,0.6.2,cur_0008,wr,mpg ~ cyl:disp,R/mtcars,32,1,full,ok,,7,0.0019038199970964342,0.0019836720020975918,0.002174066990846768
+lmpy,0.0.1,cur_0009,wr,breaks ~ wool + tension + wool %in% tension,R/warpbreaks,54,1,full,ok,,7,0.001815171999623999,0.0020104470022488385,0.04354908500681631
+formulaic,1.2.1,cur_0009,wr,breaks ~ wool + tension + wool %in% tension,R/warpbreaks,54,1,full,ok,,7,0.009627928986446932,0.010302856011549011,0.015978798997821286
+formulae,0.6.2,cur_0009,wr,breaks ~ wool + tension + wool %in% tension,R/warpbreaks,54,1,full,ok,,7,0.004024316003778949,0.004368152993265539,0.004565417009871453
+lmpy,0.0.1,cur_0010,wr,mpg ~ . - carb,R/mtcars,32,1,full,ok,,7,0.0004612100019585341,0.00046570197446271777,0.000519418012117967
+formulaic,1.2.1,cur_0010,wr,mpg ~ . - carb,R/mtcars,32,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,cur_0010,wr,mpg ~ . - carb,R/mtcars,32,1,full,error,ParseError: Don't know how to parse '.',7,,,
+lmpy,0.0.1,cur_0011,wr,mpg ~ (wt + hp) * cyl,R/mtcars,32,1,full,ok,,7,0.0003791129856836051,0.00038956699427217245,0.0004327869974076748
+formulaic,1.2.1,cur_0011,wr,mpg ~ (wt + hp) * cyl,R/mtcars,32,1,full,ok,,7,0.0047022069920785725,0.004748413019115105,0.005074107990367338
+formulae,0.6.2,cur_0011,wr,mpg ~ (wt + hp) * cyl,R/mtcars,32,1,full,ok,,7,0.0023552200000267476,0.0025123739906121045,0.0031689120223745704
+lmpy,0.0.1,cur_0012,wr,mpg ~ wt + 0,R/mtcars,32,1,full,ok,,7,0.00013875600416213274,0.00014370400458574295,0.0001937990018632263
+formulaic,1.2.1,cur_0012,wr,mpg ~ wt + 0,R/mtcars,32,1,full,ok,,7,0.0025650319876149297,0.00263523799367249,0.002971224981592968
+formulae,0.6.2,cur_0012,wr,mpg ~ wt + 0,R/mtcars,32,1,full,ok,,7,0.0017371650028508157,0.0018108279909938574,0.0020948820165358484
+lmpy,0.0.1,cur_0013,wr,mpg ~ 0 + wt,R/mtcars,32,1,full,ok,,7,0.00013880699407309294,0.0001468230038881302,0.00022856899886392057
+formulaic,1.2.1,cur_0013,wr,mpg ~ 0 + wt,R/mtcars,32,1,full,ok,,7,0.0026638810231816024,0.0027241600037086755,0.0031689270108472556
+formulae,0.6.2,cur_0013,wr,mpg ~ 0 + wt,R/mtcars,32,1,full,ok,,7,0.0017187450139317662,0.0018266719998791814,0.0020894700137432665
+lmpy,0.0.1,cur_0014,wr,mpg ~ 1 + wt,R/mtcars,32,1,full,ok,,7,0.00016382400644943118,0.00017261100583709776,0.00022291799541562796
+formulaic,1.2.1,cur_0014,wr,mpg ~ 1 + wt,R/mtcars,32,1,full,ok,,7,0.0028276130033191293,0.002980467979796231,0.0031105469970498234
+formulae,0.6.2,cur_0014,wr,mpg ~ 1 + wt,R/mtcars,32,1,full,ok,,7,0.0017214219842571765,0.0017358089971821755,0.001865692000137642
+lmpy,0.0.1,cur_0015,wr,"Sepal.Length ~ 0 + C(Species, contr.treatment)",R/iris,150,1,full,ok,,7,0.0005766880058217794,0.0005861569952685386,0.0006731410103384405
+formulaic,1.2.1,cur_0015,wr,"Sepal.Length ~ 0 + C(Species, contr.treatment)",R/iris,150,1,full,ok,,7,0.006908845010912046,0.007235453987959772,0.007599191012559459
+formulae,0.6.2,cur_0015,wr,"Sepal.Length ~ 0 + C(Species, contr.treatment)",R/iris,150,1,full,unsupported,KeyError: 'contr.treatment',7,,,
+lmpy,0.0.1,cur_0016,wr,mpg ~ I(wt + hp),R/mtcars,32,1,full,ok,,7,0.00019916798919439316,0.00020222002058289945,0.0002468109887558967
+formulaic,1.2.1,cur_0016,wr,mpg ~ I(wt + hp),R/mtcars,32,1,full,ok,,7,0.004168801999185234,0.004265011986717582,0.004668604990001768
+formulae,0.6.2,cur_0016,wr,mpg ~ I(wt + hp),R/mtcars,32,1,full,ok,,7,0.0020250320085324347,0.002170020015910268,0.0024598289746791124
+lmpy,0.0.1,cur_0017,wr,mpg ~ log1p(hp),R/mtcars,32,1,full,ok,,7,0.00017722899792715907,0.00018533100956119597,0.00024379498790949583
+formulaic,1.2.1,cur_0017,wr,mpg ~ log1p(hp),R/mtcars,32,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `log1p(hp)`. [NameError: name 'log1p' is not defined],7,,,
+formulae,0.6.2,cur_0017,wr,mpg ~ log1p(hp),R/mtcars,32,1,full,unsupported,KeyError: 'log1p',7,,,
+lmpy,0.0.1,cur_0018,wr,mpg ~ exp(qsec/10),R/mtcars,32,1,full,ok,,7,0.0002030489849857986,0.0002154420071747154,0.00026182099827565253
+formulaic,1.2.1,cur_0018,wr,mpg ~ exp(qsec/10),R/mtcars,32,1,full,ok,,7,0.0038803430215921253,0.0042219509778078645,0.004579428001306951
+formulae,0.6.2,cur_0018,wr,mpg ~ exp(qsec/10),R/mtcars,32,1,full,unsupported,KeyError: 'exp',7,,,
+lmpy,0.0.1,cur_0019,wr,mpg ~ sqrt(wt),R/mtcars,32,1,full,ok,,7,0.00018524398910813034,0.00020678099826909602,0.0002779809874482453
+formulaic,1.2.1,cur_0019,wr,mpg ~ sqrt(wt),R/mtcars,32,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `sqrt(wt)`. [NameError: name 'sqrt' is not defined],7,,,
+formulae,0.6.2,cur_0019,wr,mpg ~ sqrt(wt),R/mtcars,32,1,full,unsupported,KeyError: 'sqrt',7,,,
+lmpy,0.0.1,cur_0020,wr,"mpg ~ poly(wt, 2, raw = TRUE)",R/mtcars,32,1,full,ok,,7,0.00024025500169955194,0.00024661299539729953,0.0003323860000818968
+formulaic,1.2.1,cur_0020,wr,"mpg ~ poly(wt, 2, raw = TRUE)",R/mtcars,32,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `poly(wt, 2, raw=TRUE)`. [NameError: name 'TRUE' is not defined]",7,,,
+formulae,0.6.2,cur_0020,wr,"mpg ~ poly(wt, 2, raw = TRUE)",R/mtcars,32,1,full,unsupported,KeyError: 'TRUE',7,,,
+lmpy,0.0.1,cur_0021,wr,mpg ~ bs(wt),R/mtcars,32,1,full,ok,,7,0.0007628040038980544,0.0008031030010897666,0.0011267650115769356
+formulaic,1.2.1,cur_0021,wr,mpg ~ bs(wt),R/mtcars,32,1,full,ok,,7,0.004115557996556163,0.004404309001984075,0.004909659008262679
+formulae,0.6.2,cur_0021,wr,mpg ~ bs(wt),R/mtcars,32,1,full,error,ValueError: Must specify either 'df' or 'knots',7,,,
+lmpy,0.0.1,cur_0022,wr,"mpg ~ bs(wt, degree = 2)",R/mtcars,32,1,full,ok,,7,0.0006763669953215867,0.0006874229875393212,0.0007393450068775564
+formulaic,1.2.1,cur_0022,wr,"mpg ~ bs(wt, degree = 2)",R/mtcars,32,1,full,ok,,7,0.004187128011835739,0.00423299300018698,0.004388050001580268
+formulae,0.6.2,cur_0022,wr,"mpg ~ bs(wt, degree = 2)",R/mtcars,32,1,full,error,ValueError: Must specify either 'df' or 'knots',7,,,
+lmpy,0.0.1,cur_0023,wr,"mpg ~ cut(wt, breaks = c(0, 3, 4, 6))",R/mtcars,32,1,full,ok,,7,0.00036467399331741035,0.0003746299771592021,0.000426789018092677
+formulaic,1.2.1,cur_0023,wr,"mpg ~ cut(wt, breaks = c(0, 3, 4, 6))",R/mtcars,32,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `cut(wt, breaks=c(0, 3, 4, 6))`. [NameError: name 'cut' is not defined]",7,,,
+formulae,0.6.2,cur_0023,wr,"mpg ~ cut(wt, breaks = c(0, 3, 4, 6))",R/mtcars,32,1,full,unsupported,KeyError: 'cut',7,,,
+lmpy,0.0.1,cur_0024,wr,Reaction ~ Days + offset(Days),lme4/sleepstudy,180,1,full,ok,,7,0.0001880449999589473,0.00019416800932958722,0.00024383299751207232
+formulaic,1.2.1,cur_0024,wr,Reaction ~ Days + offset(Days),lme4/sleepstudy,180,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `offset(Days)`. [NameError: name 'offset' is not defined],7,,,
+formulae,0.6.2,cur_0024,wr,Reaction ~ Days + offset(Days),lme4/sleepstudy,180,1,full,ok,,7,0.0020142569846939296,0.0022166639973875135,0.002585675014415756
+lmpy,0.0.1,cur_0025,wr,mpg ~ I(wt > 3),R/mtcars,32,1,full,ok,,7,0.0002181679883506149,0.00023862600210122764,0.0002934649819508195
+formulaic,1.2.1,cur_0025,wr,mpg ~ I(wt > 3),R/mtcars,32,1,full,ok,,7,0.003879730007611215,0.003999093984020874,0.004126874991925433
+formulae,0.6.2,cur_0025,wr,mpg ~ I(wt > 3),R/mtcars,32,1,full,ok,,7,0.00195808699936606,0.0020540540281217545,0.0022736160026397556
+lmpy,0.0.1,cur_0026,wr,"Sepal.Length ~ relevel(Species, ref = ""virginica"")",R/iris,150,1,full,ok,,7,0.0006732520123478025,0.0006780439871363342,0.0007296489784494042
+formulaic,1.2.1,cur_0026,wr,"Sepal.Length ~ relevel(Species, ref = ""virginica"")",R/iris,150,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `relevel(Species, ref='virginica')`. [NameError: name 'relevel' is not defined]",7,,,
+formulae,0.6.2,cur_0026,wr,"Sepal.Length ~ relevel(Species, ref = ""virginica"")",R/iris,150,1,full,unsupported,KeyError: 'relevel',7,,,
+lmpy,0.0.1,cur_0027,wr,"Sepal.Length ~ poly(Petal.Length, 2) * Species",R/iris,150,1,full,ok,,7,0.0015737010107841343,0.0017069609893951565,0.0019256739760749042
+formulaic,1.2.1,cur_0027,wr,"Sepal.Length ~ poly(Petal.Length, 2) * Species",R/iris,150,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `poly(Petal.Length, 2)`. [NameError: name 'Petal' is not defined]",7,,,
+formulae,0.6.2,cur_0027,wr,"Sepal.Length ~ poly(Petal.Length, 2) * Species",R/iris,150,1,full,ok,,7,0.006617474980885163,0.006753506982931867,0.007119064015569165
+lmpy,0.0.1,cur_0028,wr,"Sepal.Length ~ poly(Petal.Length, 2, raw = TRUE) * Species",R/iris,150,1,full,ok,,7,0.0012712739990092814,0.0012803510180674493,0.0013722290168516338
+formulaic,1.2.1,cur_0028,wr,"Sepal.Length ~ poly(Petal.Length, 2, raw = TRUE) * Species",R/iris,150,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `poly(Petal.Length, 2, raw=TRUE)`. [NameError: name 'Petal' is not defined]",7,,,
+formulae,0.6.2,cur_0028,wr,"Sepal.Length ~ poly(Petal.Length, 2, raw = TRUE) * Species",R/iris,150,1,full,unsupported,KeyError: 'TRUE',7,,,
+lmpy,0.0.1,cur_0029,wr,"Sepal.Length ~ Species:cut(Petal.Length, 3)",R/iris,150,1,full,ok,,7,0.0009081129974219948,0.0009201070060953498,0.0009655019966885448
+formulaic,1.2.1,cur_0029,wr,"Sepal.Length ~ Species:cut(Petal.Length, 3)",R/iris,150,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `cut(Petal.Length, 3)`. [NameError: name 'cut' is not defined]",7,,,
+formulae,0.6.2,cur_0029,wr,"Sepal.Length ~ Species:cut(Petal.Length, 3)",R/iris,150,1,full,unsupported,KeyError: 'cut',7,,,
+lmpy,0.0.1,cur_0030,wr,mpg ~ wt + hp:I(wt^2),R/mtcars,32,1,full,ok,,7,0.00032810799893923104,0.00036486799945123494,0.0005155329999979585
+formulaic,1.2.1,cur_0030,wr,mpg ~ wt + hp:I(wt^2),R/mtcars,32,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `I(wt ^ 2)`. [TypeError: Cannot perform 'xor' with a dtyped [float64] array and scalar of type [bool]],7,,,
+formulae,0.6.2,cur_0030,wr,mpg ~ wt + hp:I(wt^2),R/mtcars,32,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,cur_0031,wr,mpg ~ wt + wt,R/mtcars,32,1,full,ok,,7,0.00016767199849709868,0.00017118602409027517,0.00021897800615988672
+formulaic,1.2.1,cur_0031,wr,mpg ~ wt + wt,R/mtcars,32,1,full,ok,,7,0.0028475250001065433,0.002935159020125866,0.0032205260067712516
+formulae,0.6.2,cur_0031,wr,mpg ~ wt + wt,R/mtcars,32,1,full,ok,,7,0.0018019939889200032,0.0018795860232785344,0.00201608199859038
+lmpy,0.0.1,cur_0032,wr,mpg ~ wt * hp - wt:hp,R/mtcars,32,1,full,ok,,7,0.0002508129982743412,0.0002615089761093259,0.00031128901173360646
+formulaic,1.2.1,cur_0032,wr,mpg ~ wt * hp - wt:hp,R/mtcars,32,1,full,ok,,7,0.003599875984946266,0.0038005310052540153,0.004020625987323001
+formulae,0.6.2,cur_0032,wr,mpg ~ wt * hp - wt:hp,R/mtcars,32,1,full,ok,,7,0.0020168089831713587,0.0021447300096042454,0.0023339029867202044
+lmpy,0.0.1,cur_0033,wr,mpg ~ wt - cyl,R/mtcars,32,1,full,ok,,7,0.00016242900164797902,0.0001749820075929165,0.00023266900097951293
+formulaic,1.2.1,cur_0033,wr,mpg ~ wt - cyl,R/mtcars,32,1,full,ok,,7,0.002772437990643084,0.0031131389841903,0.003513093979563564
+formulae,0.6.2,cur_0033,wr,mpg ~ wt - cyl,R/mtcars,32,1,full,ok,,7,0.0017627629858907312,0.0018122199981007725,0.0019952000002376735
+lmpy,0.0.1,cur_0034,wr,mpg ~ wt - wt,R/mtcars,32,1,full,ok,,7,0.00011898699449375272,0.00012780498946085572,0.00020015297923237085
+formulaic,1.2.1,cur_0034,wr,mpg ~ wt - wt,R/mtcars,32,1,full,ok,,7,0.0021711019799113274,0.0022085879754740745,0.002344863984035328
+formulae,0.6.2,cur_0034,wr,mpg ~ wt - wt,R/mtcars,32,1,full,ok,,7,0.0020831729925703257,0.0022246550070121884,0.00265528800082393
+lmpy,0.0.1,cur_0035,wr,breaks ~ wool:tension,R/warpbreaks,54,1,full,ok,,7,0.0009969389939215034,0.001008108985843137,0.0010508910054340959
+formulaic,1.2.1,cur_0035,wr,breaks ~ wool:tension,R/warpbreaks,54,1,full,ok,,7,0.011344710976118222,0.012235477013746276,0.013560455001424998
+formulae,0.6.2,cur_0035,wr,breaks ~ wool:tension,R/warpbreaks,54,1,full,ok,,7,0.0052874960238114,0.005552920018089935,0.005832876020576805
+lmpy,0.0.1,cur_0067,wr,height ~ weight + I(weight^2) + I(weight^3) + I(weight^4) + I(weight^5) + I(weight^6) + I(weight^7) + I(weight^8) + I(weight^9) + I(weight^10) + I(weight^11) + I(weight^12) + I(weight^13) + I(weight^14),R/women,15,1,full,ok,,7,0.0010723099985625595,0.0010798670118674636,0.0012403260043356568
+formulaic,1.2.1,cur_0067,wr,height ~ weight + I(weight^2) + I(weight^3) + I(weight^4) + I(weight^5) + I(weight^6) + I(weight^7) + I(weight^8) + I(weight^9) + I(weight^10) + I(weight^11) + I(weight^12) + I(weight^13) + I(weight^14),R/women,15,1,full,ok,,7,0.023441899014869705,0.024320780008565634,0.025095446995692328
+formulae,0.6.2,cur_0067,wr,height ~ weight + I(weight^2) + I(weight^3) + I(weight^4) + I(weight^5) + I(weight^6) + I(weight^7) + I(weight^8) + I(weight^9) + I(weight^10) + I(weight^11) + I(weight^12) + I(weight^13) + I(weight^14),R/women,15,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,cur_0069,wr,y ~ f * g,synthetic/seed_synth_empty_cell,120,1,full,ok,,7,0.0018704870017245412,0.0019337370176799595,0.002063812018604949
+formulaic,1.2.1,cur_0069,wr,y ~ f * g,synthetic/seed_synth_empty_cell,120,1,full,ok,,7,0.009585809981217608,0.010013340011937544,0.01027082500513643
+formulae,0.6.2,cur_0069,wr,y ~ f * g,synthetic/seed_synth_empty_cell,120,1,full,ok,,7,0.0062988619902171195,0.006460691976826638,0.007033419999061152
+lmpy,0.0.1,cur_0070,wr,"breaks ~ (C(wool, contr.sum) + tension)^2",R/warpbreaks,54,1,full,ok,,7,0.0019097710028290749,0.0019388979999348521,0.0023626860056538135
+formulaic,1.2.1,cur_0070,wr,"breaks ~ (C(wool, contr.sum) + tension)^2",R/warpbreaks,54,1,full,ok,,7,0.011125007004011422,0.011496542021632195,0.011824233981315047
+formulae,0.6.2,cur_0070,wr,"breaks ~ (C(wool, contr.sum) + tension)^2",R/warpbreaks,54,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0001,wr,stack.loss ~ .,R/stackloss,21,1,full,ok,,7,0.0002316799946129322,0.00024099601432681084,0.000281100015854463
+formulaic,1.2.1,wr_0001,wr,stack.loss ~ .,R/stackloss,21,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,wr_0001,wr,stack.loss ~ .,R/stackloss,21,1,full,error,ParseError: Don't know how to parse '.',7,,,
+lmpy,0.0.1,wr_0002,wr,y ~ x - 1,gamair/hubble,24,1,full,ok,,7,0.0001327219943050295,0.0001361470203846693,0.000176475994521752
+formulaic,1.2.1,wr_0002,wr,y ~ x - 1,gamair/hubble,24,1,full,ok,,7,0.002579877997050062,0.0027477300027385354,0.0030657089955639094
+formulae,0.6.2,wr_0002,wr,y ~ x - 1,gamair/hubble,24,1,full,ok,,7,0.001749485993059352,0.001773579977452755,0.002003320987569168
+lmpy,0.0.1,wr_0003,wr,count ~ time.ipc + prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.00019821999012492597,0.00020352000137791038,0.00025982700753957033
+formulaic,1.2.1,wr_0003,wr,count ~ time.ipc + prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.0034359270066488534,0.0036265120143070817,0.0038414559967350215
+formulae,0.6.2,wr_0003,wr,count ~ time.ipc + prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.0018389850156381726,0.0020037569920532405,0.002058723010122776
+lmpy,0.0.1,wr_0004,wr,count ~ time.ipc + I(prop.partner * time.ipc),gamair/sperm.comp1,15,1,full,ok,,7,0.0002524029987398535,0.00025793100940063596,0.0002973819791804999
+formulaic,1.2.1,wr_0004,wr,count ~ time.ipc + I(prop.partner * time.ipc),gamair/sperm.comp1,15,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `I(prop.partner * time.ipc)`. [NameError: name 'prop' is not defined],7,,,
+formulae,0.6.2,wr_0004,wr,count ~ time.ipc + I(prop.partner * time.ipc),gamair/sperm.comp1,15,1,full,ok,,7,0.0021371309994719923,0.0023126170272007585,0.0025729550106916577
+lmpy,0.0.1,wr_0005,wr,count ~ prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.0001491839939262718,0.0001543039979878813,0.00020259901066310704
+formulaic,1.2.1,wr_0005,wr,count ~ prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.0028469050012063235,0.002962714002933353,0.0032010959985200316
+formulae,0.6.2,wr_0005,wr,count ~ prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.0017813070153351873,0.0018488490022718906,0.00220693601295352
+lmpy,0.0.1,wr_0006,wr,count ~ 1,gamair/sperm.comp1,15,1,full,ok,,7,9.702600073069334e-05,0.00010435300646349788,0.00015028801863081753
+formulaic,1.2.1,wr_0006,wr,count ~ 1,gamair/sperm.comp1,15,1,full,ok,,7,0.0021039670100435615,0.0022023990168236196,0.002423547994112596
+formulae,0.6.2,wr_0006,wr,count ~ 1,gamair/sperm.comp1,15,1,full,ok,,7,0.002055868011666462,0.0021602830092888325,0.0022509089903905988
+lmpy,0.0.1,wr_0007,wr,count ~ f.age + f.height + f.weight + m.age + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.0009199820051435381,0.0009600119956303388,0.0011164300085511059
+formulaic,1.2.1,wr_0007,wr,count ~ f.age + f.height + f.weight + m.age + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.010046181007055566,0.01030043899663724,0.010803102020872757
+formulae,0.6.2,wr_0007,wr,count ~ f.age + f.height + f.weight + m.age + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.0030166709912009537,0.0032754860003478825,0.0035048330028075725
+lmpy,0.0.1,wr_0008,wr,count ~ f.age + f.height + f.weight + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.0011440379894338548,0.001304272998822853,0.0016317069821525365
+formulaic,1.2.1,wr_0008,wr,count ~ f.age + f.height + f.weight + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.009145821997663006,0.009611072979168966,0.010508170002140105
+formulae,0.6.2,wr_0008,wr,count ~ f.age + f.height + f.weight + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.002773515006992966,0.002796003012917936,0.0030216689920052886
+lmpy,0.0.1,wr_0009,wr,count ~ f.weight,gamair/sperm.comp2,24,1,full,ok,,7,0.0005338049959391356,0.0005963580042589456,0.0007487160037271678
+formulaic,1.2.1,wr_0009,wr,count ~ f.weight,gamair/sperm.comp2,24,1,full,ok,,7,0.0045421289978548884,0.004705490980995819,0.004902868997305632
+formulae,0.6.2,wr_0009,wr,count ~ f.weight,gamair/sperm.comp2,24,1,full,ok,,7,0.0023028920113574713,0.0024595209979452193,0.002744583005551249
+lmpy,0.0.1,wr_0010,wr,count ~ m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.0005400350200943649,0.0006322019908111542,0.0009062910103239119
+formulaic,1.2.1,wr_0010,wr,count ~ m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.004058689984958619,0.004171960987150669,0.005107665027026087
+formulae,0.6.2,wr_0010,wr,count ~ m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.0023543360002804548,0.00244521998683922,0.0027639659820124507
+lmpy,0.0.1,wr_0011,wr,y ~ z,MASS/topo,52,1,full,ok,,7,0.00014982398715801537,0.00017143000150099397,0.00021089200163260102
+formulaic,1.2.1,wr_0011,wr,y ~ z,MASS/topo,52,1,full,ok,,7,0.0028106090030632913,0.003056192013900727,0.0037593259767163545
+formulae,0.6.2,wr_0011,wr,y ~ z,MASS/topo,52,1,full,ok,,7,0.0018021509749814868,0.0018519599980209023,0.0021566970099229366
+lmpy,0.0.1,wr_0012,wr,y ~ x + z,MASS/topo,52,1,full,ok,,7,0.0001973189937416464,0.00020247200154699385,0.0002511999919079244
+formulaic,1.2.1,wr_0012,wr,y ~ x + z,MASS/topo,52,1,full,ok,,7,0.003296930022770539,0.003543310012901202,0.00441046801279299
+formulae,0.6.2,wr_0012,wr,y ~ x + z,MASS/topo,52,1,full,ok,,7,0.0019722369906958193,0.002210873004514724,0.002518830995541066
+lmpy,0.0.1,wr_0013,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.00038929100264795125,0.0004041969950776547,0.0005890710162930191
+formulaic,1.2.1,wr_0013,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.005335196008672938,0.005554437986575067,0.005862942984094843
+formulae,0.6.2,wr_0013,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.003084002004470676,0.003140868997434154,0.0033915590029209852
+lmpy,0.0.1,wr_0014,wr,weight ~ 1,gamair/mpg,205,1,full,ok,,7,0.00010504899546504021,0.00011700097820721567,0.0002447660081088543
+formulaic,1.2.1,wr_0014,wr,weight ~ 1,gamair/mpg,205,1,full,ok,,7,0.002075260999845341,0.0021755069901701063,0.00269224401563406
+formulae,0.6.2,wr_0014,wr,weight ~ 1,gamair/mpg,205,1,full,ok,,7,0.0020711820106953382,0.002217722008936107,0.0026636009861249477
+lmpy,0.0.1,wr_0015,wr,loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2 * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3),MASS/Rubber,30,1,full,ok,,7,0.0008330370183102787,0.0008911390032153577,0.0011360100179444999
+formulaic,1.2.1,wr_0015,wr,loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2 * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3),MASS/Rubber,30,1,full,ok,,7,0.017394908994901925,0.017902449006214738,0.018321181007195264
+formulae,0.6.2,wr_0015,wr,loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2 * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3),MASS/Rubber,30,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0016,wr,breaks ~ wool * tension,R/warpbreaks,54,1,full,ok,,7,0.0018458609993103892,0.001933292020112276,0.002089952991809696
+formulaic,1.2.1,wr_0016,wr,breaks ~ wool * tension,R/warpbreaks,54,1,full,ok,,7,0.009384385019075125,0.009945025987690315,0.010879949026275426
+formulae,0.6.2,wr_0016,wr,breaks ~ wool * tension,R/warpbreaks,54,1,full,ok,,7,0.006388077978044748,0.006620659987675026,0.006830853002611548
+lmpy,0.0.1,wr_0017,wr,dist ~ speed + I(speed^2),R/cars,50,1,full,ok,,7,0.0002582860179245472,0.0002663959749042988,0.0003243309911340475
+formulaic,1.2.1,wr_0017,wr,dist ~ speed + I(speed^2),R/cars,50,1,full,ok,,7,0.00444976199651137,0.0046503420162480325,0.0050563889963086694
+formulae,0.6.2,wr_0017,wr,dist ~ speed + I(speed^2),R/cars,50,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0018,wr,dist ~ speed + I(speed^2) - 1,R/cars,50,1,full,ok,,7,0.0002308049879502505,0.00024309498257935047,0.00029121400439180434
+formulaic,1.2.1,wr_0018,wr,dist ~ speed + I(speed^2) - 1,R/cars,50,1,full,ok,,7,0.0044237249821890146,0.004710830020485446,0.004809034988284111
+formulae,0.6.2,wr_0018,wr,dist ~ speed + I(speed^2) - 1,R/cars,50,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0019,wr,dist ~ I(speed^2),R/cars,50,1,full,ok,,7,0.0002025339927058667,0.00021184099023230374,0.00026112698833458126
+formulaic,1.2.1,wr_0019,wr,dist ~ I(speed^2),R/cars,50,1,full,ok,,7,0.003922028990928084,0.00406128098256886,0.004391718975966796
+formulae,0.6.2,wr_0019,wr,dist ~ I(speed^2),R/cars,50,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0022,wr,area ~ CO2 + tree,gamair/stomata,24,1,full,ok,,7,0.0010240880073979497,0.0010369200026616454,0.00108098000055179
+formulaic,1.2.1,wr_0022,wr,area ~ CO2 + tree,gamair/stomata,24,1,full,ok,,7,0.009439407993340865,0.010150816000532359,0.010673590993974358
+formulae,0.6.2,wr_0022,wr,area ~ CO2 + tree,gamair/stomata,24,1,full,ok,,7,0.004072124982485548,0.004244749987265095,0.004492510022828355
+lmpy,0.0.1,wr_0023,wr,area ~ CO2,gamair/stomata,24,1,full,ok,,7,0.0005540229903999716,0.0005650250241160393,0.0006071560201235116
+formulaic,1.2.1,wr_0023,wr,area ~ CO2,gamair/stomata,24,1,full,ok,,7,0.005780936975497752,0.005940828996244818,0.006498408998595551
+formulae,0.6.2,wr_0023,wr,area ~ CO2,gamair/stomata,24,1,full,ok,,7,0.0027561570168472826,0.002941601997008547,0.003131156991003081
+lmpy,0.0.1,wr_0024,wr,area ~ tree,gamair/stomata,24,1,full,ok,,7,0.000589592003962025,0.0006120670004747808,0.0007103359967004508
+formulaic,1.2.1,wr_0024,wr,area ~ tree,gamair/stomata,24,1,full,ok,,7,0.006651834992226213,0.007212919008452445,0.007702216011239216
+formulae,0.6.2,wr_0024,wr,area ~ tree,gamair/stomata,24,1,full,ok,,7,0.0028496989980340004,0.003045937017304823,0.0031666360155213624
+lmpy,0.0.1,wr_0025,wr,travel ~ Rail,nlme/Rail,18,1,full,ok,,7,0.000595941994106397,0.0006773759960196912,0.000730945001123473
+formulaic,1.2.1,wr_0025,wr,travel ~ Rail,nlme/Rail,18,1,full,ok,,7,0.006165802013128996,0.00660323299234733,0.006896434992086142
+formulae,0.6.2,wr_0025,wr,travel ~ Rail,nlme/Rail,18,1,full,ok,,7,0.002307796006789431,0.002440925978589803,0.002753292996203527
+lmpy,0.0.1,wr_0026,wr,travel ~ 1,nlme/Rail,18,1,full,ok,,7,9.54850111156702e-05,0.00010078100604005158,0.00015677098417654634
+formulaic,1.2.1,wr_0026,wr,travel ~ 1,nlme/Rail,18,1,full,ok,,7,0.002069169975584373,0.002357110002776608,0.0026528339949436486
+formulae,0.6.2,wr_0026,wr,travel ~ 1,nlme/Rail,18,1,full,ok,,7,0.002236830012407154,0.0024164050118997693,0.0025533180159982294
+lmpy,0.0.1,wr_0027,wr,score ~ Worker * Machine,nlme/Machines,54,1,full,ok,,7,0.0019747420155908912,0.002052992000244558,0.002327598020201549
+formulaic,1.2.1,wr_0027,wr,score ~ Worker * Machine,nlme/Machines,54,1,full,ok,,7,0.011472012003650889,0.012250436004251242,0.013047582993749529
+formulae,0.6.2,wr_0027,wr,score ~ Worker * Machine,nlme/Machines,54,1,full,ok,,7,0.005834215000504628,0.006413298018742353,0.006474755995441228
+lmpy,0.0.1,wr_0028,wr,score ~ Worker + Machine,nlme/Machines,54,1,full,ok,,7,0.0010192769987042993,0.0010568829893600196,0.0012927899952046573
+formulaic,1.2.1,wr_0028,wr,score ~ Worker + Machine,nlme/Machines,54,1,full,ok,,7,0.009892673988360912,0.01009978901129216,0.010789901978569105
+formulae,0.6.2,wr_0028,wr,score ~ Worker + Machine,nlme/Machines,54,1,full,ok,,7,0.003694495011586696,0.0038335470017045736,0.0045433710038196295
+lmpy,0.0.1,wr_0029,wr,score ~ 1,nlme/Machines,54,1,full,ok,,7,9.675399633124471e-05,0.00010270101483911276,0.00015209001139737666
+formulaic,1.2.1,wr_0029,wr,score ~ 1,nlme/Machines,54,1,full,ok,,7,0.002167676982935518,0.0022469349787570536,0.0025029079988598824
+formulae,0.6.2,wr_0029,wr,score ~ 1,nlme/Machines,54,1,full,ok,,7,0.001950358011526987,0.0021089620131533593,0.0022111300204414874
+lmpy,0.0.1,wr_0035,wr,"y ~ poly(x, 5)",gamair/hubble,24,1,full,ok,,7,0.00046491698594763875,0.0004968259891029447,0.0006194229936227202
+formulaic,1.2.1,wr_0035,wr,"y ~ poly(x, 5)",gamair/hubble,24,1,full,ok,,7,0.004357527010142803,0.0045691480045206845,0.00559703100589104
+formulae,0.6.2,wr_0035,wr,"y ~ poly(x, 5)",gamair/hubble,24,1,full,ok,,7,0.0040190169820562005,0.004432238987646997,0.004732027999125421
+lmpy,0.0.1,wr_0036,wr,"y ~ poly(x, 10)",gamair/hubble,24,1,full,ok,,7,0.0005035219946876168,0.0005176349950488657,0.0006212759763002396
+formulaic,1.2.1,wr_0036,wr,"y ~ poly(x, 10)",gamair/hubble,24,1,full,ok,,7,0.00476435900782235,0.005053483997471631,0.005480610008817166
+formulae,0.6.2,wr_0036,wr,"y ~ poly(x, 10)",gamair/hubble,24,1,full,ok,,7,0.006145380990346894,0.0065569890139158815,0.007408314006170258
+lmpy,0.0.1,wr_0039,wr,"accel ~ poly(times, 11)",MASS/mcycle,133,1,full,ok,,7,0.0006027330236975104,0.0006159080076031387,0.0006835479871369898
+formulaic,1.2.1,wr_0039,wr,"accel ~ poly(times, 11)",MASS/mcycle,133,1,full,ok,,7,0.0048113520024344325,0.005228069989243522,0.006231362000107765
+formulae,0.6.2,wr_0039,wr,"accel ~ poly(times, 11)",MASS/mcycle,133,1,full,ok,,7,0.006166415987536311,0.00634274201001972,0.006608946016058326
+lmpy,0.0.1,wr_0040,wr,Claims ~ District + Group + Age + offset(log(Holders)),MASS/Insurance,64,1,full,ok,,7,0.0015027699992060661,0.0015298770158551633,0.001560892997076735
+formulaic,1.2.1,wr_0040,wr,Claims ~ District + Group + Age + offset(log(Holders)),MASS/Insurance,64,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `offset(log(Holders))`. [NameError: name 'offset' is not defined],7,,,
+formulae,0.6.2,wr_0040,wr,Claims ~ District + Group + Age + offset(log(Holders)),MASS/Insurance,64,1,full,unsupported,KeyError: 'log',7,,,
+lmpy,0.0.1,wr_0043,wr,Freq ~ Infl * Type * Cont + Sat,MASS/housing,72,1,full,ok,,7,0.005529936985112727,0.005638808972435072,0.005811014998471364
+formulaic,1.2.1,wr_0043,wr,Freq ~ Infl * Type * Cont + Sat,MASS/housing,72,1,full,ok,,7,0.019791491009527817,0.0203337790153455,0.021975615003611892
+formulae,0.6.2,wr_0043,wr,Freq ~ Infl * Type * Cont + Sat,MASS/housing,72,1,full,ok,,7,0.016387835989007726,0.0170945170102641,0.01748628300265409
+lmpy,0.0.1,wr_0044,wr,y ~ trt * week,MASS/bacteria,220,1,full,ok,,7,0.001160382991656661,0.0011800270003732294,0.0012640490022022277
+formulaic,1.2.1,wr_0044,wr,y ~ trt * week,MASS/bacteria,220,1,full,ok,,7,0.009426939010154456,0.009971172985387966,0.010596145992167294
+formulae,0.6.2,wr_0044,wr,y ~ trt * week,MASS/bacteria,220,1,full,ok,,7,0.005538437981158495,0.005704915005480871,0.006223656004294753
+lmpy,0.0.1,wr_0045,wr,y ~ trt + week,MASS/bacteria,220,1,full,ok,,7,0.0006616859755013138,0.0006669609865639359,0.0008478990057483315
+formulaic,1.2.1,wr_0045,wr,y ~ trt + week,MASS/bacteria,220,1,full,ok,,7,0.008978667989140376,0.009355862974189222,0.009794423007406294
+formulae,0.6.2,wr_0045,wr,y ~ trt + week,MASS/bacteria,220,1,full,ok,,7,0.0042127170017920434,0.004421566001838073,0.004670124995755032
+lmpy,0.0.1,wr_0046,wr,y ~ trt + I(week > 2),MASS/bacteria,220,1,full,ok,,7,0.0007418070163112134,0.0007712160004302859,0.0010209419997408986
+formulaic,1.2.1,wr_0046,wr,y ~ trt + I(week > 2),MASS/bacteria,220,1,full,ok,,7,0.010494543996173888,0.011318925011437386,0.011631806992227212
+formulae,0.6.2,wr_0046,wr,y ~ trt + I(week > 2),MASS/bacteria,220,1,full,ok,,7,0.004428221989655867,0.004692874994361773,0.005109578982228413
+lmpy,0.0.1,wr_0048,wr,low ~ .,MASS/birthwt,189,1,full,ok,,7,0.0005000419914722443,0.0005223740008659661,0.0006853029772173613
+formulaic,1.2.1,wr_0048,wr,low ~ .,MASS/birthwt,189,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,wr_0048,wr,low ~ .,MASS/birthwt,189,1,full,error,ParseError: Don't know how to parse '.',7,,,
+lmpy,0.0.1,wr_0049,wr,y ~ x1 + x2 + x3 + x4,MASS/cement,13,1,full,ok,,7,0.00030105598852969706,0.000357178010744974,0.00041289100772701204
+formulaic,1.2.1,wr_0049,wr,y ~ x1 + x2 + x3 + x4,MASS/cement,13,1,full,ok,,7,0.0047807439987082034,0.00508400599937886,0.005319590010913089
+formulae,0.6.2,wr_0049,wr,y ~ x1 + x2 + x3 + x4,MASS/cement,13,1,full,ok,,7,0.0021662650106009096,0.0023843740054871887,0.002616883022710681
+lmpy,0.0.1,wr_0051,wr,"cbind(y, n - y) ~ P * A + V",MASS/eagles,8,1,full,ok,,7,0.0023692609975114465,0.0024320980010088533,0.002900482009863481
+formulaic,1.2.1,wr_0051,wr,"cbind(y, n - y) ~ P * A + V",MASS/eagles,8,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `cbind(y, n - y)`. [NameError: name 'cbind' is not defined]",7,,,
+formulae,0.6.2,wr_0051,wr,"cbind(y, n - y) ~ P * A + V",MASS/eagles,8,1,full,unsupported,KeyError: 'cbind',7,,,
+lmpy,0.0.1,wr_0052,wr,y ~ lbase * trt + lage + V4,MASS/epil,236,1,full,ok,,7,0.0012603289796970785,0.001440545980585739,0.0020398890192154795
+formulaic,1.2.1,wr_0052,wr,y ~ lbase * trt + lage + V4,MASS/epil,236,1,full,ok,,7,0.007761749991914257,0.008290307014249265,0.0099428330140654
+formulae,0.6.2,wr_0052,wr,y ~ lbase * trt + lage + V4,MASS/epil,236,1,full,ok,,7,0.0047274300013668835,0.005112785001983866,0.005423047987278551
+lmpy,0.0.1,wr_0055,wr,Days + 0.1 ~ Age * Eth * Sex * Lrn,MASS/quine,146,1,full,ok,,7,0.013461235008435324,0.0136420959897805,0.014363031019456685
+formulaic,1.2.1,wr_0055,wr,Days + 0.1 ~ Age * Eth * Sex * Lrn,MASS/quine,146,1,full,unsupported,FormulaSyntaxError: Numeric literals other than `1` can only be used to scale other terms. (tip: Use `:` rather than `*` when scaling terms),7,,,
+formulae,0.6.2,wr_0055,wr,Days + 0.1 ~ Age * Eth * Sex * Lrn,MASS/quine,146,1,full,error,"ValueError: The response term must be of class Term, not <class 'formulae.terms.terms.Model'>.",7,,,
+lmpy,0.0.1,wr_0057,wr,Days ~ .^2,MASS/quine,146,1,full,ok,,7,0.006636553996941075,0.006971164984861389,0.007031250977888703
+formulaic,1.2.1,wr_0057,wr,Days ~ .^2,MASS/quine,146,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,wr_0057,wr,Days ~ .^2,MASS/quine,146,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0058,wr,"cbind(Menarche, Total - Menarche) ~ Age",MASS/menarche,25,1,full,ok,,7,0.00017144999583251774,0.00018006900791078806,0.00022121999063529074
+formulaic,1.2.1,wr_0058,wr,"cbind(Menarche, Total - Menarche) ~ Age",MASS/menarche,25,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `cbind(Menarche, Total - Menarche)`. [NameError: name 'cbind' is not defined]",7,,,
+formulae,0.6.2,wr_0058,wr,"cbind(Menarche, Total - Menarche) ~ Age",MASS/menarche,25,1,full,unsupported,KeyError: 'cbind',7,,,
+lmpy,0.0.1,wr_0059,wr,Days ~ .^4,MASS/quine,146,1,full,ok,,7,0.01285395200829953,0.013313311996171251,0.013703081989660859
+formulaic,1.2.1,wr_0059,wr,Days ~ .^4,MASS/quine,146,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,wr_0059,wr,Days ~ .^4,MASS/quine,146,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0061,wr,Gas ~ Temp,MASS/whiteside,56,1,full,ok,,7,0.00014647599891759455,0.0001560160017106682,0.00020209798822179437
+formulaic,1.2.1,wr_0061,wr,Gas ~ Temp,MASS/whiteside,56,1,full,ok,,7,0.0027245109959039837,0.0030294549942482263,0.003492991003440693
+formulae,0.6.2,wr_0061,wr,Gas ~ Temp,MASS/whiteside,56,1,full,ok,,7,0.0017722630000207573,0.001869241998065263,0.0019441430049482733
+lmpy,0.0.1,wr_0062,wr,Gas ~ Insul/Temp - 1,MASS/whiteside,56,1,full,ok,,7,0.0010310429788660258,0.0010512919980101287,0.0011385069810785353
+formulaic,1.2.1,wr_0062,wr,Gas ~ Insul/Temp - 1,MASS/whiteside,56,1,full,ok,,7,0.006359746010275558,0.0068668960011564195,0.007316272996831685
+formulae,0.6.2,wr_0062,wr,Gas ~ Insul/Temp - 1,MASS/whiteside,56,1,full,ok,,7,0.004023572022560984,0.004102142003830522,0.0042931659845635295
+lmpy,0.0.1,wr_0063,wr,Gas ~ Insul/(Temp + I(Temp^2)) - 1,MASS/whiteside,56,1,full,ok,,7,0.0015475910040549934,0.0015966699866112322,0.0018669459968805313
+formulaic,1.2.1,wr_0063,wr,Gas ~ Insul/(Temp + I(Temp^2)) - 1,MASS/whiteside,56,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `I(Temp ^ 2)`. [TypeError: Cannot perform 'xor' with a dtyped [float64] array and scalar of type [bool]],7,,,
+formulae,0.6.2,wr_0063,wr,Gas ~ Insul/(Temp + I(Temp^2)) - 1,MASS/whiteside,56,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0064,wr,Gas ~ Insul + Temp,MASS/whiteside,56,1,full,ok,,7,0.0006276659842114896,0.0006399700068868697,0.0007191749755293131
+formulaic,1.2.1,wr_0064,wr,Gas ~ Insul + Temp,MASS/whiteside,56,1,full,ok,,7,0.006319202017039061,0.006617380015086383,0.006854537990875542
+formulae,0.6.2,wr_0064,wr,Gas ~ Insul + Temp,MASS/whiteside,56,1,full,ok,,7,0.002985689992783591,0.0030129530059639364,0.0031950400152709335
+lmpy,0.0.1,wr_0065,wr,Gas ~ Insul * Temp,MASS/whiteside,56,1,full,ok,,7,0.0010900460183620453,0.0011224249901715666,0.001309920975472778
+formulaic,1.2.1,wr_0065,wr,Gas ~ Insul * Temp,MASS/whiteside,56,1,full,ok,,7,0.006496362009784207,0.006737107003573328,0.007032222987618297
+formulae,0.6.2,wr_0065,wr,Gas ~ Insul * Temp,MASS/whiteside,56,1,full,ok,,7,0.00428144697798416,0.004384338011732325,0.00456733800820075
+lmpy,0.0.1,wr_0066,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,ok,,7,0.0003492299874778837,0.00037195399636402726,0.00043141297646798193
+formulaic,1.2.1,wr_0066,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `cos(2 * pi * Time)`. [NameError: name 'cos' is not defined],7,,,
+formulae,0.6.2,wr_0066,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,unsupported,KeyError: 'sin',7,,,
+lmpy,0.0.1,wr_0067,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,ok,,7,0.0028126559918746352,0.0029181579884607345,0.003030334017239511
+formulaic,1.2.1,wr_0067,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `I(pressure ^ 3)`. [TypeError: Cannot perform 'xor' with a dtyped [float64] array and scalar of type [bool]],7,,,
+formulae,0.6.2,wr_0067,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0068,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,ok,,7,0.00033964597969315946,0.00034144200617447495,0.0003872170054819435
+formulaic,1.2.1,wr_0068,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `cos(2 * pi * Time)`. [NameError: name 'cos' is not defined],7,,,
+formulae,0.6.2,wr_0068,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,unsupported,KeyError: 'sin',7,,,
+lmpy,0.0.1,wr_0069,wr,pixel ~ day + I(day^2),nlme/Pixel,102,1,full,ok,,7,0.00025358801940456033,0.0002696439914871007,0.00035081899841316044
+formulaic,1.2.1,wr_0069,wr,pixel ~ day + I(day^2),nlme/Pixel,102,1,full,ok,,7,0.004364374006399885,0.004417788004502654,0.004861508001340553
+formulae,0.6.2,wr_0069,wr,pixel ~ day + I(day^2),nlme/Pixel,102,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0070,wr,distance ~ age,nlme/Orthodont,108,1,full,ok,,7,0.00015352098853327334,0.00016022499767132103,0.00020676097483374178
+formulaic,1.2.1,wr_0070,wr,distance ~ age,nlme/Orthodont,108,1,full,ok,,7,0.0026496759965084493,0.002731748012593016,0.003083440999034792
+formulae,0.6.2,wr_0070,wr,distance ~ age,nlme/Orthodont,108,1,full,ok,,7,0.0017427399870939553,0.0017808489792514592,0.0021703749953303486
+lmpy,0.0.1,wr_0071,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.001128853007685393,0.0011438829824328423,0.0011884050036314875
+formulaic,1.2.1,wr_0071,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.006832207000115886,0.007071847008774057,0.007363756973063573
+formulae,0.6.2,wr_0071,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.004213274020003155,0.004406918014865369,0.004916926991427317
+lmpy,0.0.1,wr_0072,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.0011362660152371973,0.001174357981653884,0.0015113840054254979
+formulaic,1.2.1,wr_0072,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.006497244990896434,0.006885378010338172,0.00712021000799723
+formulae,0.6.2,wr_0072,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.004210263985441998,0.004286748007871211,0.004507578996708617
+lmpy,0.0.1,wr_0073,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.001187588000902906,0.001201379025587812,0.001338128000497818
+formulaic,1.2.1,wr_0073,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.00733079802012071,0.007723300019279122,0.008045781985856593
+formulae,0.6.2,wr_0073,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.0046587539836764336,0.004940531012834981,0.005359810980735347
+lmpy,0.0.1,wr_0074,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,ok,,7,0.0028484800131991506,0.0029072960023768246,0.003210771013982594
+formulaic,1.2.1,wr_0074,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `I(pressure ^ 3)`. [TypeError: Cannot perform 'xor' with a dtyped [float64] array and scalar of type [bool]],7,,,
+formulae,0.6.2,wr_0074,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0075,wr,yield ~ variety - 1,nlme/Wheat2,224,1,full,ok,,7,0.0011149200145155191,0.0011299829930067062,0.0011892559996340424
+formulaic,1.2.1,wr_0075,wr,yield ~ variety - 1,nlme/Wheat2,224,1,full,ok,,7,0.013345795014174655,0.013919994002208114,0.0149394320033025
+formulae,0.6.2,wr_0075,wr,yield ~ variety - 1,nlme/Wheat2,224,1,full,ok,,7,0.002971005014842376,0.0031215689959935844,0.0034000419836957008
+lmpy,0.0.1,wr_0076,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.0012037319829687476,0.0012299460067879409,0.0014920580142643303
+formulaic,1.2.1,wr_0076,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.007320639997487888,0.00755192301585339,0.007976736000273377
+formulae,0.6.2,wr_0076,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.004662580002332106,0.004752954992000014,0.005099256988614798
+lmpy,0.0.1,wr_0077,wr,distance ~ age * Sex,nlme/Orthodont,108,1,full,ok,,7,0.0011157730186823756,0.0011493749916553497,0.0012507000064942986
+formulaic,1.2.1,wr_0077,wr,distance ~ age * Sex,nlme/Orthodont,108,1,full,ok,,7,0.006317461986327544,0.006518255016999319,0.006884227012051269
+formulae,0.6.2,wr_0077,wr,distance ~ age * Sex,nlme/Orthodont,108,1,full,ok,,7,0.004275159997632727,0.004410522989928722,0.004818843008251861
+lmpy,0.0.1,wr_0079,wr,effort ~ Type,nlme/ergoStool,36,1,full,ok,,7,0.0005904639838263392,0.0006397439865395427,0.0008115499804262072
+formulaic,1.2.1,wr_0079,wr,effort ~ Type,nlme/ergoStool,36,1,full,ok,,7,0.006062055006623268,0.0066787249816115946,0.006744089012499899
+formulae,0.6.2,wr_0079,wr,effort ~ Type,nlme/ergoStool,36,1,full,ok,,7,0.0027635240112431347,0.002869252988602966,0.0030009589972905815
+lmpy,0.0.1,wr_0080,wr,distance ~ age + Sex,nlme/Orthodont,108,1,full,ok,,7,0.0006261869857553393,0.0007292820082511753,0.0008990079804789275
+formulaic,1.2.1,wr_0080,wr,distance ~ age + Sex,nlme/Orthodont,108,1,full,ok,,7,0.006033671990735456,0.006257002998609096,0.006720707984641194
+formulae,0.6.2,wr_0080,wr,distance ~ age + Sex,nlme/Orthodont,108,1,full,ok,,7,0.0029534480127040297,0.00307478298782371,0.003135189996100962
+lmpy,0.0.1,wr_0081,wr,pixel ~ day + day^2,nlme/Pixel,102,1,full,ok,,7,0.00020421098452061415,0.0002136120165232569,0.0002701399789657444
+formulaic,1.2.1,wr_0081,wr,pixel ~ day + day^2,nlme/Pixel,102,1,full,ok,,7,0.002905901987105608,0.0029427940025925636,0.003186977992299944
+formulae,0.6.2,wr_0081,wr,pixel ~ day + day^2,nlme/Pixel,102,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0082,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.0011332430003676564,0.0011789599957410246,0.0013931319990660995
+formulaic,1.2.1,wr_0082,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.006425341009162366,0.006774367997422814,0.00718134202179499
+formulae,0.6.2,wr_0082,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.004229073005262762,0.004357440018793568,0.004667942994274199
+lmpy,0.0.1,wr_0084,wr,Fertility ~ .,R/swiss,47,1,full,ok,,7,0.00029621299472637475,0.00030361200333572924,0.0003463829925749451
+formulaic,1.2.1,wr_0084,wr,Fertility ~ .,R/swiss,47,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,wr_0084,wr,Fertility ~ .,R/swiss,47,1,full,error,ParseError: Don't know how to parse '.',7,,,
+lmpy,0.0.1,wr_0085,wr,yield ~ block + N * P * K,MASS/npk,24,1,full,ok,,7,0.005324076017132029,0.005361629999242723,0.005703194998204708
+formulaic,1.2.1,wr_0085,wr,yield ~ block + N * P * K,MASS/npk,24,1,full,ok,,7,0.017242222995264456,0.01738642601412721,0.01768289998290129
+formulae,0.6.2,wr_0085,wr,yield ~ block + N * P * K,MASS/npk,24,1,full,ok,,7,0.01547666999977082,0.015666631021304056,0.016159557009814307
+lmpy,0.0.1,wr_0086,wr,sr ~ .,faraway/savings,50,1,full,ok,,7,0.0002610950032249093,0.00026858499040827155,0.00031563499942421913
+formulaic,1.2.1,wr_0086,wr,sr ~ .,faraway/savings,50,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,wr_0086,wr,sr ~ .,faraway/savings,50,1,full,error,ParseError: Don't know how to parse '.',7,,,
+lmpy,0.0.1,wr_0087,wr,sr ~ 1,faraway/savings,50,1,full,ok,,7,9.348499588668346e-05,9.691499872133136e-05,0.00013264900189824402
+formulaic,1.2.1,wr_0087,wr,sr ~ 1,faraway/savings,50,1,full,ok,,7,0.0020583549921866506,0.0021844730072189122,0.002422635006951168
+formulae,0.6.2,wr_0087,wr,sr ~ 1,faraway/savings,50,1,full,ok,,7,0.0019654289935715497,0.0020916830108035356,0.002235839987406507
+lmpy,0.0.1,wr_0088,wr,yield ~ block + N * P + K,MASS/npk,24,1,full,ok,,7,0.0026689999795053154,0.0028513659781310707,0.0030797040089964867
+formulaic,1.2.1,wr_0088,wr,yield ~ block + N * P + K,MASS/npk,24,1,full,ok,,7,0.01576100499369204,0.016172837000340223,0.01845523400697857
+formulae,0.6.2,wr_0088,wr,yield ~ block + N * P + K,MASS/npk,24,1,full,ok,,7,0.00809420901350677,0.008150428999215364,0.00850750700919889
+lmpy,0.0.1,wr_0090,wr,y ~ x + I(x^2) + I(x^3) + I((x - 10)^2),faraway/cathedral,25,1,full,ok,,7,0.0004295980033930391,0.00043488701339811087,0.00047681599971838295
+formulaic,1.2.1,wr_0090,wr,y ~ x + I(x^2) + I(x^3) + I((x - 10)^2),faraway/cathedral,25,1,full,ok,,7,0.007615674985572696,0.00824154500151053,0.009199893014738336
+formulae,0.6.2,wr_0090,wr,y ~ x + I(x^2) + I(x^3) + I((x - 10)^2),faraway/cathedral,25,1,full,unsupported,ScanError: Unexpected character: ^,7,,,
+lmpy,0.0.1,wr_0091,wr,Sepal.Width ~ Species,R/iris,150,1,full,ok,,7,0.0006097739969845861,0.0006368320027831942,0.0007667640165891498
+formulaic,1.2.1,wr_0091,wr,Sepal.Width ~ Species,R/iris,150,1,full,ok,,7,0.005511135997949168,0.006124491017544642,0.006541571987327188
+formulae,0.6.2,wr_0091,wr,Sepal.Width ~ Species,R/iris,150,1,full,ok,,7,0.002896600984968245,0.0031705629953648895,0.003837000986095518
+lmpy,0.0.1,wr_0092,wr,Sepal.Width ~ Sepal.Length,R/iris,150,1,full,ok,,7,0.00015446299221366644,0.00015901299775578082,0.0002105009916704148
+formulaic,1.2.1,wr_0092,wr,Sepal.Width ~ Sepal.Length,R/iris,150,1,full,ok,,7,0.002808085992000997,0.003098314016824588,0.004108552995603532
+formulae,0.6.2,wr_0092,wr,Sepal.Width ~ Sepal.Length,R/iris,150,1,full,ok,,7,0.0017938239907380193,0.0018428849871270359,0.0021021580032538623
+lmpy,0.0.1,wr_0094,wr,100/mpg ~ disp + hp + wt + am,R/mtcars,32,1,full,ok,,7,0.00030678699840791523,0.00031964798108674586,0.0003831349895335734
+formulaic,1.2.1,wr_0094,wr,100/mpg ~ disp + hp + wt + am,R/mtcars,32,1,full,unsupported,FormulaSyntaxError: Numeric literals other than `1` can only be used to scale other terms. (tip: Use `:` rather than `*` when scaling terms),7,,,
+formulae,0.6.2,wr_0094,wr,100/mpg ~ disp + hp + wt + am,R/mtcars,32,1,full,error,"ValueError: The response term must be of class Term, not <class 'formulae.terms.terms.Model'>.",7,,,
+lmpy,0.0.1,wr_0097,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.00015729499864391983,0.00016576700727455318,0.00021797101362608373
+formulaic,1.2.1,wr_0097,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.0026932460023090243,0.0030082209850661457,0.0036729569837916642
+formulae,0.6.2,wr_0097,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.0018298960058018565,0.0019114049791824073,0.0019626170105766505
+lmpy,0.0.1,wr_0098,wr,y + 10 ~ I(x - 3.8),faraway/cathedral,25,1,full,ok,,7,0.00021266998373903334,0.00021814298816025257,0.0002733650035224855
+formulaic,1.2.1,wr_0098,wr,y + 10 ~ I(x - 3.8),faraway/cathedral,25,1,full,unsupported,FormulaSyntaxError: Numeric literals other than `1` can only be used to scale other terms. (tip: Use `:` rather than `*` when scaling terms),7,,,
+formulae,0.6.2,wr_0098,wr,y + 10 ~ I(x - 3.8),faraway/cathedral,25,1,full,error,"ValueError: The response term must be of class Term, not <class 'formulae.terms.terms.Model'>.",7,,,
+lmpy,0.0.1,wr_0099,wr,log(Volume) ~ log(Girth) + log(Height),mgcv/trees,31,1,full,ok,,7,0.00025943099171854556,0.00026491700555197895,0.00032898999052122235
+formulaic,1.2.1,wr_0099,wr,log(Volume) ~ log(Girth) + log(Height),mgcv/trees,31,1,full,ok,,7,0.00630481998086907,0.006637012003920972,0.00723591897985898
+formulae,0.6.2,wr_0099,wr,log(Volume) ~ log(Girth) + log(Height),mgcv/trees,31,1,full,unsupported,KeyError: 'log',7,,,
+lmpy,0.0.1,wr_0100,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.00014813299640081823,0.00015460699796676636,0.0001984040136449039
+formulaic,1.2.1,wr_0100,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.002653208008268848,0.002702408004552126,0.003311559004941955
+formulae,0.6.2,wr_0100,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.001754333992721513,0.0018166539957746863,0.0018803449929691851
+lmpy,0.0.1,wr_0101,wr,Postwt ~ Prewt + Treat + offset(Prewt),MASS/anorexia,72,1,full,ok,,7,0.0006647089903708547,0.0006778879906050861,0.0007083170057740062
+formulaic,1.2.1,wr_0101,wr,Postwt ~ Prewt + Treat + offset(Prewt),MASS/anorexia,72,1,full,unsupported,FactorEvaluationError: Unable to evaluate factor `offset(Prewt)`. [NameError: name 'offset' is not defined],7,,,
+formulae,0.6.2,wr_0101,wr,Postwt ~ Prewt + Treat + offset(Prewt),MASS/anorexia,72,1,full,ok,,7,0.0027238629991188645,0.0029709599912166595,0.0030611669935751706
+lmpy,0.0.1,wr_0105,wr,sr ~ pop15 + pop75 + dpi + ddpi,faraway/savings,50,1,full,ok,,7,0.0002750289859250188,0.0002879220119211823,0.00037801999133080244
+formulaic,1.2.1,wr_0105,wr,sr ~ pop15 + pop75 + dpi + ddpi,faraway/savings,50,1,full,ok,,7,0.004548327997326851,0.0046492209949065,0.004946879984345287
+formulae,0.6.2,wr_0105,wr,sr ~ pop15 + pop75 + dpi + ddpi,faraway/savings,50,1,full,ok,,7,0.0021454629895742983,0.0022349169885274023,0.002448091981932521
+lmpy,0.0.1,wr_0108,wr,y ~ 0,faraway/cathedral,25,1,full,ok,,7,4.0490005630999804e-05,4.321502638049424e-05,7.093400927260518e-05
+formulaic,1.2.1,wr_0108,wr,y ~ 0,faraway/cathedral,25,1,full,ok,,7,0.001849502994446084,0.0018997740116901696,0.0022024060017429292
+formulae,0.6.2,wr_0108,wr,y ~ 0,faraway/cathedral,25,1,full,ok,,7,0.0019394629925955087,0.002008990995818749,0.0022920829942449927
+lmpy,0.0.1,wr_0109,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.0003745940048247576,0.00038660201244056225,0.0004325539921410382
+formulaic,1.2.1,wr_0109,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.005100624024635181,0.005533906019991264,0.006459687021560967
+formulae,0.6.2,wr_0109,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.002999237010953948,0.0030543520115315914,0.0034066560037899762
+lmpy,0.0.1,wr_0110,wr,weight ~ group - 1,R/PlantGrowth,30,1,full,ok,,7,0.00033999999868683517,0.00035098701482638717,0.0004037280159536749
+formulaic,1.2.1,wr_0110,wr,weight ~ group - 1,R/PlantGrowth,30,1,full,ok,,7,0.0050668570038396865,0.005330034997314215,0.005855188996065408
+formulae,0.6.2,wr_0110,wr,weight ~ group - 1,R/PlantGrowth,30,1,full,ok,,7,0.002990860986756161,0.0033354930055793375,0.00366821899660863
+lmpy,0.0.1,wr_0112,wr,x ~ 1,faraway/cathedral,25,1,full,ok,,7,9.801000123843551e-05,0.00010987897985614836,0.00015340899699367583
+formulaic,1.2.1,wr_0112,wr,x ~ 1,faraway/cathedral,25,1,full,ok,,7,0.002095831005135551,0.0021428060135804117,0.002589615003671497
+formulae,0.6.2,wr_0112,wr,x ~ 1,faraway/cathedral,25,1,full,ok,,7,0.002004815003601834,0.0021261940128169954,0.002356815995881334
+lmpy,0.0.1,wr_0113,wr,rating ~ .,R/attitude,30,1,full,ok,,7,0.00033361100940965116,0.0003421120054554194,0.0003814369847532362
+formulaic,1.2.1,wr_0113,wr,rating ~ .,R/attitude,30,1,full,error,FormulaParsingError: The `.` operator requires additional context about which variables are available to use. This can be provided by passing in a value for `__formulaic_variables_available__`in the context while parsing the formula; by passing the formula to the materializer's `.get_model_matrix()`,7,,,
+formulae,0.6.2,wr_0113,wr,rating ~ .,R/attitude,30,1,full,error,ParseError: Don't know how to parse '.',7,,,
+lmpy,0.0.1,wr_0114,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.0011340899800416082,0.0011909829918295145,0.0012926199997309595
+formulaic,1.2.1,wr_0114,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.0063826050027273595,0.006850812991615385,0.0072967769810929894
+formulae,0.6.2,wr_0114,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.004226702993037179,0.004386641987366602,0.0049136190209537745
+lmpy,0.0.1,wr_0115,wr,"weight ~ poly(height, 2)",R/women,15,1,full,ok,,7,0.0003602570213843137,0.00036816601641476154,0.0004249360063113272
+formulaic,1.2.1,wr_0115,wr,"weight ~ poly(height, 2)",R/women,15,1,full,ok,,7,0.003944006020901725,0.004210535000311211,0.004581510002026334
+formulae,0.6.2,wr_0115,wr,"weight ~ poly(height, 2)",R/women,15,1,full,ok,,7,0.002230368001619354,0.0023355779994744807,0.002687351981876418
+lmpy,0.0.1,wr_0116,wr,"cbind(ncases, ncontrols) ~ agegp + tobgp + alcgp",R/esoph,88,1,full,ok,,7,0.0015262050146702677,0.0015918709977995604,0.00174061898724176
+formulaic,1.2.1,wr_0116,wr,"cbind(ncases, ncontrols) ~ agegp + tobgp + alcgp",R/esoph,88,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `cbind(ncases, ncontrols)`. [NameError: name 'cbind' is not defined]",7,,,
+formulae,0.6.2,wr_0116,wr,"cbind(ncases, ncontrols) ~ agegp + tobgp + alcgp",R/esoph,88,1,full,unsupported,KeyError: 'cbind',7,,,
+lmpy,0.0.1,wr_0117,wr,ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp,R/esoph,88,1,full,ok,,7,0.001557237992528826,0.0016394569829571992,0.0020228539942763746
+formulaic,1.2.1,wr_0117,wr,ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp,R/esoph,88,1,full,ok,,7,0.014150866976706311,0.014248065010178834,0.01506216698908247
+formulae,0.6.2,wr_0117,wr,ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp,R/esoph,88,1,full,error,"ValueError: The response term must be of class Term, not <class 'formulae.terms.terms.Model'>.",7,,,
+lmpy,0.0.1,wr_0118,wr,"cbind(ncases, ncontrols) ~ agegp",R/esoph,88,1,full,ok,,7,0.0006459360010921955,0.000650044996291399,0.0006847399927210063
+formulaic,1.2.1,wr_0118,wr,"cbind(ncases, ncontrols) ~ agegp",R/esoph,88,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `cbind(ncases, ncontrols)`. [NameError: name 'cbind' is not defined]",7,,,
+formulae,0.6.2,wr_0118,wr,"cbind(ncases, ncontrols) ~ agegp",R/esoph,88,1,full,unsupported,KeyError: 'cbind',7,,,
+lmpy,0.0.1,wr_0119,wr,dist ~ speed,R/cars,50,1,full,ok,,7,0.00015836599050089717,0.00017255099373869598,0.0002983690064866096
+formulaic,1.2.1,wr_0119,wr,dist ~ speed,R/cars,50,1,full,ok,,7,0.002669932000571862,0.0026957349909935147,0.002915627002948895
+formulae,0.6.2,wr_0119,wr,dist ~ speed,R/cars,50,1,full,ok,,7,0.0017294219869654626,0.0017710929969325662,0.0019992149900645018
+lmpy,0.0.1,wr_0120,wr,~a + b,faraway/speedo,16,1,full,ok,,7,0.0010121029918082058,0.0010314869869034737,0.0011381610238458961
+formulaic,1.2.1,wr_0120,wr,~a + b,faraway/speedo,16,1,full,ok,,7,0.007550441980129108,0.007744276023004204,0.008058434003032744
+formulae,0.6.2,wr_0120,wr,~a + b,faraway/speedo,16,1,full,error,ParseError: Don't know how to parse '~',7,,,
+lmpy,0.0.1,wr_0121,wr,extra ~ group,R/sleep,20,1,full,ok,,7,0.0005713269929401577,0.0005818839999847114,0.0006178140174597502
+formulaic,1.2.1,wr_0121,wr,extra ~ group,R/sleep,20,1,full,ok,,7,0.005316141992807388,0.005487841001013294,0.005646259989589453
+formulae,0.6.2,wr_0121,wr,extra ~ group,R/sleep,20,1,full,ok,,7,0.002719493000768125,0.0027530280058272183,0.0030021189886610955
+lmpy,0.0.1,wr_0125,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.0010137899953406304,0.0010356610000599176,0.0011136230023112148
+formulaic,1.2.1,wr_0125,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.00868671599891968,0.00914311601081863,0.009913212998071685
+formulae,0.6.2,wr_0125,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.003989438991993666,0.004014884005300701,0.004318479011999443
+lmpy,0.0.1,wr_0126,wr,yield ~ block + N + K,MASS/npk,24,1,full,ok,,7,0.0014782290090806782,0.0015073030081111938,0.0017460660019423813
+formulaic,1.2.1,wr_0126,wr,yield ~ block + N + K,MASS/npk,24,1,full,ok,,7,0.012202862999401987,0.012318753986619413,0.012980900995898992
+formulae,0.6.2,wr_0126,wr,yield ~ block + N + K,MASS/npk,24,1,full,ok,,7,0.0049171709979418665,0.005102099006762728,0.005347530997823924
+lmpy,0.0.1,wr_0130,wr,x ~ z,MASS/topo,52,1,full,ok,,7,0.00014796698815189302,0.00015484998584724963,0.00019948900444433093
+formulaic,1.2.1,wr_0130,wr,x ~ z,MASS/topo,52,1,full,ok,,7,0.0026470039738342166,0.0027859690017066896,0.0028770289791282266
+formulae,0.6.2,wr_0130,wr,x ~ z,MASS/topo,52,1,full,ok,,7,0.0016908340039663017,0.001749265007674694,0.0019060070044361055
+lmpy,0.0.1,wr_0135,wr,"weight ~ group + I(group != ""Ctl"")",R/PlantGrowth,30,1,full,ok,,7,0.0005019259988330305,0.0005060149997007102,0.000554880010895431
+formulaic,1.2.1,wr_0135,wr,"weight ~ group + I(group != ""Ctl"")",R/PlantGrowth,30,1,full,ok,,7,0.007016643998213112,0.007311266002943739,0.007491816999390721
+formulae,0.6.2,wr_0135,wr,"weight ~ group + I(group != ""Ctl"")",R/PlantGrowth,30,1,full,ok,,7,0.0035596879897639155,0.0037309739855118096,0.004353727999841794
+lmpy,0.0.1,wr_0136,wr,"y ~ ns(x, 6) + z",MASS/topo,52,1,full,ok,,7,0.0032998539973050356,0.0035877299960702658,0.0038932409952394664
+formulaic,1.2.1,wr_0136,wr,"y ~ ns(x, 6) + z",MASS/topo,52,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `ns(x, 6)`. [NameError: name 'ns' is not defined]",7,,,
+formulae,0.6.2,wr_0136,wr,"y ~ ns(x, 6) + z",MASS/topo,52,1,full,unsupported,KeyError: 'ns',7,,,
+lmpy,0.0.1,wr_0137,wr,log(time) ~ log(climb) + log(dist),MASS/hills,35,1,full,ok,,7,0.00025000597815960646,0.00025881401961669326,0.0003045370103791356
+formulaic,1.2.1,wr_0137,wr,log(time) ~ log(climb) + log(dist),MASS/hills,35,1,full,ok,,7,0.006240044021978974,0.006801187992095947,0.00718166001024656
+formulae,0.6.2,wr_0137,wr,log(time) ~ log(climb) + log(dist),MASS/hills,35,1,full,unsupported,KeyError: 'log',7,,,
+lmpy,0.0.1,wr_0138,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.001019210001686588,0.0010293629893567413,0.0010632039920892566
+formulaic,1.2.1,wr_0138,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.008620486012659967,0.008700982987647876,0.00949422299163416
+formulae,0.6.2,wr_0138,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.004044702975079417,0.004121746984310448,0.004405714018503204
+lmpy,0.0.1,wr_0139,wr,y ~ 1,faraway/cathedral,25,1,full,ok,,7,9.214799501933157e-05,9.830499766394496e-05,0.00013897998724132776
+formulaic,1.2.1,wr_0139,wr,y ~ 1,faraway/cathedral,25,1,full,ok,,7,0.0020373479928821325,0.0021022149885538965,0.0021691489964723587
+formulae,0.6.2,wr_0139,wr,y ~ 1,faraway/cathedral,25,1,full,ok,,7,0.0019263860012870282,0.0020232129900250584,0.0024414049985352904
+lmpy,0.0.1,wr_0141,wr,"breaks ~ wool + C(tension, base = 2)",R/warpbreaks,54,1,full,ok,,7,0.0010715220123529434,0.0010773710091598332,0.0012416480167303234
+formulaic,1.2.1,wr_0141,wr,"breaks ~ wool + C(tension, base = 2)",R/warpbreaks,54,1,full,unsupported,"FactorEvaluationError: Unable to evaluate factor `C(tension, base=2)`. [TypeError: C() got an unexpected keyword argument 'base']",7,,,
+formulae,0.6.2,wr_0141,wr,"breaks ~ wool + C(tension, base = 2)",R/warpbreaks,54,1,full,error,TypeError: C() got an unexpected keyword argument 'base',7,,,
+lmpy,0.0.1,wr_0142,wr,"cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)",R/esoph,88,1,full,ok,,7,0.0016001789772417396,0.001620787981664762,0.0019032130076084286
+formulaic,1.2.1,wr_0142,wr,"cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)",R/esoph,88,1,full,error,"SyntaxError: invalid syntax (<unknown>, line 1)",7,,,
+formulae,0.6.2,wr_0142,wr,"cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)",R/esoph,88,1,full,error,"ParseError: Don't know how to parse ','",7,,,

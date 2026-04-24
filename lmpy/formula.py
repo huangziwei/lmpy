@@ -3672,17 +3672,20 @@ def _tp_rlanczos(
             np.subtract(z, scaled, out=z)
             np.multiply(Q[j - 1], b[j - 1], out=scaled)
             np.subtract(z, scaled, out=z)
-            # Full modified Gram-Schmidt, twice (mgcv does this to stabilize).
-            # Must be sequential (project out q[0], then q[1], ...): the FP
-            # trajectory differs from batched classical GS and mgcv uses
-            # sequential.
+            # Reorthogonalize via classical Gram-Schmidt, twice (CGS2).
+            # mgcv's C code uses sequential MGS-twice; CGS2 has a different
+            # arithmetic trajectory but achieves machine-precision orthogonality
+            # in two passes and collapses the inner O(j) dot-product loop into
+            # a single BLAS matmul. The resulting basis still lies in the same
+            # Krylov subspace; eigenvectors of T_j may rotate within degenerate
+            # subspaces, but stay within the 1e-5 relative tolerance of the
+            # R-oracle fixtures. Verified empirically on the full tp/te/fs
+            # suite (tests/test_smooths.py).
+            Qact = Q[: j + 1]  # (j+1, n)
             for _ in range(2):
-                for i_o in range(j + 1):
-                    qi = Q[i_o]
-                    np.multiply(qi, z, out=buf)
-                    xx = float(buf.sum())
-                    np.multiply(qi, xx, out=scaled)
-                    np.subtract(z, scaled, out=z)
+                # c = Qact @ z  -> (j+1,), then z -= Qact.T @ c
+                c = Qact @ z
+                z -= c @ Qact
         np.multiply(z, z, out=buf)
         bj = float(np.sqrt(buf.sum()))
         b[j] = bj
