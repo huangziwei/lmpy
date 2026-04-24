@@ -2163,8 +2163,8 @@ def _eval_by_col(by_expr: str, data: pl.DataFrame) -> pl.Series | np.ndarray:
     """Evaluate a smooth's ``by=`` expression against ``data``.
 
     We support the four forms that R/mgcv users actually write — anything
-    more exotic would need ``pd.eval``-class machinery that polars does not
-    ship. Supported:
+    more exotic would need full Python-expression evaluation machinery that
+    polars does not ship. Supported:
       * plain column name → the column (as a ``pl.Series``)
       * ``as.numeric(<name>)`` → float ndarray
       * ``<name> == <lit>`` / ``<name> != <lit>`` → bool ndarray

@@ -188,15 +188,17 @@ def scale(df: pd.DataFrame, factor: int) -> pd.DataFrame:
 # that needs more unique covariate rows than the fixture data provides).
 
 def _lmpy(formula_str: str, df: pd.DataFrame, kind: str, scope: str = "full"):
+    import polars as pl
+    df_pl = pl.from_pandas(df)
     f = parse(formula_str)
-    ex = expand(f, list(df.columns))
-    X = materialize(ex, df)
+    ex = expand(f, list(df_pl.columns))
+    X = materialize(ex, df_pl)
     if scope == "parametric":
         return X
     if kind == "lme4" and ex.bars:
-        materialize_bars(ex, df)
+        materialize_bars(ex, df_pl)
     elif kind == "mgcv" and ex.smooths:
-        materialize_smooths(ex, df)
+        materialize_smooths(ex, df_pl)
     return X
 
 

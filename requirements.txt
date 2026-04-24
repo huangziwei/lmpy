@@ -1,7 +1,6 @@
 numpy
 scipy
-pandas
 polars
 pyarrow
-formulaic
+scikit-sparse
 matplotlib
