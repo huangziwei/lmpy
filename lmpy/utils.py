@@ -21,6 +21,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 
 from .formula import (
@@ -32,7 +33,101 @@ from .formula import (
     referenced_columns,
 )
 
-__all__ = ["Design", "prepare_design", "data", "significance_code"]
+__all__ = ["Design", "prepare_design", "data", "significance_code", "format_df"]
+
+
+_MAX_DECIMALS = 6
+
+
+def _format_numeric_column(vals: list) -> list[str]:
+    """Format a numeric column with a single column-wide decimal count.
+
+    Each value is converted to the shortest round-trip Python ``repr``; the
+    column-wide decimal count is the max observed there (capped at 6, matching
+    pandas' default ``display.precision``), and every value is then padded to
+    that count. Scientific-repr values (e.g. ``6.8e-07``) stay in scientific
+    form so they don't balloon to long fixed strings.
+    """
+    out: list[str] = []
+    reprs: list[tuple[str, float] | None] = []
+    max_dec = 0
+    for v in vals:
+        if v is None:
+            reprs.append(None)
+            continue
+        fv = float(v)
+        if not np.isfinite(fv):
+            reprs.append(("nan", fv))
+            continue
+        r = repr(fv)
+        if "e" in r or "E" in r:
+            reprs.append(("sci", fv))
+            continue
+        if "." in r:
+            max_dec = max(max_dec, len(r.split(".")[1]))
+        reprs.append(("fix", fv))
+    max_dec = min(max_dec, _MAX_DECIMALS)
+    for item in reprs:
+        if item is None:
+            out.append("")
+        elif item[0] == "nan":
+            out.append("NaN")
+        elif item[0] == "sci":
+            out.append(f"{item[1]:.{_MAX_DECIMALS}g}")
+        else:
+            out.append(f"{item[1]:.{max_dec}f}")
+    return out
+
+
+def format_df(df: pl.DataFrame, align: dict[str, str] | None = None) -> str:
+    """Render a polars DataFrame pandas-style for human-readable output.
+
+    - Numeric columns right-aligned with column-wide fixed decimals.
+    - String columns left-aligned.
+    - A column named ``""`` prints its header row blank (treated as a row-label column).
+    - ``align`` overrides the per-column alignment (``"left"``/``"right"``).
+    """
+    align = align or {}
+    headers = list(df.columns)
+    n_rows = df.shape[0]
+
+    formatted: list[list[str]] = []
+    aligns: list[str] = []
+    for c in headers:
+        s = df[c]
+        if s.dtype.is_integer():
+            cells = [
+                "" if v is None else str(int(v))
+                for v in s.to_list()
+            ]
+            default_align = "right"
+        elif s.dtype.is_numeric():
+            cells = _format_numeric_column(s.to_list())
+            default_align = "right"
+        else:
+            cells = ["" if v is None else str(v) for v in s.to_list()]
+            default_align = "left"
+        formatted.append(cells)
+        aligns.append(align.get(c, default_align))
+
+    widths = [
+        max([len(c)] + [len(x) for x in formatted[j]])
+        for j, c in enumerate(headers)
+    ]
+
+    def pad(s: str, w: int, a: str) -> str:
+        return s.ljust(w) if a == "left" else s.rjust(w)
+
+    sep = "  "
+    header_cells = [
+        (" " * w if c == "" else pad(c, w, a))
+        for c, w, a in zip(headers, widths, aligns)
+    ]
+    lines = [sep.join(header_cells).rstrip()]
+    for i in range(n_rows):
+        row = sep.join(pad(formatted[j][i], widths[j], aligns[j]) for j in range(len(headers)))
+        lines.append(row.rstrip())
+    return "\n".join(lines)
 
 
 @dataclass(slots=True)
@@ -130,20 +225,6 @@ def data(name: str, package: str = "R", save_to: str = "./data",
         url = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}.csv"
         urllib.request.urlretrieve(url, csv_path)
     return pl.read_csv(csv_path, null_values="NA")
-
-
-def AIC(*models) -> None:
-    """Print an AIC comparison table for one or more fitted models.
-
-    Each model must expose ``.AIC``, ``.npar``, and ``.formula``.
-    """
-    rows = pl.DataFrame({
-        "formula": [m.formula for m in models],
-        "df":      [m.npar    for m in models],
-        "AIC":     [m.AIC     for m in models],
-    })
-    with pl.Config(tbl_rows=-1, tbl_cols=-1, float_precision=2):
-        print(rows)
 
 
 def significance_code(p_values) -> list[str]:

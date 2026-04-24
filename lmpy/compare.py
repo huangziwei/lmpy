@@ -12,7 +12,7 @@ from scipy.stats import chi2, f
 
 from .lm import lm
 from .lme import lme
-from .utils import significance_code
+from .utils import format_df, significance_code
 
 __all__ = ["anova", "AIC", "BIC"]
 
@@ -23,12 +23,11 @@ def AIC(*models) -> None:
     Each model must expose ``.AIC``, ``.npar``, and ``.formula``.
     """
     rows = pl.DataFrame({
-        "formula": [m.formula for m in models],
-        "df":      [m.npar    for m in models],
-        "AIC":     [f"{m.AIC:.2f}" for m in models],
+        "":    [m.formula for m in models],
+        "df":  [m.npar    for m in models],
+        "AIC": [round(m.AIC, 2) for m in models],
     })
-    with pl.Config(tbl_rows=-1, tbl_cols=-1):
-        print(rows)
+    print(format_df(rows))
 
 
 def BIC(*models) -> None:
@@ -37,12 +36,11 @@ def BIC(*models) -> None:
     Each model must expose ``.BIC``, ``.npar``, and ``.formula``.
     """
     rows = pl.DataFrame({
-        "formula": [m.formula for m in models],
-        "df":      [m.npar    for m in models],
-        "BIC":     [f"{m.BIC:.2f}" for m in models],
+        "":    [m.formula for m in models],
+        "df":  [m.npar    for m in models],
+        "BIC": [round(m.BIC, 2) for m in models],
     })
-    with pl.Config(tbl_rows=-1, tbl_cols=-1):
-        print(rows)
+    print(format_df(rows))
 
 
 def anova(*models):
@@ -77,20 +75,24 @@ def _anova_lm(*models):
     # R uses the largest (least-constrained) model's MSE as the F denom.
     mse_full = rss[-1] / dfs[-1]
 
-    df_col, sos_col, f_col, p_col, sig_col = [""], [""], [""], [""], [""]
+    df_col: list[int | None] = [None]
+    sos_col: list[float | None] = [None]
+    f_col: list[float | None] = [None]
+    p_col: list[float | None] = [None]
+    sig_col: list[str] = [""]
     for k in range(1, len(order)):
         d_df = dfs[k - 1] - dfs[k]
         d_rss = rss[k - 1] - rss[k]
         if d_df <= 0:
-            df_col.append(f"{d_df:.0f}"); sos_col.append(f"{d_rss:.3f}")
-            f_col.append(""); p_col.append(""); sig_col.append("")
+            df_col.append(d_df); sos_col.append(round(d_rss, 3))
+            f_col.append(None); p_col.append(None); sig_col.append("")
             continue
         fstat = (d_rss / d_df) / mse_full
         p = float(f.sf(fstat, d_df, dfs[-1]))
-        df_col.append(f"{d_df:.0f}")
-        sos_col.append(f"{d_rss:.3f}")
-        f_col.append(f"{fstat:.3f}")
-        p_col.append(f"{p:.4g}")
+        df_col.append(d_df)
+        sos_col.append(round(d_rss, 3))
+        f_col.append(round(fstat, 3))
+        p_col.append(float(f"{p:.4g}"))
         sig_col.append(significance_code([p])[0])
 
     docstring = "Analysis of Variance Table\n\n"
@@ -98,9 +100,9 @@ def _anova_lm(*models):
         docstring += f"{labels[i]}: {m.formula}\n"
 
     df_ = pl.DataFrame({
-        "model":     [labels[i] for i in order],
+        "":          [labels[i] for i in order],
         "Res.Df":    dfs,
-        "RSS":       [f"{r:.3f}" for r in rss],
+        "RSS":       [round(r, 3) for r in rss],
         "Df":        df_col,
         "Sum of Sq": sos_col,
         "F":         f_col,
@@ -109,8 +111,7 @@ def _anova_lm(*models):
     })
 
     print(docstring)
-    with pl.Config(tbl_rows=-1, tbl_cols=-1):
-        print(df_)
+    print(format_df(df_))
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
 
@@ -125,25 +126,32 @@ def _anova_lme(*models):
     order = sorted(range(len(models)), key=lambda i: models[i].npar)
     labels = [f"model {i}" for i in range(len(models))]
 
-    npar_col, aic_col, bic_col, ll_col, dev_col = [], [], [], [], []
-    chi_col, dfc_col, p_col, sig_col = [], [], [], []
+    npar_col: list[int] = []
+    aic_col: list[float] = []
+    bic_col: list[float] = []
+    ll_col: list[float] = []
+    dev_col: list[float] = []
+    chi_col: list[float | None] = []
+    dfc_col: list[int | None] = []
+    p_col: list[float | None] = []
+    sig_col: list[str] = []
     for k, idx in enumerate(order):
         m = models[idx]
         npar_col.append(m.npar)
-        aic_col.append(f"{m.AIC:.4f}")
-        bic_col.append(f"{m.BIC:.4f}")
-        ll_col.append(f"{m.loglike:.4f}")
-        dev_col.append(f"{m.deviance:.4f}")
+        aic_col.append(round(m.AIC, 4))
+        bic_col.append(round(m.BIC, 4))
+        ll_col.append(round(m.loglike, 4))
+        dev_col.append(round(m.deviance, 4))
         if k == 0:
-            chi_col.append(""); dfc_col.append(""); p_col.append(""); sig_col.append("")
+            chi_col.append(None); dfc_col.append(None); p_col.append(None); sig_col.append("")
             continue
         prev = models[order[k - 1]]
         chisq = prev.deviance - m.deviance
         d_df = m.npar - prev.npar
         p = float(chi2.sf(chisq, d_df)) if d_df > 0 else float("nan")
-        chi_col.append(f"{chisq:.4f}")
-        dfc_col.append(f"{d_df}")
-        p_col.append(f"{p:.4g}")
+        chi_col.append(round(chisq, 4))
+        dfc_col.append(d_df)
+        p_col.append(float(f"{p:.4g}"))
         sig_col.append(significance_code([p])[0])
 
     docstring = "Analysis of Variance Table (likelihood ratio test)\n\n"
@@ -151,7 +159,7 @@ def _anova_lme(*models):
         docstring += f"{labels[i]}: {m.formula}\n"
 
     df_ = pl.DataFrame({
-        "model":      [labels[i] for i in order],
+        "":           [labels[i] for i in order],
         "npar":       npar_col,
         "AIC":        aic_col,
         "BIC":        bic_col,
@@ -164,7 +172,6 @@ def _anova_lme(*models):
     })
 
     print(docstring)
-    with pl.Config(tbl_rows=-1, tbl_cols=-1):
-        print(df_)
+    print(format_df(df_))
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")

@@ -30,7 +30,7 @@ from sksparse.cholmod import (
 )
 
 from .formula import materialize_bars
-from .utils import prepare_design
+from .utils import format_df, prepare_design
 
 __all__ = ["lme", "Profile"]
 
@@ -733,8 +733,7 @@ class lme:
         out.extend(self._re_table_lines(include_variance=False))
         out.append(self._n_obs_line())
         out.append("Fixed Effects:")
-        with pl.Config(tbl_rows=-1, tbl_cols=-1):
-            out.append(str(self.bhat))
+        out.append(format_df(self.bhat))
         return "\n".join(out)
 
     def __str__(self) -> str:
@@ -761,12 +760,11 @@ class lme:
         out.append(self._n_obs_line())
         out.append("")
         out.append("Fixed effects:")
-        tbl = self._fixef_table()
+        tbl = self._fixef_table().rename({"coef": ""})
         tbl = tbl.with_columns(
             [pl.col(c).round(digits) for c in tbl.columns if tbl[c].dtype.is_numeric()]
         )
-        with pl.Config(tbl_rows=-1, tbl_cols=-1):
-            out.append(str(tbl))
+        out.append(format_df(tbl))
         corr_lines = self._fixef_corr_lines()
         if corr_lines:
             out.append("")

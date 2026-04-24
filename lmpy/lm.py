@@ -8,7 +8,7 @@ from scipy.optimize import minimize
 from scipy.stats import f, norm, t
 
 from .formula import materialize
-from .utils import prepare_design, significance_code
+from .utils import format_df, prepare_design, significance_code
 
 __all__ = ["lm"]
 
@@ -153,8 +153,7 @@ class lm:
 
         docstring = f"""Formula: {self.formula}\n\n"""
         docstring += "Coefficients:\n"
-        with pl.Config(tbl_rows=-1, tbl_cols=-1):
-            docstring += str(self.bhat)
+        docstring += format_df(self.bhat)
 
         return docstring
 
@@ -411,20 +410,19 @@ class lm:
         ci_low_col, ci_hi_col = self.ci_bhat.columns[1], self.ci_bhat.columns[2]
         res = pl.DataFrame(
             {
-                "coef": self.column_names,
+                "": self.column_names,
                 "Estimate": np.round(self._bhat_arr, digits),
                 "Std. Error": np.round(self._se_bhat_arr, digits),
                 ci_low_col: np.round(self.ci_bhat[ci_low_col].to_numpy(), digits),
                 ci_hi_col: np.round(self.ci_bhat[ci_hi_col].to_numpy(), digits),
                 "t values": np.round(t_arr, digits),
                 "Pr(>|t|)": np.round(p_arr, digits),
-                "": sig,
+                " ": sig,
             }
         )
         self.results = res
 
-        with pl.Config(tbl_rows=-1, tbl_cols=-1):
-            docstring += str(res)
+        docstring += format_df(res)
         docstring += "\n---"
         docstring += "\nSignif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
 
@@ -437,14 +435,18 @@ class lm:
         docstring += f"Log Likelihood = {self.loglike:.4f}, AIC = {self.AIC:.4f}, BIC = {self.BIC:.4f}"
 
         if cor is True:
-
-            docstring += f"\n\nCorrelation of Coefficients:\n"
+            docstring += "\n\nCorrelation of Coefficients:\n"
             if "(Intercept)" in self.column_names:
                 corr_df = self.X.drop("(Intercept)").corr()
             else:
                 corr_df = self.X.corr()
-            with pl.Config(tbl_rows=-1, tbl_cols=-1, float_precision=2):
-                docstring += str(corr_df)
+            corr_rounded = corr_df.with_columns(
+                [pl.col(c).round(2) for c in corr_df.columns]
+            )
+            labeled = corr_rounded.insert_column(
+                0, pl.Series("", corr_df.columns)
+            )
+            docstring += format_df(labeled)
 
         print(docstring)
 
