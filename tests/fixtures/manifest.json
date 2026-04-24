@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-24 10:04:45 CEST",
+  "generated_at": "2026-04-24 20:39:51 CEST",
   "n_total": 400,
   "n_ok": 302,
   "n_no_data": 91,
@@ -198,8 +198,8 @@
       "status": "ok",
       "dataset": "gamair/stomata",
       "rows": 24,
-      "cols_X": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 7,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.aliased_cols", "shared.rank.empty_cells"]
     },
     {
       "id": "wr_0023",
@@ -208,7 +208,7 @@
       "dataset": "gamair/stomata",
       "rows": 24,
       "cols_X": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
     },
     {
       "id": "wr_0024",
@@ -216,8 +216,8 @@
       "status": "ok",
       "dataset": "gamair/stomata",
       "rows": 24,
-      "cols_X": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "wr_0025",
@@ -225,8 +225,8 @@
       "status": "ok",
       "dataset": "nlme/Rail",
       "rows": 18,
-      "cols_X": 2,
-      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.ordered", "shared.rank.full"]
     },
     {
       "id": "wr_0026",
@@ -243,8 +243,8 @@
       "status": "ok",
       "dataset": "nlme/Machines",
       "rows": 54,
-      "cols_X": 6,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "cols_X": 18,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.ordered", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "wr_0028",
@@ -252,8 +252,8 @@
       "status": "ok",
       "dataset": "nlme/Machines",
       "rows": 54,
-      "cols_X": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "cols_X": 8,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.ordered", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "wr_0029",
@@ -353,8 +353,8 @@
       "status": "ok",
       "dataset": "MASS/Insurance",
       "rows": 64,
-      "cols_X": 8,
-      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.numeric", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.ordered", "shared.var_type.numeric", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "wr_0041",
@@ -379,7 +379,7 @@
       "dataset": "MASS/housing",
       "rows": 72,
       "cols_X": 26,
-      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.two_level", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.two_level", "shared.rank.full"]
     },
     {
       "id": "wr_0044",
@@ -589,7 +589,7 @@
       "dataset": "nlme/Dialyzer",
       "rows": 140,
       "cols_X": 10,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
     },
     {
       "id": "wr_0068",
@@ -624,8 +624,8 @@
       "status": "ok",
       "dataset": "nlme/BodyWeight",
       "rows": 176,
-      "cols_X": 4,
-      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "wr_0072",
@@ -633,8 +633,8 @@
       "status": "ok",
       "dataset": "nlme/BodyWeight",
       "rows": 176,
-      "cols_X": 4,
-      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 6,
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "wr_0073",
@@ -652,7 +652,7 @@
       "dataset": "nlme/Dialyzer",
       "rows": 140,
       "cols_X": 10,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
     },
     {
       "id": "wr_0075",
@@ -748,8 +748,8 @@
       "status": "ok",
       "dataset": "MASS/npk",
       "rows": 24,
-      "cols_X": 9,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 13,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.aliased_cols"]
     },
     {
       "id": "wr_0086",
@@ -775,8 +775,8 @@
       "status": "ok",
       "dataset": "MASS/npk",
       "rows": 24,
-      "cols_X": 6,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 10,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
     },
     {
       "id": "wr_0089",
@@ -1018,7 +1018,7 @@
       "dataset": "R/esoph",
       "rows": 88,
       "cols_X": 12,
-      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "wr_0117",
@@ -1027,7 +1027,7 @@
       "dataset": "R/esoph",
       "rows": 88,
       "cols_X": 12,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "wr_0118",
@@ -1036,7 +1036,7 @@
       "dataset": "R/esoph",
       "rows": 88,
       "cols_X": 6,
-      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.ordered", "shared.rank.full"]
     },
     {
       "id": "wr_0119",
@@ -1063,7 +1063,7 @@
       "dataset": "R/sleep",
       "rows": 20,
       "cols_X": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
     },
     {
       "id": "wr_0122",
@@ -1104,8 +1104,8 @@
       "status": "ok",
       "dataset": "MASS/npk",
       "rows": 24,
-      "cols_X": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "cols_X": 8,
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.two_level", "shared.rank.full"]
     },
     {
       "id": "wr_0127",
@@ -1241,7 +1241,7 @@
       "dataset": "R/esoph",
       "rows": 88,
       "cols_X": 8,
-      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "lme4_0007",
@@ -1329,7 +1329,7 @@
       "cols_X": 2,
       "q": 54,
       "n_theta": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.ordered", "shared.factor_cardinality.many_level", "shared.rank.full"]
     },
     {
       "id": "lme4_0015",
@@ -1348,10 +1348,10 @@
       "status": "ok",
       "dataset": "lme4/cbpp",
       "rows": 56,
-      "cols_X": 2,
+      "cols_X": 4,
       "q": 15,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.singleton", "shared.rank.full", "shared.rank.empty_cells"]
     },
     {
       "id": "lme4_0017",
@@ -1359,10 +1359,10 @@
       "status": "ok",
       "dataset": "lme4/cake",
       "rows": 270,
-      "cols_X": 6,
+      "cols_X": 18,
       "q": 45,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "lme4_0018",
@@ -1370,10 +1370,10 @@
       "status": "ok",
       "dataset": "lme4/cake",
       "rows": 270,
-      "cols_X": 4,
+      "cols_X": 8,
       "q": 45,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "lme4_0019",
@@ -1392,10 +1392,10 @@
       "status": "ok",
       "dataset": "lme4/cbpp",
       "rows": 56,
-      "cols_X": 2,
+      "cols_X": 4,
       "q": 15,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.singleton", "shared.rank.full", "shared.rank.empty_cells"]
     },
     {
       "id": "lme4_0021",
@@ -1425,7 +1425,7 @@
       "cols_X": 2,
       "q": 36,
       "n_theta": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "lme4_0024",
@@ -1436,7 +1436,7 @@
       "cols_X": 2,
       "q": 36,
       "n_theta": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "lme4_0025",
@@ -1490,7 +1490,7 @@
       "cols_X": 2,
       "q": 81,
       "n_theta": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.var_type.matrix_column", "shared.factor_cardinality.many_level", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.ordered", "shared.var_type.matrix_column", "shared.factor_cardinality.many_level", "shared.rank.full"]
     },
     {
       "id": "lme4_0031",
@@ -1501,7 +1501,7 @@
       "cols_X": 2,
       "q": 36,
       "n_theta": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "lme4_0032",
@@ -1520,7 +1520,7 @@
       "cols_X": 2,
       "q": 18,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "lme4_0034",
@@ -1558,7 +1558,7 @@
       "cols_X": 2,
       "q": 36,
       "n_theta": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "lme4_0038",
@@ -1566,10 +1566,10 @@
       "status": "ok",
       "dataset": "lme4/cbpp",
       "rows": 56,
-      "cols_X": 2,
+      "cols_X": 4,
       "q": 15,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.matrix_column", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.factor_cardinality.singleton", "shared.rank.full", "shared.rank.empty_cells"]
     },
     {
       "id": "lme4_0039",
@@ -1580,7 +1580,7 @@
       "cols_X": 1,
       "q": 18,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "lme4_0040",
@@ -1632,7 +1632,7 @@
       "cols_X": 4,
       "q": 294,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.factor", "shared.var_type.numeric", "shared.var_type.integer", "shared.factor_cardinality.two_level", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.factor", "shared.var_type.numeric", "shared.factor_cardinality.two_level", "shared.factor_cardinality.many_level", "shared.factor_cardinality.singleton", "shared.rank.full", "shared.rank.empty_cells"]
     },
     {
       "id": "mgcv_0002",
@@ -1650,7 +1650,7 @@
       "rows": 54,
       "cols_X": 3,
       "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0004",
@@ -1660,7 +1660,7 @@
       "rows": 54,
       "cols_X": 3,
       "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.integer", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0005",
@@ -1738,7 +1738,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0013",
@@ -1847,10 +1847,7 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0027",
@@ -1886,9 +1883,9 @@
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
       "rows": 400,
-      "cols_X": 2,
+      "cols_X": 4,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0031",
@@ -1896,9 +1893,9 @@
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
       "rows": 400,
-      "cols_X": 2,
+      "cols_X": 4,
       "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0035",
@@ -1913,10 +1910,7 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0037",
@@ -1955,20 +1949,14 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0042",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0043",
@@ -1983,10 +1971,7 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0045",
@@ -2001,40 +1986,28 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0047",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0048",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0049",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0050",
@@ -2132,7 +2105,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0062",
@@ -2142,7 +2115,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0063",
@@ -2152,7 +2125,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0064",
@@ -2162,47 +2135,35 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0065",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 5,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0066",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0067",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0068",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0069",
@@ -2212,17 +2173,14 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0070",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0071",
@@ -2290,9 +2248,9 @@
       "status": "ok",
       "dataset": "mgcv/gamSim_eg4",
       "rows": 400,
-      "cols_X": 2,
+      "cols_X": 3,
       "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0079",
@@ -2302,7 +2260,7 @@
       "rows": 400,
       "cols_X": 0,
       "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5"]
     },
     {
       "id": "mgcv_0080",
@@ -2310,9 +2268,9 @@
       "status": "ok",
       "dataset": "mgcv/gamSim_eg4",
       "rows": 400,
-      "cols_X": 2,
+      "cols_X": 3,
       "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0081",
@@ -2320,9 +2278,9 @@
       "status": "ok",
       "dataset": "mgcv/gamSim_eg4",
       "rows": 400,
-      "cols_X": 2,
+      "cols_X": 3,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0082",
@@ -2340,7 +2298,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 5,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0084",
@@ -2371,10 +2329,7 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0088",
@@ -2409,10 +2364,7 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0092",
@@ -2422,17 +2374,14 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0093",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0094",
@@ -2462,7 +2411,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0097",
@@ -2591,20 +2540,14 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0115",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0116",
@@ -2612,9 +2555,9 @@
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
       "rows": 400,
-      "cols_X": 2,
+      "cols_X": 4,
       "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0117",
@@ -2624,47 +2567,35 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0118",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0119",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 2,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0120",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 2,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0121",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 2,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0122",
@@ -2692,7 +2623,7 @@
       "rows": 18,
       "cols_X": 1,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.ordered", "shared.rank.full"]
     },
     {
       "id": "mgcv_0125",
@@ -2700,9 +2631,9 @@
       "status": "ok",
       "dataset": "mgcv/gamSim_eg4",
       "rows": 400,
-      "cols_X": 3,
+      "cols_X": 4,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0128",
@@ -2712,7 +2643,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0129",
@@ -2722,7 +2653,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 4,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0130",
@@ -2812,7 +2743,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0144",
@@ -2888,7 +2819,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0163",
@@ -2960,7 +2891,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 5,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "mgcv_0173",
@@ -3035,10 +2966,7 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "mgcv_0183",
@@ -3108,7 +3036,7 @@
       "dataset": "R/Orange",
       "rows": 35,
       "cols_X": 6,
-      "enriched_tags": ["shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.ordered", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "cur_0007",
@@ -3380,7 +3308,7 @@
       "cols_X": 2,
       "q": 36,
       "n_theta": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "cur_0037",
@@ -3391,7 +3319,7 @@
       "cols_X": 2,
       "q": 54,
       "n_theta": 6,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "cur_0038",
@@ -3402,7 +3330,7 @@
       "cols_X": 2,
       "q": 54,
       "n_theta": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "cur_0039",
@@ -3435,7 +3363,7 @@
       "cols_X": 2,
       "q": 18,
       "n_theta": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "cur_0042",
@@ -3457,7 +3385,7 @@
       "cols_X": 2,
       "q": 48,
       "n_theta": 6,
-      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.integer", "shared.var_type.numeric", "shared.var_type.ordered", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "cur_0044",
@@ -3479,7 +3407,7 @@
       "cols_X": 1,
       "q": 36,
       "n_theta": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "cur_0046",
@@ -3523,17 +3451,14 @@
       "cols_X": 2,
       "q": 46,
       "n_theta": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.rank.full"]
     },
     {
       "id": "cur_0052",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0053",
@@ -3543,17 +3468,14 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "cur_0054",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0055",
@@ -3570,40 +3492,28 @@
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0057",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 3,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0058",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0059",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0060",
@@ -3623,7 +3533,7 @@
       "rows": 108,
       "cols_X": 1,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.factor", "shared.factor_cardinality.many_level", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.var_type.ordered", "shared.factor_cardinality.many_level", "shared.rank.full"]
     },
     {
       "id": "cur_0062",
@@ -3633,7 +3543,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "cur_0063",
@@ -3643,17 +3553,14 @@
       "rows": 84,
       "cols_X": 1,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.ordered", "shared.rank.full"]
     },
     {
       "id": "cur_0064",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 2,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0065",
@@ -3663,17 +3570,14 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "cur_0066",
       "kind": "mgcv",
       "status": "ok",
       "dataset": "mgcv/gamSim_eg5",
-      "rows": 400,
-      "cols_X": 1,
-      "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "warning": "argument is not numeric or logical: returning NA"
     },
     {
       "id": "cur_0067",
@@ -3692,7 +3596,7 @@
       "rows": 400,
       "cols_X": 1,
       "n_smooths": 1,
-      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.integer", "shared.rank.full"]
+      "enriched_tags": ["shared.var_type.numeric", "shared.var_type.factor", "shared.factor_cardinality.balanced_3_5", "shared.rank.full"]
     },
     {
       "id": "cur_0069",

@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "hs": {
+      "levels": ["L", "M", "U"],
+      "ordered": false
+    },
+    "phs": {
+      "levels": ["C", "E", "N", "O"],
+      "ordered": false
+    },
+    "fol": {
+      "levels": ["F1", "F2", "F3", "F4", "F5", "F6", "F7"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["F", "M"],
+      "ordered": false
+    }
+  }
+}

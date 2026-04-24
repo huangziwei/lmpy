@@ -1,5 +1,5 @@
 {
-  "colnames": ["(Intercept)", "age", "SexMale"],
+  "colnames": ["(Intercept)", "age", "SexFemale"],
   "assign": [0, 1, 2],
   "contrasts": {
     "Sex": "contr.treatment"

@@ -1,0 +1,32 @@
+{
+  "factors": {
+    "Molarity": {
+      "levels": ["down", "up"],
+      "ordered": false
+    },
+    "Solute": {
+      "levels": ["down", "up"],
+      "ordered": false
+    },
+    "pH": {
+      "levels": ["down", "up"],
+      "ordered": false
+    },
+    "Gas": {
+      "levels": ["down", "up"],
+      "ordered": false
+    },
+    "Water": {
+      "levels": ["down", "up"],
+      "ordered": false
+    },
+    "Horn": {
+      "levels": ["down", "up"],
+      "ordered": false
+    },
+    "Flask": {
+      "levels": ["down", "up"],
+      "ordered": false
+    }
+  }
+}

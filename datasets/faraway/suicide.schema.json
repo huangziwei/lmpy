@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "cause": {
+      "levels": ["drug", "gas", "gun", "hang", "jump", "other"],
+      "ordered": false
+    },
+    "age": {
+      "levels": ["m", "o", "y"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["f", "m"],
+      "ordered": false
+    }
+  }
+}

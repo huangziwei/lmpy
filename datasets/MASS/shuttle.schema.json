@@ -1,0 +1,32 @@
+{
+  "factors": {
+    "stability": {
+      "levels": ["stab", "xstab"],
+      "ordered": false
+    },
+    "error": {
+      "levels": ["LX", "MM", "SS", "XL"],
+      "ordered": false
+    },
+    "sign": {
+      "levels": ["nn", "pp"],
+      "ordered": false
+    },
+    "wind": {
+      "levels": ["head", "tail"],
+      "ordered": false
+    },
+    "magn": {
+      "levels": ["Light", "Medium", "Out", "Strong"],
+      "ordered": false
+    },
+    "vis": {
+      "levels": ["no", "yes"],
+      "ordered": false
+    },
+    "use": {
+      "levels": ["auto", "noauto"],
+      "ordered": false
+    }
+  }
+}

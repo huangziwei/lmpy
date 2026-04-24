@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "limit": {
+      "levels": ["no", "yes"],
+      "ordered": false
+    }
+  }
+}

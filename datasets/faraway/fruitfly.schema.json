@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "activity": {
+      "levels": ["isolated", "one", "low", "many", "high"],
+      "ordered": false
+    }
+  }
+}

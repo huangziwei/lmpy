@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "votesys": {
+      "levels": ["D", "H"],
+      "ordered": false
+    }
+  }
+}

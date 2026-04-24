@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Subject": {
+      "levels": ["6", "2", "3", "5", "1", "4"],
+      "ordered": true
+    },
+    "Meal": {
+      "levels": ["2am", "6am", "10am", "2pm", "6pm", "10pm"],
+      "ordered": true
+    }
+  }
+}

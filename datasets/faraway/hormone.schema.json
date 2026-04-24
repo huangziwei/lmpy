@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "orientation": {
+      "levels": ["g", "s"],
+      "ordered": false
+    }
+  }
+}

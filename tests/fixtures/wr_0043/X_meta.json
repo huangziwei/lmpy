@@ -1,11 +1,11 @@
 {
-  "colnames": ["(Intercept)", "InflLow", "InflMedium", "TypeAtrium", "TypeTerrace", "TypeTower", "ContLow", "SatLow", "SatMedium", "InflLow:TypeAtrium", "InflMedium:TypeAtrium", "InflLow:TypeTerrace", "InflMedium:TypeTerrace", "InflLow:TypeTower", "InflMedium:TypeTower", "InflLow:ContLow", "InflMedium:ContLow", "TypeAtrium:ContLow", "TypeTerrace:ContLow", "TypeTower:ContLow", "InflLow:TypeAtrium:ContLow", "InflMedium:TypeAtrium:ContLow", "InflLow:TypeTerrace:ContLow", "InflMedium:TypeTerrace:ContLow", "InflLow:TypeTower:ContLow", "InflMedium:TypeTower:ContLow"],
+  "colnames": ["(Intercept)", "InflMedium", "InflHigh", "TypeApartment", "TypeAtrium", "TypeTerrace", "ContHigh", "Sat.L", "Sat.Q", "InflMedium:TypeApartment", "InflHigh:TypeApartment", "InflMedium:TypeAtrium", "InflHigh:TypeAtrium", "InflMedium:TypeTerrace", "InflHigh:TypeTerrace", "InflMedium:ContHigh", "InflHigh:ContHigh", "TypeApartment:ContHigh", "TypeAtrium:ContHigh", "TypeTerrace:ContHigh", "InflMedium:TypeApartment:ContHigh", "InflHigh:TypeApartment:ContHigh", "InflMedium:TypeAtrium:ContHigh", "InflHigh:TypeAtrium:ContHigh", "InflMedium:TypeTerrace:ContHigh", "InflHigh:TypeTerrace:ContHigh"],
   "assign": [0, 1, 1, 2, 2, 2, 3, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8],
   "contrasts": {
     "Infl": "contr.treatment",
     "Type": "contr.treatment",
     "Cont": "contr.treatment",
-    "Sat": "contr.treatment"
+    "Sat": "contr.poly"
   },
   "term_labels": ["Infl", "Type", "Cont", "Sat", "Infl:Type", "Infl:Cont", "Type:Cont", "Infl:Type:Cont"],
   "intercept": true,

@@ -169,6 +169,25 @@ write_json <- function(obj, path) {
                               na = "null", null = "null"), path)
 }
 
+# datasets/R/ mirrors R's built-in `datasets` package; other pkgs map 1:1.
+pkg_subdir <- function(pkg) if (pkg == "datasets") "R" else pkg
+
+# Re-apply factor types from a <name>.schema.json sidecar, if present.
+# No-op when no schema exists (i.e., the source data.frame had no factors).
+apply_dataset_schema <- function(d, pkg, name) {
+  path <- file.path(DATA_ROOT, pkg_subdir(pkg), paste0(name, ".schema.json"))
+  if (!file.exists(path)) return(d)
+  sch <- jsonlite::fromJSON(path, simplifyVector = FALSE)
+  for (col in names(sch$factors)) {
+    if (!col %in% names(d)) next
+    spec <- sch$factors[[col]]
+    lev <- as.character(unlist(spec$levels))
+    d[[col]] <- factor(as.character(d[[col]]), levels = lev,
+                       ordered = isTRUE(spec$ordered))
+  }
+  d
+}
+
 # ---- Data-aware tagging ----------------------------------------------------
 # Given the model.frame `mf` actually used, the raw data `raw`, and the fixed
 # design matrix `X`, emit the shared.* feature tags that can only be known by
@@ -421,7 +440,11 @@ for (c in exec_cases) {
     d <- read.csv(ds$path, check.names = FALSE, stringsAsFactors = TRUE)
     # drop unnamed row-index column if present
     d <- d[, nzchar(names(d)), drop = FALSE]
-    d
+    # Re-apply factor types lost through CSV round-trip (quoted numeric
+    # factor levels get re-parsed as integer by read.csv). Without this
+    # step, fs/sz/by=factor smooths silently dispatch to their fallthrough
+    # tp path instead of exercising the factor-aware constructor.
+    apply_dataset_schema(d, ds$pkg, ds$name)
   }, error = function(e) NULL)
   if (is.null(data)) {
     n_err <- n_err + 1

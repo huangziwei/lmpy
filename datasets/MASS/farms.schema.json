@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "Mois": {
+      "levels": ["M1", "M2", "M4", "M5"],
+      "ordered": false
+    },
+    "Manag": {
+      "levels": ["BF", "HF", "NM", "SF"],
+      "ordered": false
+    },
+    "Use": {
+      "levels": ["U1", "U2", "U3"],
+      "ordered": false
+    },
+    "Manure": {
+      "levels": ["C0", "C1", "C2", "C3", "C4"],
+      "ordered": false
+    }
+  }
+}

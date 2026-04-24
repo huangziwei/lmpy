@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Area": {
+      "levels": ["Cardiff", "GlamorganC", "GlamorganE", "GlamorganW", "MonmouthOther", "MonmouthV", "Newport", "Swansea"],
+      "ordered": false
+    },
+    "Work": {
+      "levels": ["Manual", "NonManual"],
+      "ordered": false
+    }
+  }
+}

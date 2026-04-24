@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "shape": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    },
+    "plate": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    }
+  }
+}

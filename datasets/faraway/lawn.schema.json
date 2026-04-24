@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "manufact": {
+      "levels": ["A", "B"],
+      "ordered": false
+    },
+    "machine": {
+      "levels": ["m1", "m2", "m3", "m4", "m5", "m6"],
+      "ordered": false
+    },
+    "speed": {
+      "levels": ["H", "L"],
+      "ordered": false
+    }
+  }
+}

@@ -1,7 +1,12 @@
 {
-  "colnames": ["(Intercept)", "block", "N", "P", "K", "N:P"],
-  "assign": [0, 1, 2, 3, 4, 5],
-  "contrasts": null,
+  "colnames": ["(Intercept)", "block2", "block3", "block4", "block5", "block6", "N1", "P1", "K1", "N1:P1"],
+  "assign": [0, 1, 1, 1, 1, 1, 2, 3, 4, 5],
+  "contrasts": {
+    "block": "contr.treatment",
+    "N": "contr.treatment",
+    "P": "contr.treatment",
+    "K": "contr.treatment"
+  },
   "term_labels": ["block", "N", "P", "K", "N:P"],
   "intercept": true,
   "response": 1

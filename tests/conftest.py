@@ -23,10 +23,40 @@ def fixtures_by_kind(kind: str):
 _data_cache: dict[tuple[str, str], pl.DataFrame] = {}
 
 
+def _pkg_subdir(pkg: str) -> str:
+    # datasets/R/ mirrors R's built-in `datasets` package.
+    return "R" if pkg == "datasets" else pkg
+
+
+def _apply_schema(df: pl.DataFrame, pkg: str, name: str) -> pl.DataFrame:
+    """Re-cast columns listed in a <name>.schema.json sidecar to pl.Enum.
+
+    CSV round-trip erases R's factor type — quoted numeric levels come back
+    as Int64, character levels as String. Without this step, fs/sz/by=factor
+    smooths silently take the non-factor fallthrough path, so the R ground
+    truth and lmpy's output agree only on that degraded path.
+    """
+    path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
+    if not path.exists():
+        return df
+    sch = json.loads(path.read_text())
+    factors = sch.get("factors", {})
+    if not factors:
+        return df
+    exprs = []
+    for col, spec in factors.items():
+        if col not in df.columns:
+            continue
+        levels = [str(v) for v in spec["levels"]]
+        exprs.append(pl.col(col).cast(pl.Utf8).cast(pl.Enum(levels)))
+    return df.with_columns(exprs) if exprs else df
+
+
 def load_dataset(pkg: str, name: str) -> pl.DataFrame:
     key = (pkg, name)
     if key not in _data_cache:
-        _data_cache[key] = pl.read_csv(DATA_ROOT / pkg / f"{name}.csv", null_values="NA")
+        df = pl.read_csv(DATA_ROOT / _pkg_subdir(pkg) / f"{name}.csv", null_values="NA")
+        _data_cache[key] = _apply_schema(df, pkg, name)
     return _data_cache[key].clone()
 
 

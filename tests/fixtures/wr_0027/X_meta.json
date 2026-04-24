@@ -1,7 +1,8 @@
 {
-  "colnames": ["(Intercept)", "Worker", "MachineB", "MachineC", "Worker:MachineB", "Worker:MachineC"],
-  "assign": [0, 1, 2, 2, 3, 3],
+  "colnames": ["(Intercept)", "Worker.L", "Worker.Q", "Worker.C", "Worker^4", "Worker^5", "MachineB", "MachineC", "Worker.L:MachineB", "Worker.Q:MachineB", "Worker.C:MachineB", "Worker^4:MachineB", "Worker^5:MachineB", "Worker.L:MachineC", "Worker.Q:MachineC", "Worker.C:MachineC", "Worker^4:MachineC", "Worker^5:MachineC"],
+  "assign": [0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
   "contrasts": {
+    "Worker": "contr.poly",
     "Machine": "contr.treatment"
   },
   "term_labels": ["Worker", "Machine", "Worker:Machine"],

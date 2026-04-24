@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Run": {
+      "levels": ["C1", "C2", "C3", "C4", "C5", "M1", "M2", "M3", "M4", "M5"],
+      "ordered": false
+    },
+    "Treatment": {
+      "levels": ["Control", "MDL"],
+      "ordered": false
+    },
+    "Animal": {
+      "levels": ["R1", "R2", "R3", "R4", "R5"],
+      "ordered": false
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "colnames": ["(Intercept)", "woolA:tensionH", "woolB:tensionH", "woolA:tensionL", "woolB:tensionL", "woolA:tensionM", "woolB:tensionM"],
+  "colnames": ["(Intercept)", "woolA:tensionL", "woolB:tensionL", "woolA:tensionM", "woolB:tensionM", "woolA:tensionH", "woolB:tensionH"],
   "assign": [0, 1, 1, 1, 1, 1, 1],
   "contrasts": {
     "wool": "contr.treatment",

@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "trt": {
+      "levels": ["placebo", "progabide"],
+      "ordered": false
+    }
+  }
+}

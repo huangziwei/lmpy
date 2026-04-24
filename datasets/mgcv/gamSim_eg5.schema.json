@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "x0": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    }
+  }
+}

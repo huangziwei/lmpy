@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "block": {
+      "levels": ["I", "II", "III", "IV", "V"],
+      "ordered": false
+    },
+    "variety": {
+      "levels": ["1", "2", "3", "4", "5", "6", "7", "8"],
+      "ordered": false
+    }
+  }
+}

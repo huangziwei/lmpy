@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "location": {
+      "levels": ["Aadorf.Taenikon", "Acquarossa.Comprovasco", "Adelboden", "Aigle", "Altdorf", "Basel.Binningen", "Bern.Zollikofen", "Beznau", "Buchs.Aarau", "Bullet.La Fretaz", "Chasseral", "Chur", "Cimetta", "Col du Grand St-Bernard", "Davos", "Disentis.Sedrun", "Engelberg", "Evolene.Villa", "Fahy", "Geneve-Cointrin", "Glarus", "Goesgen", "Grimsel Hospiz", "Guetsch ob Andermatt", "Guettingen", "Interlaken", "La Chaux-de-Fonds", "La Dole", "Leibstadt", "Le Moleson", "Locarno.Monti", "Lugano", "Luzern", "Magadino.Cadenazzo", "Montana", "Muehleberg", "Napf", "Neuchatel", "Nyon.Changins", "Payerne", "Pilatus", "Piotta", "Piz Corvatsch", "Plaffeien", "Poschiavo.Robbia", "Pully", "Ruenenberg", "Samedan", "Saentis", "S. Bernardino", "Schaffhausen", "Scuol", "Sion", "Stabio", "St. Gallen", "Ulrichen", "Vaduz", "Visp", "Waedenswil", "Weissfluhjoch", "Wynau", "Zermatt", "Zuerich.Affoltern", "Zuerich.Fluntern", "Zuerich.Kloten"],
+      "ordered": false
+    },
+    "code": {
+      "levels": ["ABO", "AIG", "ALT", "BAS", "BER", "BEZ", "BUS", "CDF", "CGI", "CHA", "CHU", "CIM", "COM", "COV", "DAV", "DIS", "DOL", "ENG", "EVO", "FAH", "FRE", "GLA", "GOE", "GRH", "GSB", "GUE", "GUT", "GVE", "INT", "KLO", "LEI", "LUG", "LUZ", "MAG", "MLS", "MUB", "MVE", "NAP", "NEU", "OTL", "PAY", "PIL", "PIO", "PLF", "PUY", "REH", "ROB", "RUE", "SAE", "SAM", "SBE", "SBO", "SCU", "SHA", "SIO", "SMA", "STG", "TAE", "ULR", "VAD", "VIS", "WAE", "WFJ", "WYN", "ZER"],
+      "ordered": false
+    },
+    "climate.region": {
+      "levels": ["Alpine south side", "Central Alpine north slope", "Central plateau", "Eastern Alpine north slope", "Eastern Jura", "Engadine", "North-eastern plateau", "Northern and central Grisons", "Valais", "Western Alpine north slope", "Western Jura", "Western plateau"],
+      "ordered": false
+    }
+  }
+}

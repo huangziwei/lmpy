@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "csa": {
+      "levels": ["Abused", "NotAbused"],
+      "ordered": false
+    }
+  }
+}

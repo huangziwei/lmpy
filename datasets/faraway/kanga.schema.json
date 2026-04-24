@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "species": {
+      "levels": ["fuliginosus", "giganteus", "melanops"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["Female", "Male"],
+      "ordered": false
+    }
+  }
+}

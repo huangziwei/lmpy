@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Treat": {
+      "levels": ["CBT", "Cont", "FT"],
+      "ordered": false
+    }
+  }
+}

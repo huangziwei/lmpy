@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "treat": {
+      "levels": ["1", "2"],
+      "ordered": false
+    },
+    "cell": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    },
+    "prior": {
+      "levels": ["0", "10"],
+      "ordered": false
+    }
+  }
+}

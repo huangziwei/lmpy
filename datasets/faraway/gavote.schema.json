@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "equip": {
+      "levels": ["LEVER", "OS-CC", "OS-PC", "PAPER", "PUNCH"],
+      "ordered": false
+    },
+    "econ": {
+      "levels": ["middle", "poor", "rich"],
+      "ordered": false
+    },
+    "rural": {
+      "levels": ["rural", "urban"],
+      "ordered": false
+    },
+    "atlanta": {
+      "levels": ["Atlanta", "notAtlanta"],
+      "ordered": false
+    }
+  }
+}

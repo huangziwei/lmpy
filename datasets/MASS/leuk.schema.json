@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "ag": {
+      "levels": ["absent", "present"],
+      "ordered": false
+    }
+  }
+}

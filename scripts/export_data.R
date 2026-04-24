@@ -9,6 +9,7 @@
 
 suppressPackageStartupMessages({
   library(tools)
+  library(jsonlite)
 })
 
 OUT_ROOT <- "datasets"
@@ -46,7 +47,33 @@ write_csv <- function(df, pkg, name) {
   path <- file.path(OUT_ROOT, sub, paste0(name, ".csv"))
   if (file.exists(path)) return(FALSE)
   write.csv(df, path, row.names = FALSE, na = "NA")
+  write_schema(df, pkg, name)
   TRUE
+}
+
+# Sidecar <name>.schema.json next to the CSV. CSV loses factor type, so we
+# record which columns to re-`factor()` on read (R side) or re-cast to
+# pl.Enum (Python side). No-factor frames get no schema file.
+write_schema <- function(df, pkg, name) {
+  sub <- pkg_dir(pkg)
+  fac_cols <- names(df)[vapply(df, is.factor, logical(1))]
+  path <- file.path(OUT_ROOT, sub, paste0(name, ".schema.json"))
+  if (length(fac_cols) == 0L) {
+    if (file.exists(path)) file.remove(path)
+    return(invisible(FALSE))
+  }
+  facs <- list()
+  for (col in fac_cols) {
+    facs[[col]] <- list(
+      levels  = as.character(levels(df[[col]])),
+      ordered = is.ordered(df[[col]])
+    )
+  }
+  writeLines(
+    jsonlite::toJSON(list(factors = facs), auto_unbox = TRUE, pretty = TRUE),
+    path
+  )
+  invisible(TRUE)
 }
 
 # ---- main -------------------------------------------------------------------

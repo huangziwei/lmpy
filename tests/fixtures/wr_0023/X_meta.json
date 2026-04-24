@@ -1,7 +1,9 @@
 {
-  "colnames": ["(Intercept)", "CO2"],
+  "colnames": ["(Intercept)", "CO22"],
   "assign": [0, 1],
-  "contrasts": null,
+  "contrasts": {
+    "CO2": "contr.treatment"
+  },
   "term_labels": "CO2",
   "intercept": true,
   "response": 1

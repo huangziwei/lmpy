@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "penalty": {
+      "levels": ["no", "yes"],
+      "ordered": false
+    },
+    "victim": {
+      "levels": ["b", "w"],
+      "ordered": false
+    },
+    "defend": {
+      "levels": ["b", "w"],
+      "ordered": false
+    }
+  }
+}

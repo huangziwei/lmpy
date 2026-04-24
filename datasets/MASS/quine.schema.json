@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "Eth": {
+      "levels": ["A", "N"],
+      "ordered": false
+    },
+    "Sex": {
+      "levels": ["F", "M"],
+      "ordered": false
+    },
+    "Age": {
+      "levels": ["F0", "F1", "F2", "F3"],
+      "ordered": false
+    },
+    "Lrn": {
+      "levels": ["AL", "SL"],
+      "ordered": false
+    }
+  }
+}

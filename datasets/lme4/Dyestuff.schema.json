@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Batch": {
+      "levels": ["A", "B", "C", "D", "E", "F"],
+      "ordered": false
+    }
+  }
+}

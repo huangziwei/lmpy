@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "residency": {
+      "levels": ["N", "Y"],
+      "ordered": false
+    },
+    "gender": {
+      "levels": ["F", "M"],
+      "ordered": false
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "tgrp": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    }
+  }
+}

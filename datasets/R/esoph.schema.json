@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "agegp": {
+      "levels": ["25-34", "35-44", "45-54", "55-64", "65-74", "75+"],
+      "ordered": true
+    },
+    "alcgp": {
+      "levels": ["0-39g/day", "40-79", "80-119", "120+"],
+      "ordered": true
+    },
+    "tobgp": {
+      "levels": ["0-9g/day", "10-19", "20-29", "30+"],
+      "ordered": true
+    }
+  }
+}

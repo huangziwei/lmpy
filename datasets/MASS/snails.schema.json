@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Species": {
+      "levels": ["A", "B"],
+      "ordered": false
+    }
+  }
+}

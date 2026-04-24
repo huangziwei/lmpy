@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Block": {
+      "levels": ["VI", "V", "III", "IV", "II", "I"],
+      "ordered": true
+    },
+    "Variety": {
+      "levels": ["Golden Rain", "Marvellous", "Victory"],
+      "ordered": false
+    }
+  }
+}

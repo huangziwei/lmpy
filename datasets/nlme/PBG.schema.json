@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Run": {
+      "levels": ["T5", "T4", "T3", "T2", "T1", "P5", "P3", "P2", "P4", "P1"],
+      "ordered": true
+    },
+    "Treatment": {
+      "levels": ["MDL 72222", "Placebo"],
+      "ordered": false
+    },
+    "Rabbit": {
+      "levels": ["5", "3", "2", "4", "1"],
+      "ordered": true
+    }
+  }
+}

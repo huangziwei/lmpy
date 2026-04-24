@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "No": {
+      "levels": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"],
+      "ordered": false
+    }
+  }
+}

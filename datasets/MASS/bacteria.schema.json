@@ -1,0 +1,24 @@
+{
+  "factors": {
+    "y": {
+      "levels": ["n", "y"],
+      "ordered": false
+    },
+    "ap": {
+      "levels": ["a", "p"],
+      "ordered": false
+    },
+    "hilo": {
+      "levels": ["hi", "lo"],
+      "ordered": false
+    },
+    "ID": {
+      "levels": ["X01", "X02", "X03", "X04", "X05", "X06", "X07", "X08", "X09", "X10", "X11", "X12", "X13", "X14", "X15", "X16", "X17", "X18", "X19", "X20", "X21", "Y01", "Y02", "Y03", "Y04", "Y05", "Y06", "Y07", "Y08", "Y09", "Y10", "Y11", "Y12", "Y13", "Y14", "Z01", "Z02", "Z03", "Z05", "Z06", "Z07", "Z09", "Z10", "Z11", "Z14", "Z15", "Z19", "Z20", "Z24", "Z26"],
+      "ordered": false
+    },
+    "trt": {
+      "levels": ["placebo", "drug", "drug+"],
+      "ordered": false
+    }
+  }
+}

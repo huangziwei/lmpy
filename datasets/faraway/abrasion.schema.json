@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "run": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    },
+    "position": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    },
+    "material": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    }
+  }
+}

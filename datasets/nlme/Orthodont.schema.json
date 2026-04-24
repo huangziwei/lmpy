@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Subject": {
+      "levels": ["M16", "M05", "M02", "M11", "M07", "M08", "M03", "M12", "M13", "M14", "M09", "M15", "M06", "M04", "M01", "M10", "F10", "F09", "F06", "F01", "F05", "F07", "F02", "F08", "F03", "F04", "F11"],
+      "ordered": true
+    },
+    "Sex": {
+      "levels": ["Male", "Female"],
+      "ordered": false
+    }
+  }
+}

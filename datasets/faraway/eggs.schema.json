@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Lab": {
+      "levels": ["I", "II", "III", "IV", "V", "VI"],
+      "ordered": false
+    },
+    "Technician": {
+      "levels": ["one", "two"],
+      "ordered": false
+    },
+    "Sample": {
+      "levels": ["G", "H"],
+      "ordered": false
+    }
+  }
+}

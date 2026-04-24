@@ -1,0 +1,36 @@
+{
+  "factors": {
+    "longlive": {
+      "levels": ["<6mos", "6-12mos", "1-3yrs", "3-10yrs", "10yrs"],
+      "ordered": false
+    },
+    "wherebfr": {
+      "levels": ["same", "Exeter", "Devon", "Britain", "Abroad"],
+      "ordered": false
+    },
+    "hownbly": {
+      "levels": ["Vunfriendly", "NVfriendly", "Average", "FFriendly", "VFriendly"],
+      "ordered": false
+    },
+    "knowname": {
+      "levels": ["none", "1-5", "6-20", "20+"],
+      "ordered": false
+    },
+    "callname": {
+      "levels": ["none", "1-5", "6-20", "20+"],
+      "ordered": false
+    },
+    "age": {
+      "levels": ["-18", "18-30", "31-50", "51-65", "65+"],
+      "ordered": false
+    },
+    "district": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["female", "male"],
+      "ordered": false
+    }
+  }
+}

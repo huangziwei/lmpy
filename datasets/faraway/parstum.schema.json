@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "parent": {
+      "levels": ["Both", "Neither", "One"],
+      "ordered": false
+    },
+    "student": {
+      "levels": ["Never", "Occasional", "Regular"],
+      "ordered": false
+    }
+  }
+}

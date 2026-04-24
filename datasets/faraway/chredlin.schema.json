@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "side": {
+      "levels": ["n", "s"],
+      "ordered": false
+    }
+  }
+}

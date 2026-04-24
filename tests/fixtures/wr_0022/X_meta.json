@@ -1,7 +1,10 @@
 {
-  "colnames": ["(Intercept)", "CO2", "tree"],
-  "assign": [0, 1, 2],
-  "contrasts": null,
+  "colnames": ["(Intercept)", "CO22", "tree2", "tree3", "tree4", "tree5", "tree6"],
+  "assign": [0, 1, 2, 2, 2, 2, 2],
+  "contrasts": {
+    "CO2": "contr.treatment",
+    "tree": "contr.treatment"
+  },
   "term_labels": ["CO2", "tree"],
   "intercept": true,
   "response": 1

@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Worker": {
+      "levels": ["6", "2", "4", "1", "3", "5"],
+      "ordered": true
+    },
+    "Machine": {
+      "levels": ["A", "B", "C"],
+      "ordered": false
+    }
+  }
+}

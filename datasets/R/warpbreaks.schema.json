@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "wool": {
+      "levels": ["A", "B"],
+      "ordered": false
+    },
+    "tension": {
+      "levels": ["L", "M", "H"],
+      "ordered": false
+    }
+  }
+}

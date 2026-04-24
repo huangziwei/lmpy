@@ -1,5 +1,5 @@
 {
-  "colnames": ["(Intercept)", "a+", "b+"],
+  "colnames": ["(Intercept)", "a-", "b-"],
   "assign": [0, 1, 2],
   "contrasts": {
     "a": "contr.treatment",

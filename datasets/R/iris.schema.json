@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Species": {
+      "levels": ["setosa", "versicolor", "virginica"],
+      "ordered": false
+    }
+  }
+}

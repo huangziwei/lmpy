@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "mfr": {
+      "levels": ["G", "K", "N", "P", "Q", "R"],
+      "ordered": false
+    },
+    "vitamins": {
+      "levels": ["100%", "enriched", "none"],
+      "ordered": false
+    }
+  }
+}

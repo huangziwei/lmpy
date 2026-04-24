@@ -1,0 +1,24 @@
+{
+  "factors": {
+    "gender": {
+      "levels": ["female", "male"],
+      "ordered": false
+    },
+    "race": {
+      "levels": ["african-amer", "asian", "hispanic", "white"],
+      "ordered": false
+    },
+    "ses": {
+      "levels": ["high", "low", "middle"],
+      "ordered": false
+    },
+    "schtyp": {
+      "levels": ["private", "public"],
+      "ordered": false
+    },
+    "prog": {
+      "levels": ["academic", "general", "vocation"],
+      "ordered": false
+    }
+  }
+}

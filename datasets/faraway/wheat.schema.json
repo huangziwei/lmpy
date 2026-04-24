@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "variety": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    }
+  }
+}

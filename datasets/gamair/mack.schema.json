@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "country": {
+      "levels": ["EN", "fr", "IR", "SP"],
+      "ordered": false
+    },
+    "vessel": {
+      "levels": ["CIRO", "COSA", "LOFO", "thal"],
+      "ordered": false
+    }
+  }
+}

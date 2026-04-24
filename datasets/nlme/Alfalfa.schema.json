@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Variety": {
+      "levels": ["Cossack", "Ladak", "Ranger"],
+      "ordered": false
+    },
+    "Date": {
+      "levels": ["None", "S1", "S20", "O7"],
+      "ordered": false
+    },
+    "Block": {
+      "levels": ["1", "2", "3", "4", "5", "6"],
+      "ordered": false
+    }
+  }
+}

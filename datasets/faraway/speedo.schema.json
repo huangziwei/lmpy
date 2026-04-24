@@ -1,0 +1,64 @@
+{
+  "factors": {
+    "h": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "d": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "l": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "b": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "j": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "f": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "n": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "a": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "i": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "e": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "m": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "c": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "k": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "g": {
+      "levels": ["+", "-"],
+      "ordered": false
+    },
+    "o": {
+      "levels": ["+", "-"],
+      "ordered": false
+    }
+  }
+}

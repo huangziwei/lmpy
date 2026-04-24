@@ -1,5 +1,5 @@
 {
-  "colnames": ["(Intercept)", "woolB", "C(tension, base = 2)H", "C(tension, base = 2)M"],
+  "colnames": ["(Intercept)", "woolB", "C(tension, base = 2)L", "C(tension, base = 2)H"],
   "assign": [0, 1, 2, 2],
   "contrasts": {
     "wool": "contr.treatment",

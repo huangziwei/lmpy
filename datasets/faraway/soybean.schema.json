@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "variety": {
+      "levels": ["arasan", "check", "fermate", "semesan", "spergon"],
+      "ordered": false
+    },
+    "replicate": {
+      "levels": ["1", "2", "3", "4", "5"],
+      "ordered": false
+    }
+  }
+}

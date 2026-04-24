@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "laser": {
+      "levels": ["40W", "50W", "60W"],
+      "ordered": false
+    },
+    "tape": {
+      "levels": ["slow", "medium", "fast"],
+      "ordered": false
+    }
+  }
+}

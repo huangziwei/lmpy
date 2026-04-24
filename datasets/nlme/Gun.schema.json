@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Method": {
+      "levels": ["M1", "M2"],
+      "ordered": false
+    },
+    "Team": {
+      "levels": ["T1S", "T3S", "T2S", "T1A", "T2A", "T3A", "T1H", "T3H", "T2H"],
+      "ordered": true
+    },
+    "Physique": {
+      "levels": ["Slight", "Average", "Heavy"],
+      "ordered": true
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "Season": {
+      "levels": ["Fall", "Summer"],
+      "ordered": false
+    },
+    "TypeM": {
+      "levels": ["R", "W"],
+      "ordered": false
+    },
+    "TypeF": {
+      "levels": ["R", "W"],
+      "ordered": false
+    },
+    "Cross": {
+      "levels": ["RR", "RW", "WR", "WW"],
+      "ordered": false
+    }
+  }
+}

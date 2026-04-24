@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "location": {
+      "levels": ["Buckingham", "Louisa"],
+      "ordered": false
+    },
+    "gender": {
+      "levels": ["male", "female"],
+      "ordered": false
+    },
+    "frame": {
+      "levels": ["small", "medium", "large"],
+      "ordered": false
+    }
+  }
+}

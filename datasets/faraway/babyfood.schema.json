@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "sex": {
+      "levels": ["Boy", "Girl"],
+      "ordered": false
+    },
+    "food": {
+      "levels": ["Bottle", "Breast", "Suppl"],
+      "ordered": false
+    }
+  }
+}

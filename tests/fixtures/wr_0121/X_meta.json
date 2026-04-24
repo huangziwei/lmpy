@@ -1,7 +1,9 @@
 {
-  "colnames": ["(Intercept)", "group"],
+  "colnames": ["(Intercept)", "group2"],
   "assign": [0, 1],
-  "contrasts": null,
+  "contrasts": {
+    "group": "contr.treatment"
+  },
   "term_labels": "group",
   "intercept": true,
   "response": 1

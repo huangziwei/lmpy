@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "smoker": {
+      "levels": ["yes", "no"],
+      "ordered": false
+    },
+    "dead": {
+      "levels": ["yes", "no"],
+      "ordered": false
+    },
+    "age": {
+      "levels": ["18-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75+"],
+      "ordered": false
+    }
+  }
+}

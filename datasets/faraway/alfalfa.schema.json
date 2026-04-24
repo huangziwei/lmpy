@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "shade": {
+      "levels": ["1", "2", "3", "4", "5"],
+      "ordered": false
+    },
+    "irrigation": {
+      "levels": ["1", "2", "3", "4", "5"],
+      "ordered": false
+    },
+    "inoculum": {
+      "levels": ["A", "B", "C", "D", "E"],
+      "ordered": false
+    }
+  }
+}

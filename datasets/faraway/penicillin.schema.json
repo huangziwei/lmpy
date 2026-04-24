@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "treat": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    },
+    "blend": {
+      "levels": ["Blend1", "Blend2", "Blend3", "Blend4", "Blend5"],
+      "ordered": false
+    }
+  }
+}

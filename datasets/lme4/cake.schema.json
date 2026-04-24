@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "replicate": {
+      "levels": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"],
+      "ordered": false
+    },
+    "recipe": {
+      "levels": ["A", "B", "C"],
+      "ordered": false
+    },
+    "temperature": {
+      "levels": ["175", "185", "195", "205", "215", "225"],
+      "ordered": true
+    }
+  }
+}

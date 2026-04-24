@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Lab": {
+      "levels": ["L1", "L2", "L3", "L4", "L5", "L6"],
+      "ordered": false
+    },
+    "Spc": {
+      "levels": ["S1", "S2", "S3", "S4", "S5", "S6", "S7"],
+      "ordered": false
+    },
+    "Bat": {
+      "levels": ["B1", "B2", "B3"],
+      "ordered": false
+    }
+  }
+}

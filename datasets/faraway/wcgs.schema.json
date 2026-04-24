@@ -1,0 +1,24 @@
+{
+  "factors": {
+    "behave": {
+      "levels": ["A1", "A2", "B3", "B4"],
+      "ordered": false
+    },
+    "dibep": {
+      "levels": ["A", "B"],
+      "ordered": false
+    },
+    "chd": {
+      "levels": ["no", "yes"],
+      "ordered": false
+    },
+    "typechd": {
+      "levels": ["angina", "infdeath", "none", "silent"],
+      "ordered": false
+    },
+    "arcus": {
+      "levels": ["absent", "present"],
+      "ordered": false
+    }
+  }
+}

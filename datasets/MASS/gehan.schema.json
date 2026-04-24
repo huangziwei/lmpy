@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "treat": {
+      "levels": ["6-MP", "control"],
+      "ordered": false
+    }
+  }
+}

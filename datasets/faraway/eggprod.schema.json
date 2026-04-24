@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "treat": {
+      "levels": ["E", "F", "O"],
+      "ordered": false
+    },
+    "block": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    }
+  }
+}

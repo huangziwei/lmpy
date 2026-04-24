@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "sex": {
+      "levels": ["F", "M"],
+      "ordered": false
+    },
+    "treatment": {
+      "levels": ["N", "S"],
+      "ordered": false
+    }
+  }
+}

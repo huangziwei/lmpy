@@ -3879,7 +3879,12 @@ def _nat_param(
     Y = np.linalg.solve(R.T, S)
     RSR = np.linalg.solve(R.T, Y.T).T
     RSR = 0.5 * (RSR + RSR.T)
-    w, V = np.linalg.eigh(RSR)
+    # Match R's eigen() eigenvector basis inside degenerate eigenspaces by
+    # calling the same LAPACK driver (MRRR, via evr). numpy's eigh uses evd
+    # (D&C), which rotates the null-space differently and leaks into the
+    # final X/P columns for fs-style smooths that don't re-rotate the null.
+    from scipy.linalg import eigh as _sla_eigh
+    w, V = _sla_eigh(RSR, driver="evr")
     order = np.argsort(-w)  # descending
     w = w[order]
     V = V[:, order]

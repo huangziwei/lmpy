@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Insulate": {
+      "levels": ["After", "Before"],
+      "ordered": false
+    }
+  }
+}

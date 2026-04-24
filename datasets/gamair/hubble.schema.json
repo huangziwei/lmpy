@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Galaxy": {
+      "levels": ["IC4182", "NGC0300", "NGC0925", "NGC1326A", "NGC1365", "NGC1425", "NGC2090", "NGC2403", "NGC2541", "NGC3031", "NGC3198", "NGC3351", "NGC3368", "NGC3621", "NGC4321", "NGC4414", "NGC4496A", "NGC4535", "NGC4536", "NGC4548", "NGC4639", "NGC4725", "NGC5253", "NGC7331"],
+      "ordered": false
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "B": {
+      "levels": ["I", "II", "III", "IV", "V", "VI"],
+      "ordered": false
+    },
+    "V": {
+      "levels": ["Golden.rain", "Marvellous", "Victory"],
+      "ordered": false
+    },
+    "N": {
+      "levels": ["0.0cwt", "0.2cwt", "0.4cwt", "0.6cwt"],
+      "ordered": false
+    }
+  }
+}

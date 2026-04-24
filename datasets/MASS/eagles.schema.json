@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "P": {
+      "levels": ["L", "S"],
+      "ordered": false
+    },
+    "A": {
+      "levels": ["A", "I"],
+      "ordered": false
+    },
+    "V": {
+      "levels": ["L", "S"],
+      "ordered": false
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Cult": {
+      "levels": ["c39", "c52"],
+      "ordered": false
+    },
+    "Date": {
+      "levels": ["d16", "d20", "d21"],
+      "ordered": false
+    }
+  }
+}

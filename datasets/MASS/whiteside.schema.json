@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Insul": {
+      "levels": ["Before", "After"],
+      "ordered": false
+    }
+  }
+}

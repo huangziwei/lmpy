@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Subject": {
+      "levels": ["1", "2", "3", "4", "5", "6", "7"],
+      "ordered": false
+    },
+    "Date": {
+      "levels": ["1", "2"],
+      "ordered": false
+    }
+  }
+}

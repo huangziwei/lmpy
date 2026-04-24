@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "state": {
+      "levels": ["NSW", "Other", "QLD", "VIC"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["F", "M"],
+      "ordered": false
+    },
+    "status": {
+      "levels": ["A", "D"],
+      "ordered": false
+    },
+    "T.categ": {
+      "levels": ["hs", "hsid", "id", "het", "haem", "blood", "mother", "other"],
+      "ordered": false
+    }
+  }
+}

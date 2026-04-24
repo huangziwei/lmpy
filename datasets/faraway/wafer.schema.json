@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "x1": {
+      "levels": ["-", "+"],
+      "ordered": false
+    },
+    "x2": {
+      "levels": ["-", "+"],
+      "ordered": false
+    },
+    "x3": {
+      "levels": ["-", "+"],
+      "ordered": false
+    },
+    "x4": {
+      "levels": ["-", "+"],
+      "ordered": false
+    }
+  }
+}

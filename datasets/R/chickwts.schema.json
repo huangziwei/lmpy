@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "feed": {
+      "levels": ["casein", "horsebean", "linseed", "meatmeal", "soybean", "sunflower"],
+      "ordered": false
+    }
+  }
+}

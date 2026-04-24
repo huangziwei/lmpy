@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "region": {
+      "levels": ["Africa", "Europe", "Asia", "Americas"],
+      "ordered": false
+    },
+    "oil": {
+      "levels": ["oil exports", "no oil exports"],
+      "ordered": false
+    }
+  }
+}

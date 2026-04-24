@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "supp": {
+      "levels": ["OJ", "VC"],
+      "ordered": false
+    }
+  }
+}

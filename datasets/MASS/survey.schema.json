@@ -1,0 +1,32 @@
+{
+  "factors": {
+    "Sex": {
+      "levels": ["Female", "Male"],
+      "ordered": false
+    },
+    "W.Hnd": {
+      "levels": ["Left", "Right"],
+      "ordered": false
+    },
+    "Fold": {
+      "levels": ["L on R", "Neither", "R on L"],
+      "ordered": false
+    },
+    "Clap": {
+      "levels": ["Left", "Neither", "Right"],
+      "ordered": false
+    },
+    "Exer": {
+      "levels": ["Freq", "None", "Some"],
+      "ordered": false
+    },
+    "Smoke": {
+      "levels": ["Heavy", "Never", "Occas", "Regul"],
+      "ordered": false
+    },
+    "M.I": {
+      "levels": ["Imperial", "Metric"],
+      "ordered": false
+    }
+  }
+}

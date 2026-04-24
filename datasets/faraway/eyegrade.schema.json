@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "right": {
+      "levels": ["best", "second", "third", "worst"],
+      "ordered": false
+    },
+    "left": {
+      "levels": ["best", "second", "third", "worst"],
+      "ordered": false
+    }
+  }
+}

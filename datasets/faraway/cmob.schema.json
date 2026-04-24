@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "class71": {
+      "levels": ["I", "II", "IIIN", "IIIM", "IV", "V"],
+      "ordered": false
+    },
+    "class81": {
+      "levels": ["I", "II", "IIIN", "IIIM", "IV", "V"],
+      "ordered": false
+    }
+  }
+}

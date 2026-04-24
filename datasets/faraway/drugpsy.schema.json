@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "diagnosis": {
+      "levels": ["Affective.Disorder", "Neurosis", "Personality.Disorder", "Schizophrenia", "Special.Symptoms"],
+      "ordered": false
+    },
+    "drug": {
+      "levels": ["no", "yes"],
+      "ordered": false
+    }
+  }
+}

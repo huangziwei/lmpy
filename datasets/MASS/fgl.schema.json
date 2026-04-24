@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "type": {
+      "levels": ["WinF", "WinNF", "Veh", "Con", "Tabl", "Head"],
+      "ordered": false
+    }
+  }
+}

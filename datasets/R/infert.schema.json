@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "education": {
+      "levels": ["0-5yrs", "6-11yrs", "12+ yrs"],
+      "ordered": false
+    }
+  }
+}

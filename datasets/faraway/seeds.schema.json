@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "covered": {
+      "levels": ["no", "yes"],
+      "ordered": false
+    }
+  }
+}

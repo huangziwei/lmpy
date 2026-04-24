@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "husband": {
+      "levels": ["never", "fairly", "very", "always"],
+      "ordered": false
+    },
+    "wife": {
+      "levels": ["never", "fairly", "very", "always"],
+      "ordered": false
+    }
+  }
+}

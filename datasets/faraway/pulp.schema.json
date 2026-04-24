@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "operator": {
+      "levels": ["a", "b", "c", "d"],
+      "ordered": false
+    }
+  }
+}

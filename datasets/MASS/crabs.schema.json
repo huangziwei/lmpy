@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "sp": {
+      "levels": ["B", "O"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["F", "M"],
+      "ordered": false
+    }
+  }
+}

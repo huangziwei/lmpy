@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "sex": {
+      "levels": ["Female", "Male"],
+      "ordered": false
+    },
+    "race": {
+      "levels": ["White", "Asian", "Black", "Hispanic"],
+      "ordered": false
+    },
+    "paredu": {
+      "levels": ["ba", "college", "hs", "lesshs", "ma", "phd"],
+      "ordered": false
+    }
+  }
+}

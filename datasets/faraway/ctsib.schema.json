@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Sex": {
+      "levels": ["female", "male"],
+      "ordered": false
+    },
+    "Surface": {
+      "levels": ["foam", "norm"],
+      "ordered": false
+    },
+    "Vision": {
+      "levels": ["closed", "dome", "open"],
+      "ordered": false
+    }
+  }
+}

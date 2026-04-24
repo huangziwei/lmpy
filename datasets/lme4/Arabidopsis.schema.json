@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "reg": {
+      "levels": ["NL", "SP", "SW"],
+      "ordered": false
+    },
+    "popu": {
+      "levels": ["1.SP", "1.SW", "2.SW", "3.NL", "5.NL", "5.SP", "6.SP", "7.SW", "8.SP"],
+      "ordered": false
+    },
+    "amd": {
+      "levels": ["clipped", "unclipped"],
+      "ordered": false
+    },
+    "status": {
+      "levels": ["Normal", "Petri.Plate", "Transplant"],
+      "ordered": false
+    }
+  }
+}

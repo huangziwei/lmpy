@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "Sat": {
+      "levels": ["Low", "Medium", "High"],
+      "ordered": true
+    },
+    "Infl": {
+      "levels": ["Low", "Medium", "High"],
+      "ordered": false
+    },
+    "Type": {
+      "levels": ["Tower", "Apartment", "Atrium", "Terrace"],
+      "ordered": false
+    },
+    "Cont": {
+      "levels": ["Low", "High"],
+      "ordered": false
+    }
+  }
+}

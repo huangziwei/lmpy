@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "Block": {
+      "levels": ["2", "1"],
+      "ordered": true
+    },
+    "sample": {
+      "levels": ["a", "b", "c", "d", "e", "f"],
+      "ordered": false
+    },
+    "dilut": {
+      "levels": ["1", "2", "3", "4", "5"],
+      "ordered": false
+    }
+  }
+}

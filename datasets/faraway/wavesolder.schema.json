@@ -1,0 +1,32 @@
+{
+  "factors": {
+    "prebake": {
+      "levels": ["1", "2"],
+      "ordered": false
+    },
+    "flux": {
+      "levels": ["1", "2"],
+      "ordered": false
+    },
+    "speed": {
+      "levels": ["1", "2"],
+      "ordered": false
+    },
+    "preheat": {
+      "levels": ["1", "2"],
+      "ordered": false
+    },
+    "cooling": {
+      "levels": ["1", "2"],
+      "ordered": false
+    },
+    "agitator": {
+      "levels": ["1", "2"],
+      "ordered": false
+    },
+    "temp": {
+      "levels": ["1", "2"],
+      "ordered": false
+    }
+  }
+}

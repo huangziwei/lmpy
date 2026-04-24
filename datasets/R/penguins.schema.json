@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "species": {
+      "levels": ["Adelie", "Chinstrap", "Gentoo"],
+      "ordered": false
+    },
+    "island": {
+      "levels": ["Biscoe", "Dream", "Torgersen"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["female", "male"],
+      "ordered": false
+    }
+  }
+}

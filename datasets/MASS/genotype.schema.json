@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Litter": {
+      "levels": ["A", "B", "I", "J"],
+      "ordered": false
+    },
+    "Mother": {
+      "levels": ["A", "B", "I", "J"],
+      "ordered": false
+    }
+  }
+}

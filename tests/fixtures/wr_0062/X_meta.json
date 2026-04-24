@@ -1,5 +1,5 @@
 {
-  "colnames": ["InsulAfter", "InsulBefore", "InsulAfter:Temp", "InsulBefore:Temp"],
+  "colnames": ["InsulBefore", "InsulAfter", "InsulBefore:Temp", "InsulAfter:Temp"],
   "assign": [1, 1, 2, 2],
   "contrasts": {
     "Insul": "contr.treatment"

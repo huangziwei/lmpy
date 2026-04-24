@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "subject": {
+      "levels": ["A", "B", "D", "F", "K", "L", "M", "N", "P", "Q", "R", "T", "U", "V", "Y"],
+      "ordered": false
+    }
+  }
+}

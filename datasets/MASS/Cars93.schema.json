@@ -1,0 +1,40 @@
+{
+  "factors": {
+    "Manufacturer": {
+      "levels": ["Acura", "Audi", "BMW", "Buick", "Cadillac", "Chevrolet", "Chrylser", "Chrysler", "Dodge", "Eagle", "Ford", "Geo", "Honda", "Hyundai", "Infiniti", "Lexus", "Lincoln", "Mazda", "Mercedes-Benz", "Mercury", "Mitsubishi", "Nissan", "Oldsmobile", "Plymouth", "Pontiac", "Saab", "Saturn", "Subaru", "Suzuki", "Toyota", "Volkswagen", "Volvo"],
+      "ordered": false
+    },
+    "Model": {
+      "levels": ["100", "190E", "240", "300E", "323", "535i", "626", "850", "90", "900", "Accord", "Achieva", "Aerostar", "Altima", "Astro", "Bonneville", "Camaro", "Camry", "Capri", "Caprice", "Caravan", "Cavalier", "Celica", "Century", "Civic", "Colt", "Concorde", "Continental", "Corrado", "Corsica", "Corvette", "Cougar", "Crown_Victoria", "Cutlass_Ciera", "DeVille", "Diamante", "Dynasty", "ES300", "Eighty-Eight", "Elantra", "Escort", "Eurovan", "Excel", "Festiva", "Firebird", "Fox", "Grand_Prix", "Imperial", "Integra", "Justy", "Laser", "LeBaron", "LeMans", "LeSabre", "Legacy", "Legend", "Loyale", "Lumina", "Lumina_APV", "MPV", "Maxima", "Metro", "Mirage", "Mustang", "Passat", "Prelude", "Previa", "Probe", "Protege", "Q45", "Quest", "RX-7", "Riviera", "Roadmaster", "SC300", "SL", "Scoupe", "Sentra", "Seville", "Shadow", "Silhouette", "Sonata", "Spirit", "Stealth", "Storm", "Summit", "Sunbird", "Swift", "Taurus", "Tempo", "Tercel", "Town_Car", "Vision"],
+      "ordered": false
+    },
+    "Type": {
+      "levels": ["Compact", "Large", "Midsize", "Small", "Sporty", "Van"],
+      "ordered": false
+    },
+    "AirBags": {
+      "levels": ["Driver & Passenger", "Driver only", "None"],
+      "ordered": false
+    },
+    "DriveTrain": {
+      "levels": ["4WD", "Front", "Rear"],
+      "ordered": false
+    },
+    "Cylinders": {
+      "levels": ["3", "4", "5", "6", "8", "rotary"],
+      "ordered": false
+    },
+    "Man.trans.avail": {
+      "levels": ["No", "Yes"],
+      "ordered": false
+    },
+    "Origin": {
+      "levels": ["USA", "non-USA"],
+      "ordered": false
+    },
+    "Make": {
+      "levels": ["Acura Integra", "Acura Legend", "Audi 100", "Audi 90", "BMW 535i", "Buick Century", "Buick LeSabre", "Buick Riviera", "Buick Roadmaster", "Cadillac DeVille", "Cadillac Seville", "Chevrolet Astro", "Chevrolet Camaro", "Chevrolet Caprice", "Chevrolet Cavalier", "Chevrolet Corsica", "Chevrolet Corvette", "Chevrolet Lumina", "Chevrolet Lumina_APV", "Chrylser Concorde", "Chrysler Imperial", "Chrysler LeBaron", "Dodge Caravan", "Dodge Colt", "Dodge Dynasty", "Dodge Shadow", "Dodge Spirit", "Dodge Stealth", "Eagle Summit", "Eagle Vision", "Ford Aerostar", "Ford Crown_Victoria", "Ford Escort", "Ford Festiva", "Ford Mustang", "Ford Probe", "Ford Taurus", "Ford Tempo", "Geo Metro", "Geo Storm", "Honda Accord", "Honda Civic", "Honda Prelude", "Hyundai Elantra", "Hyundai Excel", "Hyundai Scoupe", "Hyundai Sonata", "Infiniti Q45", "Lexus ES300", "Lexus SC300", "Lincoln Continental", "Lincoln Town_Car", "Mazda 323", "Mazda 626", "Mazda MPV", "Mazda Protege", "Mazda RX-7", "Mercedes-Benz 190E", "Mercedes-Benz 300E", "Mercury Capri", "Mercury Cougar", "Mitsubishi Diamante", "Mitsubishi Mirage", "Nissan Altima", "Nissan Maxima", "Nissan Quest", "Nissan Sentra", "Oldsmobile Achieva", "Oldsmobile Cutlass_Ciera", "Oldsmobile Eighty-Eight", "Oldsmobile Silhouette", "Plymouth Laser", "Pontiac Bonneville", "Pontiac Firebird", "Pontiac Grand_Prix", "Pontiac LeMans", "Pontiac Sunbird", "Saab 900", "Saturn SL", "Subaru Justy", "Subaru Legacy", "Subaru Loyale", "Suzuki Swift", "Toyota Camry", "Toyota Celica", "Toyota Previa", "Toyota Tercel", "Volkswagen Corrado", "Volkswagen Eurovan", "Volkswagen Fox", "Volkswagen Passat", "Volvo 240", "Volvo 850"],
+      "ordered": false
+    }
+  }
+}

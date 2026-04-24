@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "OME": {
+      "levels": ["N/A", "high", "low"],
+      "ordered": false
+    },
+    "Noise": {
+      "levels": ["coherent", "incoherent"],
+      "ordered": false
+    }
+  }
+}

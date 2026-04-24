@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "operator": {
+      "levels": ["op1", "op2", "op3", "op4"],
+      "ordered": false
+    },
+    "day": {
+      "levels": ["day1", "day2", "day3", "day4"],
+      "ordered": false
+    },
+    "supplier": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    }
+  }
+}

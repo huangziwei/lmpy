@@ -1,0 +1,32 @@
+{
+  "factors": {
+    "selfLR": {
+      "levels": ["extLib", "Lib", "sliLib", "Mod", "sliCon", "Con", "extCon"],
+      "ordered": true
+    },
+    "ClinLR": {
+      "levels": ["extLib", "Lib", "sliLib", "Mod", "sliCon", "Con", "extCon"],
+      "ordered": true
+    },
+    "DoleLR": {
+      "levels": ["extLib", "Lib", "sliLib", "Mod", "sliCon", "Con", "extCon"],
+      "ordered": true
+    },
+    "PID": {
+      "levels": ["strDem", "weakDem", "indDem", "indind", "indRep", "weakRep", "strRep"],
+      "ordered": true
+    },
+    "educ": {
+      "levels": ["MS", "HSdrop", "HS", "Coll", "CCdeg", "BAdeg", "MAdeg"],
+      "ordered": true
+    },
+    "income": {
+      "levels": ["$3Kminus", "$3K-$5K", "$5K-$7K", "$7K-$9K", "$9K-$10K", "$10K-$11K", "$11K-$12K", "$12K-$13K", "$13K-$14K", "$14K-$15K", "$15K-$17K", "$17K-$20K", "$20K-$22K", "$22K-$25K", "$25K-$30K", "$30K-$35K", "$35K-$40K", "$40K-$45K", "$45K-$50K", "$50K-$60K", "$60K-$75K", "$75K-$90K", "$90K-$105K", "$105Kplus"],
+      "ordered": true
+    },
+    "vote": {
+      "levels": ["Clinton", "Dole"],
+      "ordered": false
+    }
+  }
+}

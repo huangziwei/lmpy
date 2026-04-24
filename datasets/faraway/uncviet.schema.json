@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "policy": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    },
+    "sex": {
+      "levels": ["Female", "Male"],
+      "ordered": false
+    },
+    "year": {
+      "levels": ["Fresh", "Grad", "Junior", "Senior", "Soph"],
+      "ordered": false
+    }
+  }
+}

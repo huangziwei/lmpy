@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "style": {
+      "levels": ["g", "r"],
+      "ordered": false
+    }
+  }
+}

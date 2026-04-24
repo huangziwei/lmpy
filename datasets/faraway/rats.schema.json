@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "poison": {
+      "levels": ["I", "II", "III"],
+      "ordered": false
+    },
+    "treat": {
+      "levels": ["A", "B", "C", "D"],
+      "ordered": false
+    }
+  }
+}

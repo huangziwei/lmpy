@@ -1,6 +1,8 @@
 {
-  "colnames": ["(Intercept)", "fac"],
-  "assign": [0, 1],
-  "contrasts": null,
+  "colnames": ["(Intercept)", "fac2", "fac3"],
+  "assign": [0, 1, 1],
+  "contrasts": {
+    "fac": "contr.treatment"
+  },
   "parametric_rhs": "fac"
 }

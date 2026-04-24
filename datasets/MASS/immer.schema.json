@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Loc": {
+      "levels": ["C", "D", "GR", "M", "UF", "W"],
+      "ordered": false
+    },
+    "Var": {
+      "levels": ["M", "P", "S", "T", "V"],
+      "ordered": false
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Subject": {
+      "levels": ["5", "3", "2", "4", "1"],
+      "ordered": true
+    },
+    "Formulation": {
+      "levels": ["tetrachel", "tetracyn"],
+      "ordered": false
+    }
+  }
+}

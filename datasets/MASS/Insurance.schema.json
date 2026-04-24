@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "District": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    },
+    "Group": {
+      "levels": ["<1l", "1-1.5l", "1.5-2l", ">2l"],
+      "ordered": true
+    },
+    "Age": {
+      "levels": ["<25", "25-29", "30-35", ">35"],
+      "ordered": true
+    }
+  }
+}

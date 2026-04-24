@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "Rail": {
+      "levels": ["2", "5", "1", "6", "3", "4"],
+      "ordered": true
+    }
+  }
+}

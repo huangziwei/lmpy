@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "tumor": {
+      "levels": ["freckle", "indeterminate", "nodular", "superficial"],
+      "ordered": false
+    },
+    "site": {
+      "levels": ["extremity", "head", "trunk"],
+      "ordered": false
+    }
+  }
+}

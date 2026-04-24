@@ -1,0 +1,20 @@
+{
+  "factors": {
+    "block": {
+      "levels": ["1", "2", "3", "4", "5", "6"],
+      "ordered": false
+    },
+    "N": {
+      "levels": ["0", "1"],
+      "ordered": false
+    },
+    "P": {
+      "levels": ["0", "1"],
+      "ordered": false
+    },
+    "K": {
+      "levels": ["0", "1"],
+      "ordered": false
+    }
+  }
+}

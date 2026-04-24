@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "state": {
+      "levels": ["treated", "untreated"],
+      "ordered": false
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Team": {
+      "levels": ["Algeria", "Argentina", "Australia", "Brazil", "Cameroon", "Chile", "Denmark", "England", "France", "Germany", "Ghana", "Greece", "Honduras", "Italy", "Ivory Coast", "Japan", "Mexico", "Netherlands", "New Zealand", "Nigeria", "North Korea", "Paraguay", "Portugal", "Serbia", "Slovakia", "Slovenia", "South Africa", "South Korea", "Spain", "Switzerland", "USA", "Uruguay"],
+      "ordered": false
+    },
+    "Position": {
+      "levels": ["Defender", "Forward", "Goalkeeper", "Midfielder"],
+      "ordered": false
+    }
+  }
+}

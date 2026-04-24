@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "type": {
+      "levels": ["No", "Yes"],
+      "ordered": false
+    }
+  }
+}

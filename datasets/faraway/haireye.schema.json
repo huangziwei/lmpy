@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "eye": {
+      "levels": ["green", "hazel", "blue", "brown"],
+      "ordered": false
+    },
+    "hair": {
+      "levels": ["BLACK", "BROWN", "RED", "BLOND"],
+      "ordered": false
+    }
+  }
+}

@@ -1,7 +1,9 @@
 {
-  "colnames": ["(Intercept)", "Time", "Diet", "Time:Diet"],
-  "assign": [0, 1, 2, 3],
-  "contrasts": null,
+  "colnames": ["(Intercept)", "Time", "Diet2", "Diet3", "Time:Diet2", "Time:Diet3"],
+  "assign": [0, 1, 2, 2, 3, 3],
+  "contrasts": {
+    "Diet": "contr.treatment"
+  },
   "term_labels": ["Time", "Diet", "Time:Diet"],
   "intercept": true,
   "response": 1

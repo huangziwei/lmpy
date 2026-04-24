@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "status": {
+      "levels": ["mild", "normal", "severe"],
+      "ordered": false
+    }
+  }
+}

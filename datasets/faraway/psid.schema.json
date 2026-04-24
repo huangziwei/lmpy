@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "sex": {
+      "levels": ["F", "M"],
+      "ordered": false
+    }
+  }
+}

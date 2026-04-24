@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Breed": {
+      "levels": ["Ayrshire", "Canadian", "Guernsey", "Holstein-Fresian", "Jersey"],
+      "ordered": false
+    },
+    "Age": {
+      "levels": ["2year", "Mature"],
+      "ordered": false
+    }
+  }
+}

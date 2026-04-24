@@ -1,0 +1,8 @@
+{
+  "factors": {
+    "group": {
+      "levels": ["ctrl", "trt1", "trt2"],
+      "ordered": false
+    }
+  }
+}

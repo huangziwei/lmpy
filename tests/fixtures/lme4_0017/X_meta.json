@@ -1,7 +1,8 @@
 {
-  "colnames": ["(Intercept)", "recipeB", "recipeC", "temperature", "recipeB:temperature", "recipeC:temperature"],
-  "assign": [0, 1, 1, 2, 3, 3],
+  "colnames": ["(Intercept)", "recipeB", "recipeC", "temperature.L", "temperature.Q", "temperature.C", "temperature^4", "temperature^5", "recipeB:temperature.L", "recipeC:temperature.L", "recipeB:temperature.Q", "recipeC:temperature.Q", "recipeB:temperature.C", "recipeC:temperature.C", "recipeB:temperature^4", "recipeC:temperature^4", "recipeB:temperature^5", "recipeC:temperature^5"],
+  "assign": [0, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
   "contrasts": {
-    "recipe": "contr.treatment"
+    "recipe": "contr.treatment",
+    "temperature": "contr.poly"
   }
 }

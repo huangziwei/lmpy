@@ -1,0 +1,12 @@
+{
+  "factors": {
+    "Type": {
+      "levels": ["T1", "T2", "T3", "T4"],
+      "ordered": false
+    },
+    "Subject": {
+      "levels": ["8", "5", "4", "9", "6", "3", "7", "1", "2"],
+      "ordered": true
+    }
+  }
+}

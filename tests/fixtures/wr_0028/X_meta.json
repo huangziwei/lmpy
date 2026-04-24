@@ -1,7 +1,8 @@
 {
-  "colnames": ["(Intercept)", "Worker", "MachineB", "MachineC"],
-  "assign": [0, 1, 2, 2],
+  "colnames": ["(Intercept)", "Worker.L", "Worker.Q", "Worker.C", "Worker^4", "Worker^5", "MachineB", "MachineC"],
+  "assign": [0, 1, 1, 1, 1, 1, 2, 2],
   "contrasts": {
+    "Worker": "contr.poly",
     "Machine": "contr.treatment"
   },
   "term_labels": ["Worker", "Machine"],

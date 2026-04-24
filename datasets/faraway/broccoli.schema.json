@@ -1,0 +1,16 @@
+{
+  "factors": {
+    "grower": {
+      "levels": ["1", "2", "3"],
+      "ordered": false
+    },
+    "box": {
+      "levels": ["1", "2", "3", "4"],
+      "ordered": false
+    },
+    "cluster": {
+      "levels": ["1", "2", "3"],
+      "ordered": false
+    }
+  }
+}
