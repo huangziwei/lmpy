@@ -1,279 +1,314 @@
+"""Linear mixed-effects model — lme4-style profiled deviance.
+
+Built on lmpy.formula's ``parse → expand → materialize / materialize_bars``
+pipeline. The fixed-effect side comes from ``materialize`` (R-canonical
+column names). The random-effect side comes from ``materialize_bars``,
+which returns ``Z``, an integer ``Λᵀ`` template, and an initial ``θ``.
+
+We optimize the ML or REML profiled deviance over ``θ`` using L-BFGS-B
+(diagonal entries of ``Λ`` constrained to be ≥ 0 for identifiability),
+then recover ``β̂``, ``σ̂``, ``SE(β̂)``, and the per-bar variance components
+at the optimum.
+
+References
+----------
+Bates, Mächler, Bolker, Walker (2015), "Fitting Linear Mixed-Effects
+Models Using lme4", J. Stat. Software 67(1), §5 ("Profiled Deviance").
+"""
+
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-from scipy import stats
-from scipy.stats import norm, t, f
+from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
-from formulae import design_matrices
+
+from .formula import Name, expand, materialize, materialize_bars, parse
+
+__all__ = ["lme"]
+
+
+def _bar_sizes(cnms: dict) -> list[int]:
+    """Component count ``c`` per bar (1 for scalar bars, ≥ 2 for vector)."""
+    return [
+        len(names) if isinstance(names, list) else 1
+        for names in cnms.values()
+    ]
+
+
+def _theta_diag_idx(bar_sizes: list[int]) -> list[int]:
+    """0-indexed θ positions on the diagonal of any per-level Λᵀ block.
+
+    ``materialize_bars`` packs each c×c upper-triangular Λᵀ block row by
+    row: ``θ[off+0] = (0,0)``, ``θ[off+1] = (0,1)``, … . The diagonal
+    positions therefore start each row, at cumulative offsets ``c, c-1,
+    c-2, …``.
+    """
+    diag: list[int] = []
+    off = 0
+    for c in bar_sizes:
+        cum = 0
+        for i in range(c):
+            diag.append(off + cum)
+            cum += c - i
+        off += c * (c + 1) // 2
+    return diag
+
+
+def _per_bar_relative_cov(theta: np.ndarray, bar_sizes: list[int]) -> list[np.ndarray]:
+    """Recover the c×c relative-covariance ``Σ_b = Λ_b Λ_bᵀ`` per bar."""
+    blocks: list[np.ndarray] = []
+    off = 0
+    for c in bar_sizes:
+        Lt = np.zeros((c, c))
+        idx = 0
+        for i in range(c):
+            for j in range(i, c):
+                Lt[i, j] = theta[off + idx]
+                idx += 1
+        L = Lt.T
+        blocks.append(L @ L.T)
+        off += c * (c + 1) // 2
+    return blocks
 
 
 class lme:
-    def __init__(
-        self,
-        formula: str,
-        data: pd.DataFrame,
-        REML: bool = True,
-        method: str = "Nelder-Mead",
-    ):
+    """Linear mixed-effects model, fit by ML or REML profiled deviance.
 
-        # meta
+    Parameters
+    ----------
+    formula : str
+        lme4-style mixed model formula, e.g.
+        ``"Reaction ~ 1 + Days + (1+Days|Subject)"``.
+    data : pandas.DataFrame
+        Data table; rows with NA in any referenced column are dropped
+        before fitting.
+    REML : bool, default True
+        Fit by REML (matches lme4's default) or ML.
+
+    Attributes (always set)
+    -----------------------
+    n, p, q : int
+        Sample size, # of fixed-effect coefficients, # of random-effect
+        coefficients (= total number of Z columns).
+    n_groups : dict[str, int]
+        Number of unique levels per (raw) grouping factor.
+    sigma : float
+        Residual SD (σ̂).
+    bhat, se_bhat, t_values : pandas.DataFrame
+        Fixed-effect estimates / SEs / t-values, one row each, columns
+        keyed by R-canonical fixed-effect names (``(Intercept)``,
+        ``MachineB``, …).
+    sd_re : dict[str, np.ndarray]
+        Per-bar component SDs. Keyed by the disambiguated bar key from
+        ``ReTerms.cnms`` (e.g. ``"Subject"``, ``"Subject.1"``). Length
+        equals the bar's component count (1 for scalar bars).
+    corr_re : dict[str, np.ndarray | None]
+        Per-bar correlation matrix. ``None`` for scalar bars; a c×c
+        matrix for vector bars.
+    npar : int
+        Total parameter count (fixed effects + θ + 1 residual variance);
+        used for likelihood ratio tests.
+
+    Attributes (REML=True only)
+    ---------------------------
+    REML_criterion : float
+        Optimized REML criterion, ``-2 log L_REML``.
+
+    Attributes (REML=False only)
+    ----------------------------
+    deviance : float
+        Optimized ML deviance, ``-2 log L``.
+    loglike : float
+    AIC, BIC : float
+    df_resid : int
+        ``n - npar`` (matches lme4's printed ``df.resid``).
+    """
+
+    def __init__(self, formula: str, data: pd.DataFrame, REML: bool = True):
         self.formula = formula
-        self.data = data
         self.REML = REML
-        self.method = method
 
-        # design matrix
-        dm = design_matrices(formula, data)
-        self.terms = dm.group.terms.keys()
-        self.column_names = dm.common.terms.keys()
+        f_parsed = parse(formula)
+        if not isinstance(f_parsed.lhs, Name):
+            raise NotImplementedError(
+                f"lme requires a single-name response (y ~ ...); got LHS={f_parsed.lhs!r}"
+            )
+        response = f_parsed.lhs.ident
+        ef = expand(f_parsed, data_columns=list(data.columns))
+        if not ef.bars:
+            raise ValueError(
+                f"lme requires at least one random-effect bar; got formula={formula!r}"
+            )
 
-        self.Zs = [dm.group[key] for key in dm.group.terms.keys()]
-        self.y = y = np.array(dm.response.design_vector.astype(float))
-        self.X = X = np.array(dm.common.design_matrix)
-        self.Z = np.hstack(self.Zs)
-        self.XtX = X.T @ X
-        self.Xty = X.T @ y
+        # NA-omit. Both materialize and materialize_bars dropna over the
+        # same set of RHS-referenced columns, so calling them on the same
+        # input keeps X (DataFrame, with index) and Z (ndarray) row-aligned.
+        data = data.dropna(subset=[response])
+        X_df = materialize(ef, data)
+        re = materialize_bars(ef, data)
+        y = data.loc[X_df.index, response].to_numpy(dtype=float)
+        X = X_df.to_numpy(dtype=float)
+        Z = re.Z
+        n, p = X.shape
+        q = Z.shape[1]
 
-        self.n = len(self.y)
-        self.p = self.X.shape[1]  # number of variables in the fixed effect
-        self.qs = [
-            Z.shape[1] for Z in self.Zs
-        ]  # number of variables in each term of the random effect
-        self.q = np.sum(self.qs)
+        self.data = data
+        self.X = X_df
+        self.y = y
+        self.Z = Z
+        self.column_names = list(X_df.columns)
+        self.n = n
+        self.p = p
+        self.q = q
+        self._re = re
 
-        # model degree of freedom
-        self.df_model = self.p - 1 if "Intercept" in self.column_names else self.p
+        bar_sizes = _bar_sizes(re.cnms)
+        self._bar_sizes = bar_sizes
+        self.n_groups = {g: len(levs) for g, levs in re.flist_levels.items()}
 
-        # residual degrees of freedom (n - p)
-        self.df_residuals = (
-            self.n - self.df_model - 1
-            if "Intercept" in self.column_names
-            else self.n - self.df_model
+        # ------------- profiled-deviance optimization ----------------------
+        template = re.Lambdat
+        nz_mask = template > 0
+        theta_pos = template[nz_mask] - 1  # 0-indexed θ position per nz cell
+        eye_q = np.eye(q)
+        XtX = X.T @ X
+        Xty = X.T @ y
+        yty = float(y @ y)
+        log2pi = float(np.log(2.0 * np.pi))
+
+        def build_Lt(theta: np.ndarray) -> np.ndarray:
+            out = np.zeros(template.shape, dtype=float)
+            out[nz_mask] = theta[theta_pos]
+            return out
+
+        def objective(theta: np.ndarray) -> float:
+            Lt = build_Lt(theta)
+            ZL = Z @ Lt.T                    # n×q,  Z @ Λ
+            M = ZL.T @ ZL + eye_q
+            try:
+                Lz = np.linalg.cholesky(M)
+            except np.linalg.LinAlgError:
+                return 1e15
+            cu = solve_triangular(Lz, ZL.T @ y, lower=True)
+            RZX = solve_triangular(Lz, ZL.T @ X, lower=True)
+            XtX_eff = XtX - RZX.T @ RZX
+            try:
+                Rx = np.linalg.cholesky(XtX_eff)
+            except np.linalg.LinAlgError:
+                return 1e15
+            cb = solve_triangular(Rx, Xty - RZX.T @ cu, lower=True)
+            rss = yty - float(cu @ cu) - float(cb @ cb)
+            if rss <= 0:
+                return 1e15
+            log_det_Lz = float(np.log(np.diag(Lz)).sum())
+            if REML:
+                log_det_Rx = float(np.log(np.diag(Rx)).sum())
+                df = n - p
+                return (
+                    2.0 * log_det_Lz + 2.0 * log_det_Rx
+                    + df * (1.0 + log2pi + np.log(rss / df))
+                )
+            return 2.0 * log_det_Lz + n * (1.0 + log2pi + np.log(rss / n))
+
+        diag_set = set(_theta_diag_idx(bar_sizes))
+        bounds = [
+            (0.0, None) if i in diag_set else (None, None)
+            for i in range(len(re.theta))
+        ]
+
+        theta0 = re.theta.astype(float).copy()
+        res = minimize(
+            objective, theta0, method="L-BFGS-B", bounds=bounds,
+            options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 1000},
         )
+        theta_hat = res.x
+        self.theta = theta_hat
+        self._optim = res
 
-        # fit model
-        self.re, self.REML_criterion, self.convergence = self.fit(
-            REML=REML, method=method
-        )
-        bhat = self.fe = self.compute_b(self.Xtr, self.ytr)
+        # ------------- recover β̂, σ̂, SE(β̂) at the optimum ------------------
+        Lt = build_Lt(theta_hat)
+        ZL = Z @ Lt.T
+        M = ZL.T @ ZL + eye_q
+        Lz = np.linalg.cholesky(M)
+        cu = solve_triangular(Lz, ZL.T @ y, lower=True)
+        RZX = solve_triangular(Lz, ZL.T @ X, lower=True)
+        XtX_eff = XtX - RZX.T @ RZX
+        Rx = np.linalg.cholesky(XtX_eff)
+        cb = solve_triangular(Rx, Xty - RZX.T @ cu, lower=True)
+        beta = solve_triangular(Rx.T, cb, lower=False)
+        rss = yty - float(cu @ cu) - float(cb @ cb)
+        # spherical random-effect coefficients (kept for diagnostics)
+        self._u = solve_triangular(Lz.T, cu - RZX @ beta, lower=False)
+
+        sigma2 = rss / (n - p) if REML else rss / n
+        sigma = float(np.sqrt(sigma2))
+        self.sigma = sigma
+        self.sigma_squared = sigma2
+
+        # Var(β̂) = σ̂² (XᵀX_eff)⁻¹ = σ̂² R_x⁻ᵀ R_x⁻¹
+        Rx_inv = solve_triangular(Rx, np.eye(p), lower=True)
+        var_beta = sigma2 * (Rx_inv ** 2).sum(axis=0)
+        se_beta = np.sqrt(var_beta)
+
         self.bhat = pd.DataFrame(
-            bhat.reshape(1, -1), columns=self.column_names, index=["Estimate"]
+            beta.reshape(1, -1), columns=self.column_names, index=["Estimate"],
         )
-        self.yhat = yhat = self.compute_mu(self.X, self.bhat.values.T)
-
-        residuals = y.flatten() - yhat.flatten()
-        self.residuals = pd.DataFrame(residuals[:, None], columns=["residuals"])
-        self.rss = np.squeeze(residuals.T @ residuals)
-        self.sigma_squared = self.rss / self.df_residuals
-        self.sigma = np.sqrt(self.sigma_squared)
-
-        self.XtXinv = self.compute_XtXinv()
-
-        se_bhat, V_bhat = self.compute_se_bhat()
-        self.V_bhat = V_bhat
         self.se_bhat = pd.DataFrame(
-            se_bhat.reshape(1, -1), columns=self.column_names, index=["Std. Error"]
+            se_beta.reshape(1, -1), columns=self.column_names, index=["Std. Error"],
         )
-        # compute confidence interval for β̂
-        self.ci_bhat = self.compute_ci_bhat()
-
-        # compute t values of model coefficients
-        self.t_values = self.compute_t_values()
-
-        # compute r2 and r2adjusted, aka coefficient of determination
-        # aka percentage of variance explained. Noted that the formulae
-        # are different for cases with and without intercept
-        (
-            self.tss,
-            self.r_squared,
-            self.r_squared_adjusted,
-        ) = self.compute_goodness_of_fit()
-
-        # compute log-likelihood
-        self.loglike = self.compute_loglikelihood()
-
-        # compute AIC (Akaike Information criterion): -2logL + 2p, p is the total number of parameters
-        self.AIC = self.compute_AIC()
-
-        # compute BIC (Bayes Information criterian): -2logL + p * log(n)
-        self.BIC = self.compute_BIC()
-
-    def compute_XtXinv(self):
-        U, S, Vt = np.linalg.svd(self.XtX, full_matrices=False)
-        XtXinv = Vt.T @ np.diag(1 / S) @ U.T
-        return XtXinv
-
-    def compute_se_bhat(self):
-        V_bhat = self.sigma_squared * self.XtXinv
-        se_bhat = np.sqrt(np.diag(V_bhat))[:, None]
-        return se_bhat, V_bhat
-
-    def compute_ci_bhat(self, alpha=0.05):
-
-        se_bhat = self.se_bhat.values.T
-        bhat = self.bhat.values.T
-        ci_bhat = (
-            t.ppf(1 - alpha / 2, self.df_residuals) * se_bhat * np.array([-1, 1]) + bhat
-        )
-        ci_bhat = pd.DataFrame(
-            ci_bhat,
-            index=self.column_names,
-            columns=[f"CI[{alpha/2*100}%]", f"CI[{100-alpha/2*100}]%"],
-        )
-        return ci_bhat
-
-    def compute_t_values(self):
-
-        t_values = self.bhat.values / self.se_bhat.values
-
-        return pd.DataFrame(t_values, columns=self.column_names, index=["t values"])
-
-    def compute_goodness_of_fit(self):
-
-        y = self.y
-
-        if "Intercept" in self.column_names:
-            tss = np.sum((y - y.mean()) ** 2)
-            # Eq: r2 = 1 - RSS / TSS = 1 -  sum((ŷ - yi)**2) / sum((y - ȳ)**2)
-            r_squared = (1 - self.rss / tss).squeeze()
-            # Eq: r2adj = 1 - (1 - r2) * (n - 1) / df_residuals
-            r_squared_adjusted = 1 - (1 - r_squared) * (self.n - 1) / (
-                self.df_residuals
-            )
-        else:
-            tss = np.sum(y**2)
-            # Eq: r2 = 1 - RSS / TSS = 1 -  sum((ŷ - yi)**2) / sum((y)**2)
-            r_squared = (1 - self.rss / tss).squeeze()
-            # Eq: r2adj = 1 - (1 - r2) * n / df_residuals
-            r_squared_adjusted = 1 - (1 - r_squared) * self.n / (self.df_residuals)
-
-        return tss, r_squared, r_squared_adjusted
-
-    def compute_loglikelihood(self):
-        return np.squeeze(
-            -0.5 * self.n * (np.log(self.rss / self.n) + np.log(2 * np.pi) + 1)
+        self.t_values = pd.DataFrame(
+            (beta / se_beta).reshape(1, -1),
+            columns=self.column_names, index=["t value"],
         )
 
-    def compute_AIC(self):
-        # add 1 to p to keep consistent with R
-        # https://stackoverflow.com/q/37917437
-        return -2 * self.loglike + 2 * (self.p + 1)
+        # ------------- per-bar variance components -------------------------
+        Sigma_blocks = _per_bar_relative_cov(theta_hat, bar_sizes)
+        self.sd_re: dict[str, np.ndarray] = {}
+        self.corr_re: dict[str, np.ndarray | None] = {}
+        for key, Sigma in zip(re.cnms.keys(), Sigma_blocks):
+            d = np.sqrt(np.diag(Sigma))
+            self.sd_re[key] = sigma * d
+            if Sigma.shape[0] > 1:
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    corr = Sigma / np.outer(d, d)
+                corr = np.where(np.isfinite(corr), corr, 0.0)
+                np.fill_diagonal(corr, 1.0)
+                self.corr_re[key] = corr
+            else:
+                self.corr_re[key] = None
 
-    def compute_BIC(self):
-        # add 1 to p to keep consistent with R
-        # https://stackoverflow.com/q/37917437
-        return -2 * self.loglike + np.log(self.n) * (self.p + 1)
-
-    def __repr__(self):
-
-        docstring = f"""Formula: {self.formula}\n\n"""
-        docstring += "Coefficients:\n"
-        docstring += self.bhat.to_string()
-
-        return docstring
-
-    def __str__(self):
-        return self.__repr__()
-
-    def compute_phi(self, tau):
-        return np.diag(
-            np.hstack([np.repeat(tau[i], q_) for i, q_ in enumerate(self.qs)])
-        )
-
-    # multivariate normal vector with mean 0 and covariance Z @ phi @ Z.t + I * sigma**2
-    def compute_e(self, phi, sigma):
-        e = self.Z @ phi**2 @ self.Z.T + np.eye(self.n) * sigma**2
-        return e
-
-    # fixed effect
-    def compute_b(self, X, y):
-        return np.linalg.lstsq(X.T @ X, X.T @ y, rcond=True)[0]
-
-    # fitted / predicted values
-    def compute_mu(self, X, b):
-        return X @ b
-
-    # cholesky factor
-    def compute_L(self, e):
-        return np.linalg.cholesky(e)
-
-    # random effect
-    def compute_u(self):
-        Sigma = self.e / self.sigma**2
-        residuals = self.compute_residuals(self.X, self.y)
-        re = np.hstack(
-            [
-                self.tau[i] ** 2
-                * (self.Zs[i].T @ np.linalg.inv(Sigma) @ residuals / self.sigma**2)
-                for i in range(len(self.qs))
-            ]
-        )
-        return re
-
-    def transform_Xy(self, X, y, L):
-        # I don't really get this transformation
-        # but without it will cause error w.r.t singular matrix
-        # in m-clark's comment, it's transforming dependent linear model
-        # into independent
-
-        y = np.linalg.solve(L, self.y)
-        X = np.linalg.solve(L, self.X)
-        return X, y
-
-    def compute_residuals(self, X, y):
-        return y - X @ self.b
-
-    def profiled_deviance(self, params, REML=False):
-
-        """
-        Modified from
-        https://m-clark.github.io/docs/mixedModels/mixedModelML.html
-        """
-
-        n = self.n
-        p = self.p
-
-        self.tau = np.exp(params[:-1])
-        self.sigma = np.exp(params[-1])
-
-        self.phi = self.compute_phi(self.tau)
-
-        self.e = self.compute_e(self.phi, self.sigma)
-        self.L = self.compute_L(self.e)
-
-        self.Xtr, self.ytr = self.transform_Xy(self.X, self.y, self.L)
-
-        self.b = self.compute_b(self.Xtr, self.ytr)
-        self.mu = self.compute_mu(self.Xtr, self.b)
-        self.residuals_tr = self.compute_residuals(self.Xtr, self.ytr)
-
+        # ------------- summary statistics ----------------------------------
+        # npar = fixed-effect coefficients + θ entries + 1 residual variance
+        self.npar = p + len(theta_hat) + 1
+        opt = float(res.fun)
         if REML:
-            """
-            Ref:https://rh8liuqy.github.io/Linear_mixed_model_equations.html
-            """
-            XtX = self.Xtr.T @ self.Xtr
-
-            ll = (
-                (n - p) / 2 * np.log(2 * np.pi)
-                + np.linalg.slogdet(self.L)[1]
-                + np.linalg.slogdet(np.linalg.cholesky(XtX))[1]
-                + self.residuals_tr.T @ self.residuals_tr / 2
-            )
+            self.REML_criterion = opt
         else:
-            ll = (
-                n / 2 * np.log(2 * np.pi)
-                + np.linalg.slogdet(self.L)[1]
-                + self.residuals_tr.T @ self.residuals_tr / 2
-            )
+            self.deviance = opt
+            self.loglike = -0.5 * opt
+            self.df_resid = n - self.npar
+            self.AIC = self.deviance + 2.0 * self.npar
+            self.BIC = self.deviance + np.log(n) * self.npar
 
-        return np.squeeze(ll)
+    def __repr__(self) -> str:
+        kind = "REML" if self.REML else "ML"
+        out = [f"lme[{kind}]: {self.formula}"]
+        out.append("")
+        out.append("Random effects:")
+        for key, sd in self.sd_re.items():
+            sds = ", ".join(f"{v:.4g}" for v in sd)
+            out.append(f"  {key:>22s}: SD=[{sds}]")
+            corr = self.corr_re.get(key)
+            if corr is not None and corr.shape[0] > 1:
+                i, j = np.triu_indices(corr.shape[0], k=1)
+                cs = ", ".join(f"{corr[a, b]:.3f}" for a, b in zip(i, j))
+                out.append(f"  {'corr':>22s}: [{cs}]")
+        out.append(f"  {'Residual':>22s}: SD={self.sigma:.4g}")
+        out.append("")
+        out.append("Fixed effects:")
+        out.append(self.bhat.to_string())
+        return "\n".join(out)
 
-    def fit(self, params=None, REML=True, method="Nelder-Mead"):
-
-        if params is None:
-            params = np.ones(len(self.Zs) + 1)
-
-        res = minimize(self.profiled_deviance, params, args=(REML), method=method)
-
-        return np.exp(res.x), res.fun, res.success
+    def __str__(self) -> str:
+        return self.__repr__()
