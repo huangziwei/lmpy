@@ -289,8 +289,11 @@ class lme:
 
         # Var(β̂) = σ̂² (XᵀX_eff)⁻¹ = σ̂² R_x⁻ᵀ R_x⁻¹
         Rx_inv = solve_triangular(Rx, np.eye(p), lower=True)
-        var_beta = sigma2 * (Rx_inv ** 2).sum(axis=0)
-        se_beta = np.sqrt(var_beta)
+        vcov_beta = sigma2 * (Rx_inv.T @ Rx_inv)
+        se_beta = np.sqrt(np.diag(vcov_beta))
+        self.vcov_beta = pd.DataFrame(
+            vcov_beta, index=self.column_names, columns=self.column_names,
+        )
 
         self.bhat = pd.DataFrame(
             beta.reshape(1, -1), columns=self.column_names, index=["Estimate"],
@@ -687,6 +690,28 @@ class lme:
         df.columns = ["Estimate", "Std. Error", "t value"]
         return df
 
+    def _fixef_corr_lines(self) -> list[str]:
+        """Correlation-of-fixed-effects block, lme4-style (lower-triangular)."""
+        p = self.vcov_beta.shape[0]
+        if p <= 1:
+            return []
+        vcov = self.vcov_beta.values
+        d = np.sqrt(np.diag(vcov))
+        with np.errstate(invalid="ignore", divide="ignore"):
+            corr = vcov / np.outer(d, d)
+        corr = np.where(np.isfinite(corr), corr, 0.0)
+        names = ["(Intr)" if n == "(Intercept)" else n for n in self.column_names]
+        row_w = max(len(n) for n in names[1:])
+        cell_w = max(6, max(len(n) for n in names[: p - 1]))
+        header = " " * row_w + " " + " ".join(
+            names[j].rjust(cell_w) for j in range(p - 1)
+        )
+        rows = []
+        for i in range(1, p):
+            cells = " ".join(f"{corr[i, j]:.3f}".rjust(cell_w) for j in range(i))
+            rows.append(names[i].ljust(row_w) + " " + cells)
+        return ["Correlation of Fixed Effects:", header] + rows
+
     def __repr__(self) -> str:
         out = [self._header(), f"Formula: {self.formula}"]
         out.extend(self._fit_criterion_lines())
@@ -723,6 +748,10 @@ class lme:
         out.append("")
         out.append("Fixed effects:")
         out.append(self._fixef_table().round(digits).to_string())
+        corr_lines = self._fixef_corr_lines()
+        if corr_lines:
+            out.append("")
+            out.extend(corr_lines)
         print("\n".join(out))
 
 
