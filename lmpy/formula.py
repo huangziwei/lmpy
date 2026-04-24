@@ -3848,6 +3848,33 @@ def _build_fs_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
     )]
 
 
+def _build_sz_smooth(call: Call, data: pd.DataFrame) -> list[SmoothBlock]:
+    """`bs="sz"` — zero-center nested smooth.
+
+    Default base smooth is `tp` (`xt$bs="tp"` in mgcv; alternative bases
+    require `xt=list(bs=...)` which is not yet parsed here).
+
+    Fallthrough: mgcv's sz.smooth.spec (smooth.r:2211-2214) checks for any
+    factor among the terms; if none is found it reclasses the object as the
+    base smooth and returns that constructor's output. We mirror that by
+    dispatching to `_build_tp_smooth` on the full term list.
+
+    The factor-present path duplicates the base basis across factor levels
+    via tensor.prod.model.matrix and applies a sum-to-zero-per-level
+    constraint (`C = c(0, nf)` in mgcv). That path is not yet implemented;
+    no current fixture exercises it because CSV-loaded factor columns are
+    int64, which is not `is.factor()`.
+    """
+    term = _smooth_term_vars(call)
+    fterm, _others = _fs_find_factor(term, data)
+    if fterm is None:
+        return _build_tp_smooth(call, data)
+    raise NotImplementedError(
+        "sz smooth with a categorical factor term is not yet supported "
+        "(requires sum-to-zero-per-level constraint handling)"
+    )
+
+
 def materialize_smooths(
     expanded: ExpandedFormula, data: pd.DataFrame,
 ) -> list[list[SmoothBlock]]:
@@ -3888,6 +3915,8 @@ def materialize_smooths(
             out.append(_build_gp_smooth(call, data))
         elif bs == "fs":
             out.append(_build_fs_smooth(call, data))
+        elif bs == "sz":
+            out.append(_build_sz_smooth(call, data))
         else:
             raise NotImplementedError(
                 f"smooth bs={bs!r} (class dispatch for {_smooth_label(call)}) "
