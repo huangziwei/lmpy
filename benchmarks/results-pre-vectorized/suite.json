@@ -1,0 +1,2418 @@
+[
+  {
+    "id": "cur_0036",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (1 + Days | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0037",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (1 + Days + I(Days^2) | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0038",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (1 + Days + I(Days^2) || Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0039",
+    "kind": "lme4",
+    "formula": "angle ~ recipe + (recipe | replicate)",
+    "dataset": "lme4/cake",
+    "rows": 270,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0040",
+    "kind": "lme4",
+    "formula": "angle ~ recipe + (recipe || replicate)",
+    "dataset": "lme4/cake",
+    "rows": 270,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0041",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (0 + Days | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0042",
+    "kind": "lme4",
+    "formula": "strength ~ (1 | batch/cask)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0043",
+    "kind": "lme4",
+    "formula": "yield ~ nitro + (nitro | Block/Variety)",
+    "dataset": "nlme/Oats",
+    "rows": 72,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0044",
+    "kind": "lme4",
+    "formula": "strength ~ (1 | batch) + (1 | sample)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0045",
+    "kind": "lme4",
+    "formula": "Reaction ~ 1 + (Days | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0046",
+    "kind": "lme4",
+    "formula": "strength ~ batch + (1 | batch)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 10
+  },
+  {
+    "id": "cur_0048",
+    "kind": "lme4",
+    "formula": "angle ~ recipe + (1 | recipe:replicate)",
+    "dataset": "lme4/cake",
+    "rows": 270,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0049",
+    "kind": "lme4",
+    "formula": "Yield ~ 1 + (1 | Batch)",
+    "dataset": "lme4/Dyestuff",
+    "rows": 30,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0051",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (Days || Subject) + (1 | Days)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0007",
+    "kind": "lme4",
+    "formula": "Yield ~ 1 | Batch",
+    "dataset": "lme4/Dyestuff",
+    "rows": 30,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0008",
+    "kind": "lme4",
+    "formula": "strength ~ (1 | batch) + (1 | sample)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0009",
+    "kind": "lme4",
+    "formula": "strength ~ (1 | batch/cask)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0010",
+    "kind": "lme4",
+    "formula": "strength ~ (1 | batch) + (1 | batch:cask)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0011",
+    "kind": "lme4",
+    "formula": "strength ~ (1 | batch/sample)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0012",
+    "kind": "lme4",
+    "formula": "strength ~ (1 | batch) + (1 | cask)",
+    "dataset": "lme4/Pastes",
+    "rows": 60,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0013",
+    "kind": "lme4",
+    "formula": "diameter ~ (1 | plate) + (1 | sample)",
+    "dataset": "lme4/Penicillin",
+    "rows": 144,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0014",
+    "kind": "lme4",
+    "formula": "distance ~ age + (age | Subject)",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0015",
+    "kind": "lme4",
+    "formula": "r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item)",
+    "dataset": "lme4/VerbAgg",
+    "rows": 7584,
+    "cols_X": 15
+  },
+  {
+    "id": "lme4_0016",
+    "kind": "lme4",
+    "formula": "cbind(incidence, size - incidence) ~ period + (1 | herd)",
+    "dataset": "lme4/cbpp",
+    "rows": 56,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0017",
+    "kind": "lme4",
+    "formula": "angle ~ recipe * temperature + (1 | recipe:replicate)",
+    "dataset": "lme4/cake",
+    "rows": 270,
+    "cols_X": 18
+  },
+  {
+    "id": "lme4_0018",
+    "kind": "lme4",
+    "formula": "angle ~ recipe + temperature + (1 | recipe:replicate)",
+    "dataset": "lme4/cake",
+    "rows": 270,
+    "cols_X": 8
+  },
+  {
+    "id": "lme4_0019",
+    "kind": "lme4",
+    "formula": "angle ~ recipe + temp + (1 | recipe:replicate)",
+    "dataset": "lme4/cake",
+    "rows": 270,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0020",
+    "kind": "lme4",
+    "formula": "incidence/size ~ period + (1 | herd)",
+    "dataset": "lme4/cbpp",
+    "rows": 56,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0022",
+    "kind": "lme4",
+    "formula": "incidence/size ~ period + treatment + avg_size + (1 | herd)",
+    "dataset": "lme4/cbpp2",
+    "rows": 56,
+    "cols_X": 5
+  },
+  {
+    "id": "lme4_0023",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (Days | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0024",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (Days || Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0025",
+    "kind": "lme4",
+    "formula": "predation ~ ttt2 + (1 | block)",
+    "dataset": "lme4/culcitalogreg",
+    "rows": 80,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0030",
+    "kind": "lme4",
+    "formula": "distance ~ age + (age | Subject) + (0 + dummy(Sex, \"Female\") | Subject)",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0031",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (1 | Subject) + (0 + Days | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0033",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (1 | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0034",
+    "kind": "lme4",
+    "formula": "shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site)",
+    "dataset": "lme4/gopherdat2",
+    "rows": 30,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0037",
+    "kind": "lme4",
+    "formula": "Reaction ~ Days + (Days | Subject)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0038",
+    "kind": "lme4",
+    "formula": "cbind(incidence, size - incidence) ~ period + (1 | herd)",
+    "dataset": "lme4/cbpp",
+    "rows": 56,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0039",
+    "kind": "lme4",
+    "formula": "Reaction ~ 1 | Subject",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 1
+  },
+  {
+    "id": "lme4_0041",
+    "kind": "lme4",
+    "formula": "y ~ x + (1 | f)",
+    "dataset": "synthetic/seed_synth_singleton",
+    "rows": 100,
+    "cols_X": 2
+  },
+  {
+    "id": "lme4_0042",
+    "kind": "lme4",
+    "formula": "Mate ~ (1 | Female) + (1 | Male) + Cross",
+    "dataset": "lme4/salamander",
+    "rows": 360,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0043",
+    "kind": "lme4",
+    "formula": "imps79 ~ TxDrug * Week + (1 | id)",
+    "dataset": "lme4/schizophrenia",
+    "rows": 1603,
+    "cols_X": 4
+  },
+  {
+    "id": "lme4_0044",
+    "kind": "lme4",
+    "formula": "outcome ~ time * treatment + (1 | patientID)",
+    "dataset": "lme4/toenail",
+    "rows": 1908,
+    "cols_X": 4
+  },
+  {
+    "id": "cur_0052",
+    "kind": "mgcv",
+    "formula": "y ~ te(x0, x1, bs = c(\"tp\", \"cr\"))",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0053",
+    "kind": "mgcv",
+    "formula": "y ~ te(x0, x1, k = c(5, 10))",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0054",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, by = x1)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0055",
+    "kind": "mgcv",
+    "formula": "yield ~ Variety + s(nitro, by = Variety)",
+    "dataset": "nlme/Oats",
+    "rows": 72,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0056",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + ti(x0, x1)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0057",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0058",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 50)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0059",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0060",
+    "kind": "mgcv",
+    "formula": "temp ~ s(day.of.year, bs = \"cc\", k = 20)",
+    "dataset": "gamair/cairo",
+    "rows": 3780,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0061",
+    "kind": "mgcv",
+    "formula": "distance ~ s(age, Subject, bs = \"fs\")",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0062",
+    "kind": "mgcv",
+    "formula": "y ~ te(x0)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0063",
+    "kind": "mgcv",
+    "formula": "uptake ~ s(Plant, bs = \"re\")",
+    "dataset": "R/CO2",
+    "rows": 84,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0064",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"ts\") + s(x1, bs = \"ts\")",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0065",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"cs\", k = 10)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0066",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, pc = 0.5)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0068",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"cr\", xt = list(border = 2))",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0003",
+    "kind": "mgcv",
+    "formula": "score ~ Machine + s(Worker, bs = \"re\") + s(Machine, Worker, bs = \"re\")",
+    "dataset": "nlme/Machines",
+    "rows": 54,
+    "cols_X": 3
+  },
+  {
+    "id": "mgcv_0004",
+    "kind": "mgcv",
+    "formula": "score ~ Machine + s(Worker, bs = \"re\") + s(Worker, bs = \"re\", by = Machine)",
+    "dataset": "nlme/Machines",
+    "rows": 54,
+    "cols_X": 3
+  },
+  {
+    "id": "mgcv_0005",
+    "kind": "mgcv",
+    "formula": "Volume ~ s(Height) + s(Girth)",
+    "dataset": "mgcv/trees",
+    "rows": 31,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0006",
+    "kind": "mgcv",
+    "formula": "Volume ~ s(Height, bs = \"cr\") + s(Girth, bs = \"cr\")",
+    "dataset": "mgcv/trees",
+    "rows": 31,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0007",
+    "kind": "mgcv",
+    "formula": "Volume ~ s(Height) + s(Girth, bs = \"cr\", k = 20)",
+    "dataset": "mgcv/trees",
+    "rows": 31,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0008",
+    "kind": "mgcv",
+    "formula": "Volume ~ s(Height, Girth, k = 25)",
+    "dataset": "mgcv/trees",
+    "rows": 31,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0009",
+    "kind": "mgcv",
+    "formula": "Volume ~ te(Height, Girth, k = 5)",
+    "dataset": "mgcv/trees",
+    "rows": 31,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0010",
+    "kind": "mgcv",
+    "formula": "Volume ~ Height + s(Girth)",
+    "dataset": "mgcv/trees",
+    "rows": 31,
+    "cols_X": 2
+  },
+  {
+    "id": "mgcv_0012",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"pl\", m = 2) + s(x1, bs = \"pl\", m = 2) + s(x2, bs = \"pl\", m = 3) + s(x3, bs = \"pl\", m = 2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0013",
+    "kind": "mgcv",
+    "formula": "y ~ s(x)",
+    "dataset": "gamair/hubble",
+    "rows": 24,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0014",
+    "kind": "mgcv",
+    "formula": "y ~ x",
+    "dataset": "gamair/hubble",
+    "rows": 24,
+    "cols_X": 2
+  },
+  {
+    "id": "mgcv_0015",
+    "kind": "mgcv",
+    "formula": "accel ~ s(times, k = 40)",
+    "dataset": "MASS/mcycle",
+    "rows": 133,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0016",
+    "kind": "mgcv",
+    "formula": "accel ~ s(times, k = 11, fx = TRUE)",
+    "dataset": "MASS/mcycle",
+    "rows": 133,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0017",
+    "kind": "mgcv",
+    "formula": "accel ~ s(times, k = 11, fx = TRUE, bs = \"cr\")",
+    "dataset": "MASS/mcycle",
+    "rows": 133,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0018",
+    "kind": "mgcv",
+    "formula": "accel ~ s(times, k = 40, m = 3)",
+    "dataset": "MASS/mcycle",
+    "rows": 133,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0020",
+    "kind": "mgcv",
+    "formula": "price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year)",
+    "dataset": "gamair/wine",
+    "rows": 38,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0026",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0027",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, k = 40)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0028",
+    "kind": "mgcv",
+    "formula": "z ~ s(x, y, k = 100)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0030",
+    "kind": "mgcv",
+    "formula": "y ~ x0 + s(x1) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 4
+  },
+  {
+    "id": "mgcv_0031",
+    "kind": "mgcv",
+    "formula": "y ~ x0 + s(x1) + s(x2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 4
+  },
+  {
+    "id": "mgcv_0036",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0041",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0042",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1, x2, k = 15) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0044",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + te(x1, x2, k = 4) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0046",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0047",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0048",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0049",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0061",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"cr\") + s(x1, bs = \"cr\") + s(x2, bs = \"cr\") + s(x3, bs = \"cr\")",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0062",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1, fac, bs = \"fs\", k = 5) + s(x2, k = 20)",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0063",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x1, fac, bs = \"sz\", k = 5) + s(x2, k = 20)",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0064",
+    "kind": "mgcv",
+    "formula": "y ~ te(x0, x1, k = 7) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0065",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0066",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, x1, k = 40) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0067",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0068",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, k = 4, fx = TRUE, bs = \"tp\") + s(x1, k = 12) + s(x2, k = 15)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0069",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"cr\") + s(x1, bs = \"cr\") + s(x2, bs = \"cr\")",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0070",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0071",
+    "kind": "mgcv",
+    "formula": "y ~ s(x1) + s(x2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0072",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0073",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, k = 40)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0074",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, k = 64)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0076",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, k = 15)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0077",
+    "kind": "mgcv",
+    "formula": "y ~ s(x2, by = x1)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0078",
+    "kind": "mgcv",
+    "formula": "y ~ fac + s(x2, by = fac) + s(x0)",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 3
+  },
+  {
+    "id": "mgcv_0079",
+    "kind": "mgcv",
+    "formula": "y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2)) + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 0
+  },
+  {
+    "id": "mgcv_0080",
+    "kind": "mgcv",
+    "formula": "y ~ fac + s(x2, by = fac, id = 1) + s(x0)",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 3
+  },
+  {
+    "id": "mgcv_0081",
+    "kind": "mgcv",
+    "formula": "y ~ fac + s(x2) + s(x2, by = fac) + s(x0)",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 3
+  },
+  {
+    "id": "mgcv_0083",
+    "kind": "mgcv",
+    "formula": "y ~ s(fac, bs = \"re\") + s(x0) + s(x1) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg6",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0087",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0088",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"cr\", k = 6) + s(z, bs = \"cr\", k = 6) + te(x, z, k = 6)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0089",
+    "kind": "mgcv",
+    "formula": "y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0091",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0092",
+    "kind": "mgcv",
+    "formula": "y ~ te(x0, x1) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0093",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0094",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, k = 20)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0095",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, k = 20)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0096",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"cr\") + s(x1, bs = \"cr\") + s(x2, bs = \"cr\") + s(x3, bs = \"cr\")",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0097",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, k = 50)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0098",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, k = 50)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0110",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"cc\", k = 6)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0111",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, k = 10, bs = \"cr\")",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0112",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, k = 10)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0114",
+    "kind": "mgcv",
+    "formula": "y ~ t2(x0, x1, bs = \"tp\", m = 1, k = 7) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0115",
+    "kind": "mgcv",
+    "formula": "y ~ t2(x0, x1, bs = \"tp\", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0116",
+    "kind": "mgcv",
+    "formula": "y ~ x0 + s(x1, x2) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 4
+  },
+  {
+    "id": "mgcv_0117",
+    "kind": "mgcv",
+    "formula": "y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0118",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0119",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1) + s(x2) + x3",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0120",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0121",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "mgcv_0123",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, k = 5)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0124",
+    "kind": "mgcv",
+    "formula": "travel ~ s(Rail, bs = \"re\")",
+    "dataset": "nlme/Rail",
+    "rows": 18,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0125",
+    "kind": "mgcv",
+    "formula": "y ~ fac + s(x1, by = fac) + x2",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 4
+  },
+  {
+    "id": "mgcv_0128",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"tr\", m = 2) + s(x1, bs = \"ps\", m = c(1, 3)) + s(x2, bs = \"tr\", m = 3) + s(x3, bs = \"tr\", m = 2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0129",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, bs = \"tr\", m = 2) + s(x1, bs = \"ps\", m = c(1, 3)) + s(x2, bs = \"tr\", m = 3) + s(x3, bs = \"tr\", m = 2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0130",
+    "kind": "mgcv",
+    "formula": "y ~ te(x, z, bs = c(\"tr\", \"tr\"), m = c(2, 2))",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0131",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"ad\", k = 40, m = 5)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0133",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, k = 150)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0134",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, bs = \"ad\", k = 15, m = 1)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0135",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, bs = \"ad\", k = 15, m = 3)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0137",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, m = 1, k = 20)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0138",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"bs\", m = c(3, 1), k = 20)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0139",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"cc\", k = 12) + s(z)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0143",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0) + s(x1, fac, bs = \"fs\", k = 5) + s(x2, k = 20)",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0144",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, bs = \"gp\", k = 50)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0145",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, bs = \"gp\", k = 50, m = c(1, 0.5))",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0146",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, z, bs = \"gp\", k = 50, m = c(-1, 0.5))",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0151",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"cp\") + s(z, bs = \"ps\")",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0152",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"cp\", k = 12) + s(z, bs = \"ps\", k = 13)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0162",
+    "kind": "mgcv",
+    "formula": "y ~ s(x2) + s(fac, x2, bs = \"sz\") + s(x0)",
+    "dataset": "mgcv/gamSim_eg4",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0164",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, m = c(2, 0)) + x",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 2
+  },
+  {
+    "id": "mgcv_0165",
+    "kind": "mgcv",
+    "formula": "y ~ s(x)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0168",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"cc\", k = 10) + s(z)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0172",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = \"re\")",
+    "dataset": "mgcv/gamSim_eg6",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0173",
+    "kind": "mgcv",
+    "formula": "y ~ te(x, z)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0174",
+    "kind": "mgcv",
+    "formula": "y ~ t2(x, z)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0175",
+    "kind": "mgcv",
+    "formula": "y ~ t2(x, z, bs = c(\"tp\", \"tp\"))",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0178",
+    "kind": "mgcv",
+    "formula": "y ~ ti(x) + ti(z) + ti(x, z)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0179",
+    "kind": "mgcv",
+    "formula": "y ~ ti(x) + ti(x, z, mc = c(0, 1))",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0181",
+    "kind": "mgcv",
+    "formula": "y ~ s(x, bs = \"cc\", k = 10)",
+    "dataset": "mgcv/gamSim_eg2",
+    "rows": 400,
+    "cols_X": 1
+  },
+  {
+    "id": "mgcv_0182",
+    "kind": "mgcv",
+    "formula": "y ~ s(x0, x1, x2)",
+    "dataset": "mgcv/gamSim_eg5",
+    "rows": null,
+    "cols_X": null
+  },
+  {
+    "id": "cur_0001",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ C(Species, contr.treatment)",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0002",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ C(Species, contr.sum)",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0003",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ C(Species, contr.helmert)",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0004",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ C(Species, contr.poly)",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0005",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ C(Species, contr.SAS)",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0006",
+    "kind": "wr",
+    "formula": "circumference ~ C(Tree, contr.poly) + age",
+    "dataset": "R/Orange",
+    "rows": 35,
+    "cols_X": 6
+  },
+  {
+    "id": "cur_0007",
+    "kind": "wr",
+    "formula": "mpg ~ wt + hp - hp",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0008",
+    "kind": "wr",
+    "formula": "mpg ~ cyl:disp",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0009",
+    "kind": "wr",
+    "formula": "breaks ~ wool + tension + wool %in% tension",
+    "dataset": "R/warpbreaks",
+    "rows": 54,
+    "cols_X": 6
+  },
+  {
+    "id": "cur_0010",
+    "kind": "wr",
+    "formula": "mpg ~ . - carb",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 10
+  },
+  {
+    "id": "cur_0011",
+    "kind": "wr",
+    "formula": "mpg ~ (wt + hp) * cyl",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 6
+  },
+  {
+    "id": "cur_0012",
+    "kind": "wr",
+    "formula": "mpg ~ wt + 0",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0013",
+    "kind": "wr",
+    "formula": "mpg ~ 0 + wt",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0014",
+    "kind": "wr",
+    "formula": "mpg ~ 1 + wt",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0015",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ 0 + C(Species, contr.treatment)",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0016",
+    "kind": "wr",
+    "formula": "mpg ~ I(wt + hp)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0017",
+    "kind": "wr",
+    "formula": "mpg ~ log1p(hp)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0018",
+    "kind": "wr",
+    "formula": "mpg ~ exp(qsec/10)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0019",
+    "kind": "wr",
+    "formula": "mpg ~ sqrt(wt)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0020",
+    "kind": "wr",
+    "formula": "mpg ~ poly(wt, 2, raw = TRUE)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0021",
+    "kind": "wr",
+    "formula": "mpg ~ bs(wt)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 4
+  },
+  {
+    "id": "cur_0022",
+    "kind": "wr",
+    "formula": "mpg ~ bs(wt, degree = 2)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0023",
+    "kind": "wr",
+    "formula": "mpg ~ cut(wt, breaks = c(0, 3, 4, 6))",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0024",
+    "kind": "wr",
+    "formula": "Reaction ~ Days + offset(Days)",
+    "dataset": "lme4/sleepstudy",
+    "rows": 180,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0025",
+    "kind": "wr",
+    "formula": "mpg ~ I(wt > 3)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0026",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ relevel(Species, ref = \"virginica\")",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0027",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ poly(Petal.Length, 2) * Species",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 9
+  },
+  {
+    "id": "cur_0028",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ poly(Petal.Length, 2, raw = TRUE) * Species",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 9
+  },
+  {
+    "id": "cur_0029",
+    "kind": "wr",
+    "formula": "Sepal.Length ~ Species:cut(Petal.Length, 3)",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 10
+  },
+  {
+    "id": "cur_0030",
+    "kind": "wr",
+    "formula": "mpg ~ wt + hp:I(wt^2)",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0031",
+    "kind": "wr",
+    "formula": "mpg ~ wt + wt",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0032",
+    "kind": "wr",
+    "formula": "mpg ~ wt * hp - wt:hp",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 3
+  },
+  {
+    "id": "cur_0033",
+    "kind": "wr",
+    "formula": "mpg ~ wt - cyl",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 2
+  },
+  {
+    "id": "cur_0034",
+    "kind": "wr",
+    "formula": "mpg ~ wt - wt",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 1
+  },
+  {
+    "id": "cur_0035",
+    "kind": "wr",
+    "formula": "breaks ~ wool:tension",
+    "dataset": "R/warpbreaks",
+    "rows": 54,
+    "cols_X": 7
+  },
+  {
+    "id": "cur_0067",
+    "kind": "wr",
+    "formula": "height ~ weight + I(weight^2) + I(weight^3) + I(weight^4) + I(weight^5) + I(weight^6) + I(weight^7) + I(weight^8) + I(weight^9) + I(weight^10) + I(weight^11) + I(weight^12) + I(weight^13) + I(weight^14)",
+    "dataset": "R/women",
+    "rows": 15,
+    "cols_X": 15
+  },
+  {
+    "id": "cur_0069",
+    "kind": "wr",
+    "formula": "y ~ f * g",
+    "dataset": "synthetic/seed_synth_empty_cell",
+    "rows": 120,
+    "cols_X": 9
+  },
+  {
+    "id": "cur_0070",
+    "kind": "wr",
+    "formula": "breaks ~ (C(wool, contr.sum) + tension)^2",
+    "dataset": "R/warpbreaks",
+    "rows": 54,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0001",
+    "kind": "wr",
+    "formula": "stack.loss ~ .",
+    "dataset": "R/stackloss",
+    "rows": 21,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0002",
+    "kind": "wr",
+    "formula": "y ~ x - 1",
+    "dataset": "gamair/hubble",
+    "rows": 24,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0003",
+    "kind": "wr",
+    "formula": "count ~ time.ipc + prop.partner",
+    "dataset": "gamair/sperm.comp1",
+    "rows": 15,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0004",
+    "kind": "wr",
+    "formula": "count ~ time.ipc + I(prop.partner * time.ipc)",
+    "dataset": "gamair/sperm.comp1",
+    "rows": 15,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0005",
+    "kind": "wr",
+    "formula": "count ~ prop.partner",
+    "dataset": "gamair/sperm.comp1",
+    "rows": 15,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0006",
+    "kind": "wr",
+    "formula": "count ~ 1",
+    "dataset": "gamair/sperm.comp1",
+    "rows": 15,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0007",
+    "kind": "wr",
+    "formula": "count ~ f.age + f.height + f.weight + m.age + m.height + m.weight + m.vol",
+    "dataset": "gamair/sperm.comp2",
+    "rows": 15,
+    "cols_X": 8
+  },
+  {
+    "id": "wr_0008",
+    "kind": "wr",
+    "formula": "count ~ f.age + f.height + f.weight + m.height + m.weight + m.vol",
+    "dataset": "gamair/sperm.comp2",
+    "rows": 15,
+    "cols_X": 7
+  },
+  {
+    "id": "wr_0009",
+    "kind": "wr",
+    "formula": "count ~ f.weight",
+    "dataset": "gamair/sperm.comp2",
+    "rows": 22,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0010",
+    "kind": "wr",
+    "formula": "count ~ m.vol",
+    "dataset": "gamair/sperm.comp2",
+    "rows": 15,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0011",
+    "kind": "wr",
+    "formula": "y ~ z",
+    "dataset": "MASS/topo",
+    "rows": 52,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0012",
+    "kind": "wr",
+    "formula": "y ~ x + z",
+    "dataset": "MASS/topo",
+    "rows": 52,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0013",
+    "kind": "wr",
+    "formula": "weight ~ group",
+    "dataset": "R/PlantGrowth",
+    "rows": 30,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0014",
+    "kind": "wr",
+    "formula": "weight ~ 1",
+    "dataset": "gamair/mpg",
+    "rows": 205,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0015",
+    "kind": "wr",
+    "formula": "loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2 * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3)",
+    "dataset": "MASS/Rubber",
+    "rows": 30,
+    "cols_X": 10
+  },
+  {
+    "id": "wr_0016",
+    "kind": "wr",
+    "formula": "breaks ~ wool * tension",
+    "dataset": "R/warpbreaks",
+    "rows": 54,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0017",
+    "kind": "wr",
+    "formula": "dist ~ speed + I(speed^2)",
+    "dataset": "R/cars",
+    "rows": 50,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0018",
+    "kind": "wr",
+    "formula": "dist ~ speed + I(speed^2) - 1",
+    "dataset": "R/cars",
+    "rows": 50,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0019",
+    "kind": "wr",
+    "formula": "dist ~ I(speed^2)",
+    "dataset": "R/cars",
+    "rows": 50,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0022",
+    "kind": "wr",
+    "formula": "area ~ CO2 + tree",
+    "dataset": "gamair/stomata",
+    "rows": 24,
+    "cols_X": 7
+  },
+  {
+    "id": "wr_0023",
+    "kind": "wr",
+    "formula": "area ~ CO2",
+    "dataset": "gamair/stomata",
+    "rows": 24,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0024",
+    "kind": "wr",
+    "formula": "area ~ tree",
+    "dataset": "gamair/stomata",
+    "rows": 24,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0025",
+    "kind": "wr",
+    "formula": "travel ~ Rail",
+    "dataset": "nlme/Rail",
+    "rows": 18,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0026",
+    "kind": "wr",
+    "formula": "travel ~ 1",
+    "dataset": "nlme/Rail",
+    "rows": 18,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0027",
+    "kind": "wr",
+    "formula": "score ~ Worker * Machine",
+    "dataset": "nlme/Machines",
+    "rows": 54,
+    "cols_X": 18
+  },
+  {
+    "id": "wr_0028",
+    "kind": "wr",
+    "formula": "score ~ Worker + Machine",
+    "dataset": "nlme/Machines",
+    "rows": 54,
+    "cols_X": 8
+  },
+  {
+    "id": "wr_0029",
+    "kind": "wr",
+    "formula": "score ~ 1",
+    "dataset": "nlme/Machines",
+    "rows": 54,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0035",
+    "kind": "wr",
+    "formula": "y ~ poly(x, 5)",
+    "dataset": "gamair/hubble",
+    "rows": 24,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0036",
+    "kind": "wr",
+    "formula": "y ~ poly(x, 10)",
+    "dataset": "gamair/hubble",
+    "rows": 24,
+    "cols_X": 11
+  },
+  {
+    "id": "wr_0039",
+    "kind": "wr",
+    "formula": "accel ~ poly(times, 11)",
+    "dataset": "MASS/mcycle",
+    "rows": 133,
+    "cols_X": 12
+  },
+  {
+    "id": "wr_0040",
+    "kind": "wr",
+    "formula": "Claims ~ District + Group + Age + offset(log(Holders))",
+    "dataset": "MASS/Insurance",
+    "rows": 64,
+    "cols_X": 10
+  },
+  {
+    "id": "wr_0043",
+    "kind": "wr",
+    "formula": "Freq ~ Infl * Type * Cont + Sat",
+    "dataset": "MASS/housing",
+    "rows": 72,
+    "cols_X": 26
+  },
+  {
+    "id": "wr_0044",
+    "kind": "wr",
+    "formula": "y ~ trt * week",
+    "dataset": "MASS/bacteria",
+    "rows": 220,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0045",
+    "kind": "wr",
+    "formula": "y ~ trt + week",
+    "dataset": "MASS/bacteria",
+    "rows": 220,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0046",
+    "kind": "wr",
+    "formula": "y ~ trt + I(week > 2)",
+    "dataset": "MASS/bacteria",
+    "rows": 220,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0048",
+    "kind": "wr",
+    "formula": "low ~ .",
+    "dataset": "MASS/birthwt",
+    "rows": 189,
+    "cols_X": 10
+  },
+  {
+    "id": "wr_0049",
+    "kind": "wr",
+    "formula": "y ~ x1 + x2 + x3 + x4",
+    "dataset": "MASS/cement",
+    "rows": 13,
+    "cols_X": 5
+  },
+  {
+    "id": "wr_0051",
+    "kind": "wr",
+    "formula": "cbind(y, n - y) ~ P * A + V",
+    "dataset": "MASS/eagles",
+    "rows": 8,
+    "cols_X": 5
+  },
+  {
+    "id": "wr_0052",
+    "kind": "wr",
+    "formula": "y ~ lbase * trt + lage + V4",
+    "dataset": "MASS/epil",
+    "rows": 236,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0055",
+    "kind": "wr",
+    "formula": "Days + 0.1 ~ Age * Eth * Sex * Lrn",
+    "dataset": "MASS/quine",
+    "rows": 146,
+    "cols_X": 32
+  },
+  {
+    "id": "wr_0057",
+    "kind": "wr",
+    "formula": "Days ~ .^2",
+    "dataset": "MASS/quine",
+    "rows": 146,
+    "cols_X": 19
+  },
+  {
+    "id": "wr_0058",
+    "kind": "wr",
+    "formula": "cbind(Menarche, Total - Menarche) ~ Age",
+    "dataset": "MASS/menarche",
+    "rows": 25,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0059",
+    "kind": "wr",
+    "formula": "Days ~ .^4",
+    "dataset": "MASS/quine",
+    "rows": 146,
+    "cols_X": 32
+  },
+  {
+    "id": "wr_0061",
+    "kind": "wr",
+    "formula": "Gas ~ Temp",
+    "dataset": "MASS/whiteside",
+    "rows": 56,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0062",
+    "kind": "wr",
+    "formula": "Gas ~ Insul/Temp - 1",
+    "dataset": "MASS/whiteside",
+    "rows": 56,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0063",
+    "kind": "wr",
+    "formula": "Gas ~ Insul/(Temp + I(Temp^2)) - 1",
+    "dataset": "MASS/whiteside",
+    "rows": 56,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0064",
+    "kind": "wr",
+    "formula": "Gas ~ Insul + Temp",
+    "dataset": "MASS/whiteside",
+    "rows": 56,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0065",
+    "kind": "wr",
+    "formula": "Gas ~ Insul * Temp",
+    "dataset": "MASS/whiteside",
+    "rows": 56,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0066",
+    "kind": "wr",
+    "formula": "follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time)",
+    "dataset": "nlme/Ovary",
+    "rows": 308,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0067",
+    "kind": "wr",
+    "formula": "rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB",
+    "dataset": "nlme/Dialyzer",
+    "rows": 140,
+    "cols_X": 10
+  },
+  {
+    "id": "wr_0068",
+    "kind": "wr",
+    "formula": "follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time)",
+    "dataset": "nlme/Ovary",
+    "rows": 308,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0069",
+    "kind": "wr",
+    "formula": "pixel ~ day + I(day^2)",
+    "dataset": "nlme/Pixel",
+    "rows": 102,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0070",
+    "kind": "wr",
+    "formula": "distance ~ age",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0071",
+    "kind": "wr",
+    "formula": "weight ~ Time * Diet",
+    "dataset": "nlme/BodyWeight",
+    "rows": 176,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0072",
+    "kind": "wr",
+    "formula": "weight ~ Time * Diet",
+    "dataset": "nlme/BodyWeight",
+    "rows": 176,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0073",
+    "kind": "wr",
+    "formula": "distance ~ Sex * I(age - 11)",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0074",
+    "kind": "wr",
+    "formula": "rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB",
+    "dataset": "nlme/Dialyzer",
+    "rows": 140,
+    "cols_X": 10
+  },
+  {
+    "id": "wr_0075",
+    "kind": "wr",
+    "formula": "yield ~ variety - 1",
+    "dataset": "nlme/Wheat2",
+    "rows": 224,
+    "cols_X": 56
+  },
+  {
+    "id": "wr_0076",
+    "kind": "wr",
+    "formula": "distance ~ Sex * I(age - 11)",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0077",
+    "kind": "wr",
+    "formula": "distance ~ age * Sex",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0079",
+    "kind": "wr",
+    "formula": "effort ~ Type",
+    "dataset": "nlme/ergoStool",
+    "rows": 36,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0080",
+    "kind": "wr",
+    "formula": "distance ~ age + Sex",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0081",
+    "kind": "wr",
+    "formula": "pixel ~ day + day^2",
+    "dataset": "nlme/Pixel",
+    "rows": 102,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0082",
+    "kind": "wr",
+    "formula": "distance ~ Sex * age",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0084",
+    "kind": "wr",
+    "formula": "Fertility ~ .",
+    "dataset": "R/swiss",
+    "rows": 47,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0085",
+    "kind": "wr",
+    "formula": "yield ~ block + N * P * K",
+    "dataset": "MASS/npk",
+    "rows": 24,
+    "cols_X": 13
+  },
+  {
+    "id": "wr_0086",
+    "kind": "wr",
+    "formula": "sr ~ .",
+    "dataset": "faraway/savings",
+    "rows": 50,
+    "cols_X": 5
+  },
+  {
+    "id": "wr_0087",
+    "kind": "wr",
+    "formula": "sr ~ 1",
+    "dataset": "faraway/savings",
+    "rows": 50,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0088",
+    "kind": "wr",
+    "formula": "yield ~ block + N * P + K",
+    "dataset": "MASS/npk",
+    "rows": 24,
+    "cols_X": 10
+  },
+  {
+    "id": "wr_0090",
+    "kind": "wr",
+    "formula": "y ~ x + I(x^2) + I(x^3) + I((x - 10)^2)",
+    "dataset": "faraway/cathedral",
+    "rows": 25,
+    "cols_X": 5
+  },
+  {
+    "id": "wr_0091",
+    "kind": "wr",
+    "formula": "Sepal.Width ~ Species",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0092",
+    "kind": "wr",
+    "formula": "Sepal.Width ~ Sepal.Length",
+    "dataset": "R/iris",
+    "rows": 150,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0094",
+    "kind": "wr",
+    "formula": "100/mpg ~ disp + hp + wt + am",
+    "dataset": "R/mtcars",
+    "rows": 32,
+    "cols_X": 5
+  },
+  {
+    "id": "wr_0097",
+    "kind": "wr",
+    "formula": "y ~ x",
+    "dataset": "faraway/cathedral",
+    "rows": 25,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0098",
+    "kind": "wr",
+    "formula": "y + 10 ~ I(x - 3.8)",
+    "dataset": "faraway/cathedral",
+    "rows": 25,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0099",
+    "kind": "wr",
+    "formula": "log(Volume) ~ log(Girth) + log(Height)",
+    "dataset": "mgcv/trees",
+    "rows": 31,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0100",
+    "kind": "wr",
+    "formula": "y ~ x",
+    "dataset": "faraway/cathedral",
+    "rows": 25,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0101",
+    "kind": "wr",
+    "formula": "Postwt ~ Prewt + Treat + offset(Prewt)",
+    "dataset": "MASS/anorexia",
+    "rows": 72,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0105",
+    "kind": "wr",
+    "formula": "sr ~ pop15 + pop75 + dpi + ddpi",
+    "dataset": "faraway/savings",
+    "rows": 50,
+    "cols_X": 5
+  },
+  {
+    "id": "wr_0108",
+    "kind": "wr",
+    "formula": "y ~ 0",
+    "dataset": "faraway/cathedral",
+    "rows": 25,
+    "cols_X": 0
+  },
+  {
+    "id": "wr_0109",
+    "kind": "wr",
+    "formula": "weight ~ group",
+    "dataset": "R/PlantGrowth",
+    "rows": 30,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0110",
+    "kind": "wr",
+    "formula": "weight ~ group - 1",
+    "dataset": "R/PlantGrowth",
+    "rows": 30,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0112",
+    "kind": "wr",
+    "formula": "x ~ 1",
+    "dataset": "faraway/cathedral",
+    "rows": 25,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0113",
+    "kind": "wr",
+    "formula": "rating ~ .",
+    "dataset": "R/attitude",
+    "rows": 30,
+    "cols_X": 7
+  },
+  {
+    "id": "wr_0114",
+    "kind": "wr",
+    "formula": "distance ~ Sex * age",
+    "dataset": "nlme/Orthodont",
+    "rows": 108,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0115",
+    "kind": "wr",
+    "formula": "weight ~ poly(height, 2)",
+    "dataset": "R/women",
+    "rows": 15,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0116",
+    "kind": "wr",
+    "formula": "cbind(ncases, ncontrols) ~ agegp + tobgp + alcgp",
+    "dataset": "R/esoph",
+    "rows": 88,
+    "cols_X": 12
+  },
+  {
+    "id": "wr_0117",
+    "kind": "wr",
+    "formula": "ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp",
+    "dataset": "R/esoph",
+    "rows": 88,
+    "cols_X": 12
+  },
+  {
+    "id": "wr_0118",
+    "kind": "wr",
+    "formula": "cbind(ncases, ncontrols) ~ agegp",
+    "dataset": "R/esoph",
+    "rows": 88,
+    "cols_X": 6
+  },
+  {
+    "id": "wr_0119",
+    "kind": "wr",
+    "formula": "dist ~ speed",
+    "dataset": "R/cars",
+    "rows": 50,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0120",
+    "kind": "wr",
+    "formula": "~a + b",
+    "dataset": "faraway/speedo",
+    "rows": 16,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0121",
+    "kind": "wr",
+    "formula": "extra ~ group",
+    "dataset": "R/sleep",
+    "rows": 20,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0125",
+    "kind": "wr",
+    "formula": "breaks ~ wool + tension",
+    "dataset": "R/warpbreaks",
+    "rows": 54,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0126",
+    "kind": "wr",
+    "formula": "yield ~ block + N + K",
+    "dataset": "MASS/npk",
+    "rows": 24,
+    "cols_X": 8
+  },
+  {
+    "id": "wr_0130",
+    "kind": "wr",
+    "formula": "x ~ z",
+    "dataset": "MASS/topo",
+    "rows": 52,
+    "cols_X": 2
+  },
+  {
+    "id": "wr_0135",
+    "kind": "wr",
+    "formula": "weight ~ group + I(group != \"Ctl\")",
+    "dataset": "R/PlantGrowth",
+    "rows": 30,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0136",
+    "kind": "wr",
+    "formula": "y ~ ns(x, 6) + z",
+    "dataset": "MASS/topo",
+    "rows": 52,
+    "cols_X": 8
+  },
+  {
+    "id": "wr_0137",
+    "kind": "wr",
+    "formula": "log(time) ~ log(climb) + log(dist)",
+    "dataset": "MASS/hills",
+    "rows": 35,
+    "cols_X": 3
+  },
+  {
+    "id": "wr_0138",
+    "kind": "wr",
+    "formula": "breaks ~ wool + tension",
+    "dataset": "R/warpbreaks",
+    "rows": 54,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0139",
+    "kind": "wr",
+    "formula": "y ~ 1",
+    "dataset": "faraway/cathedral",
+    "rows": 25,
+    "cols_X": 1
+  },
+  {
+    "id": "wr_0141",
+    "kind": "wr",
+    "formula": "breaks ~ wool + C(tension, base = 2)",
+    "dataset": "R/warpbreaks",
+    "rows": 54,
+    "cols_X": 4
+  },
+  {
+    "id": "wr_0142",
+    "kind": "wr",
+    "formula": "cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)",
+    "dataset": "R/esoph",
+    "rows": 88,
+    "cols_X": 8
+  }
+]
