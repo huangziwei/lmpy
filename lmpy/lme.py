@@ -284,24 +284,128 @@ class lme:
             self.AIC = self.deviance + 2.0 * self.npar
             self.BIC = self.deviance + np.log(n) * self.npar
 
-    def __repr__(self) -> str:
-        kind = "REML" if self.REML else "ML"
-        out = [f"lme[{kind}]: {self.formula}"]
-        out.append("")
-        out.append("Random effects:")
-        for key, sd in self.sd_re.items():
-            sds = ", ".join(f"{v:.4g}" for v in sd)
-            out.append(f"  {key:>22s}: SD=[{sds}]")
+    # ---- lmer-style printing --------------------------------------------
+
+    def _header(self) -> str:
+        if self.REML:
+            return "Linear mixed model fit by REML"
+        return "Linear mixed model fit by maximum likelihood"
+
+    def _fit_criterion_lines(self) -> list[str]:
+        if self.REML:
+            return [f"REML criterion at convergence: {self.REML_criterion:.4f}"]
+        labels = ["AIC", "BIC", "logLik", "-2*log(L)", "df.resid"]
+        vals = [
+            f"{self.AIC:.4f}",
+            f"{self.BIC:.4f}",
+            f"{self.loglike:.4f}",
+            f"{self.deviance:.4f}",
+            f"{self.df_resid}",
+        ]
+        widths = [max(len(l), len(v)) for l, v in zip(labels, vals)]
+        hdr = " ".join(l.rjust(w) for l, w in zip(labels, widths))
+        row = " ".join(v.rjust(w) for v, w in zip(vals, widths))
+        return [hdr, row]
+
+    def _n_obs_line(self) -> str:
+        groups = "; ".join(f"{g}, {n}" for g, n in self.n_groups.items())
+        return f"Number of obs: {self.n}, groups:  {groups}"
+
+    @staticmethod
+    def _format_col(values: list[float]) -> list[str]:
+        """Format a numeric column with shared decimal places (R's format())."""
+        strs = [f"{v:.4g}" for v in values]
+        if any("e" in s or "E" in s for s in strs):
+            return strs
+        max_dp = max((len(s.split(".")[1]) for s in strs if "." in s), default=0)
+        if max_dp == 0:
+            return strs
+        return [f"{v:.{max_dp}f}" for v in values]
+
+    def _re_table_lines(self, include_variance: bool) -> list[str]:
+        max_corr_cols = 0
+        for c in self.corr_re.values():
+            if c is not None:
+                max_corr_cols = max(max_corr_cols, c.shape[0] - 1)
+
+        # Collect per-bar entries: (group_label, name, sd, variance, corrs)
+        entries: list[tuple[str, str, float, float, list[float]]] = []
+        for key in self.sd_re:
+            names = self._re.cnms[key]
+            if not isinstance(names, list):
+                names = [names]
+            sds = self.sd_re[key]
             corr = self.corr_re.get(key)
-            if corr is not None and corr.shape[0] > 1:
-                i, j = np.triu_indices(corr.shape[0], k=1)
-                cs = ", ".join(f"{corr[a, b]:.3f}" for a, b in zip(i, j))
-                out.append(f"  {'corr':>22s}: [{cs}]")
-        out.append(f"  {'Residual':>22s}: SD={self.sigma:.4g}")
-        out.append("")
-        out.append("Fixed effects:")
-        out.append(self.bhat.to_string())
+            for i, (name, s) in enumerate(zip(names, sds)):
+                corrs = [corr[i, j] for j in range(i)] if (corr is not None and i > 0) else []
+                entries.append((key if i == 0 else "", name, float(s), float(s) ** 2, corrs))
+        entries.append(("Residual", "", float(self.sigma), float(self.sigma_squared), []))
+
+        sd_col = self._format_col([e[2] for e in entries])
+        var_col = self._format_col([e[3] for e in entries]) if include_variance else None
+
+        rows: list[list[str]] = []
+        for idx, (group, name, _s, _v, corrs) in enumerate(entries):
+            # Residual row: blank out the Name cell
+            if group == "Residual" and idx == len(entries) - 1:
+                name_cell = ""
+            else:
+                name_cell = name
+            row = [group, name_cell]
+            if var_col is not None:
+                row.append(var_col[idx])
+            row.append(sd_col[idx])
+            row.extend(f"{c:.2f}" for c in corrs)
+            rows.append(row)
+
+        header = ["Groups", "Name"]
+        if include_variance:
+            header.append("Variance")
+        header.append("Std.Dev.")
+        if max_corr_cols > 0:
+            header.append("Corr")
+            header.extend([""] * (max_corr_cols - 1))
+
+        ncols = len(header)
+        for r in rows:
+            r.extend([""] * (ncols - len(r)))
+        widths = [len(h) for h in header]
+        for r in rows:
+            for i, c in enumerate(r):
+                widths[i] = max(widths[i], len(c))
+
+        def fmt(cells: list[str]) -> str:
+            return (" " + " ".join(c.ljust(w) for c, w in zip(cells, widths))).rstrip()
+
+        return [fmt(header)] + [fmt(r) for r in rows]
+
+    def _fixef_table(self) -> pd.DataFrame:
+        df = pd.concat([self.bhat, self.se_bhat, self.t_values], axis=0).T
+        df.columns = ["Estimate", "Std. Error", "t value"]
+        return df
+
+    def __repr__(self) -> str:
+        out = [self._header(), f"Formula: {self.formula}"]
+        out.extend(self._fit_criterion_lines())
+        out.append("Random effects:")
+        out.extend(self._re_table_lines(include_variance=False))
+        out.append(self._n_obs_line())
+        out.append("Fixed Effects:")
+        compact = self.bhat.rename(index={"Estimate": ""})
+        out.append(compact.to_string())
         return "\n".join(out)
 
     def __str__(self) -> str:
         return self.__repr__()
+
+    def summary(self, digits: int = 4) -> None:
+        out = [self._header(), f"Formula: {self.formula}", ""]
+        out.extend(self._fit_criterion_lines())
+        out.append("")
+        out.append("Random effects:")
+        out.extend(self._re_table_lines(include_variance=True))
+        out.append(self._n_obs_line())
+        out.append("")
+        out.append("Fixed effects:")
+        out.append(self._fixef_table().round(digits).to_string())
+        print("\n".join(out))
