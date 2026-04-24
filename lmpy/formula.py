@@ -3611,20 +3611,17 @@ def _tp_rlanczos(
     if kk_fc < f_check:
         f_check = kk_fc
 
-    # Apple Accelerate's BLAS ddot / dnrm2 pick different summation kernels
-    # across process invocations, giving bit-different results run-to-run.
-    # That perturbs a_j / b_j just enough to rotate eigenvectors within near-
-    # degenerate subspaces of T_j, making X non-deterministic. np.sum(a*b)
-    # goes through a fixed pairwise reduction and is process-deterministic.
-    # (Not einsum: einsum's reduction differs from np.sum by ~1 ULP, which
-    # is enough to rotate eigenvectors away from the R-oracle basis that
-    # test_smooths calibrated against.)
+    # Reorthogonalization uses classical Gram-Schmidt twice (CGS2) via a
+    # batched BLAS matmul — mgcv's C code uses sequential MGS2 in a tight
+    # per-column loop. CGS2 has a different floating-point trajectory, so
+    # eigenvectors of T_j may rotate within degenerate subspaces, but the
+    # final X matrix stays within the 1e-5 relative tolerance of the R
+    # oracle on the full tp/te/fs fixture suite.
     #
-    # Preallocated buffers + in-place numpy ops are used below to avoid
-    # per-iteration temp allocations in the hot MGS loop. Arithmetic is
-    # bit-identical to the naive `float(np.sum(u*v))` / `z = z - xx * q[i]`
-    # form (pairwise reduction along a contiguous axis matches the 1D case;
-    # verified against the R oracle on all tp/te fixtures).
+    # a_j / b_j and the start-vector norm still use `np.sum(u*v)` (pairwise,
+    # BLAS-free, deterministic). Those feed the tridiagonal eigendecomp, so
+    # run-to-run consistency there avoids spurious basis drift beyond what
+    # CGS2 already introduces.
 
     # mgcv's LCG-seeded start vector. The specific constants (106, 1283, 6075)
     # and the `jran=1` seed are load-bearing — changing them would pick a
