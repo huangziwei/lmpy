@@ -1004,19 +1004,40 @@ def _factor_from_series(series: pl.Series, label: str, ordered_hint: bool = Fals
         # sibling columns and to_physical() indexes into that merged pool. Drop
         # levels absent from this column (matches R's droplevels semantics lme4
         # and mgcv use when building Z / model matrices) and remap codes densely.
-        full = series.cat.get_categories().to_list()
-        codes_raw = series.to_physical().to_numpy().astype(np.int64)
+        #
+        # Enum declares its own per-column level pool so we can read levels via
+        # the dtype (~10× faster than .cat.get_categories()) and skip the remap
+        # when every declared level appears (the common case for schema-cast
+        # fixtures).
+        if dt == pl.Enum:
+            full = dt.categories.to_list()
+        else:
+            full = series.cat.get_categories().to_list()
+        codes_raw = series.to_physical().to_numpy()
         null_mask = series.is_null().to_numpy() if series.null_count() > 0 else None
         valid = codes_raw if null_mask is None else codes_raw[~null_mask]
-        present = np.unique(valid) if valid.size else np.empty(0, dtype=np.int64)
-        levels = [full[int(c)] for c in present]
-        remap = np.full(len(full) + 1, -1, dtype=np.int64)
-        for new, old in enumerate(present):
-            remap[int(old)] = new
-        codes = remap[codes_raw] if codes_raw.size else np.empty(0, dtype=np.int64)
+        k_full = len(full)
+        if valid.size == 0:
+            levels = []
+            codes = np.empty(0, dtype=np.int64)
+        else:
+            present_max = int(valid.max())
+            # Fast path: all declared levels are present. np.bincount with
+            # minlength=k_full is O(n) and avoids the np.unique sort.
+            if present_max < k_full and valid.size >= k_full and \
+                    np.all(np.bincount(valid.astype(np.intp, copy=False), minlength=k_full) > 0):
+                levels = full
+                codes = codes_raw.astype(np.int64, copy=False)
+            else:
+                present = np.unique(valid)
+                levels = [full[int(c)] for c in present]
+                remap = np.full(k_full + 1, -1, dtype=np.int64)
+                for new, old in enumerate(present):
+                    remap[int(old)] = new
+                codes = remap[codes_raw]
         if null_mask is not None:
             codes = np.where(null_mask, -1, codes)
-        codes = codes.astype(int)
+        codes = codes.astype(int, copy=False)
         # Ordered-factor signal: polars has no native ordered-factor dtype, and
         # polars 1.40+ made pl.Categorical process-global (so we can't use the
         # Enum/Categorical split anymore either). Callers declare ordered cols
@@ -1544,30 +1565,52 @@ def _poly_orthogonal(x: np.ndarray, degree: int) -> np.ndarray:
     return (Q * signs)[:, 1:]
 
 
-def _eval_atom(node, data: pl.DataFrame):
-    """Per-atom entry point: returns _NumBlock or _FactorBlock."""
+def _eval_atom(node, data: pl.DataFrame, cache: dict | None = None):
+    """Per-atom entry point: returns _NumBlock or _FactorBlock.
+
+    `cache`, if provided, memoizes Name/`df$col` atoms within a single
+    materialize call so interaction-heavy formulas (e.g. `A*B*C*D`) don't
+    re-encode the same factor column once per term.
+    """
     if isinstance(node, Name):
+        if cache is not None:
+            hit = cache.get(node.ident)
+            if hit is not None:
+                return hit
         s = _series(data, node.ident)
         if _is_categorical(s):
-            return _factor_from_series(s, label=node.ident)
-        return _NumBlock(values=_as_float(s.to_numpy()).reshape(-1, 1),
-                         suffixes=[""], label=node.ident)
+            blk = _factor_from_series(s, label=node.ident)
+        else:
+            blk = _NumBlock(values=_as_float(s.to_numpy()).reshape(-1, 1),
+                            suffixes=[""], label=node.ident)
+        if cache is not None:
+            cache[node.ident] = blk
+        return blk
     if isinstance(node, Literal):
         if node.kind == "num":
             return _NumBlock(values=np.full((len(data), 1), float(node.value)),
                              suffixes=[""], label=_deparse(node))
         raise TypeError(f"literal atom not supported: {node!r}")
     if isinstance(node, Paren):
-        return _eval_atom(node.expr, data)
+        return _eval_atom(node.expr, data, cache)
     if isinstance(node, Call):
         return _eval_call(node, data)
     if isinstance(node, BinOp) and node.op == "$":
         if isinstance(node.left, Name) and isinstance(node.right, Name):
+            key = ("$", node.left.ident, node.right.ident) if cache is not None else None
+            if cache is not None:
+                hit = cache.get(key)
+                if hit is not None:
+                    return hit
             s = _series(data, node.right.ident)
             if _is_categorical(s):
-                return _factor_from_series(s, label=_deparse(node))
-            return _NumBlock(values=_as_float(s.to_numpy()).reshape(-1, 1),
-                             suffixes=[""], label=_deparse(node))
+                blk = _factor_from_series(s, label=_deparse(node))
+            else:
+                blk = _NumBlock(values=_as_float(s.to_numpy()).reshape(-1, 1),
+                                suffixes=[""], label=_deparse(node))
+            if cache is not None:
+                cache[key] = blk
+            return blk
         raise TypeError("`$` only supported as `df$col`")
     if isinstance(node, (UnaryOp, BinOp, Subscript)):
         v = _eval_numeric(node, data)
@@ -1740,6 +1783,7 @@ def _encode_term(
     data: pl.DataFrame,
     earlier_terms: list[Term],
     intercept: bool,
+    cache: dict | None = None,
 ) -> _NumBlock:
     """Encode a single term to its numeric column block.
 
@@ -1747,12 +1791,16 @@ def _encode_term(
     whose "hole" (term minus this atom) isn't already covered gets FULL
     coding; other factors stay REDUCED. If intercept is on, the empty term
     is in-model, so all factors are REDUCED when their hole is {}.
+
+    `cache` is forwarded to `_eval_atom` so an outer loop (e.g. `materialize`)
+    can memoize per-atom encoding across sibling terms in interaction-heavy
+    formulas like `A*B*C*D`.
     """
     if not term.atoms:
         # Intercept
         return _NumBlock(values=np.ones((len(data), 1)), suffixes=["(Intercept)"], label="")
 
-    atom_blocks: list[_NumBlock | _FactorBlock] = [_eval_atom(a, data) for a in term.atoms]
+    atom_blocks: list[_NumBlock | _FactorBlock] = [_eval_atom(a, data, cache) for a in term.atoms]
 
     # R's promote1: for each factor atom, FULL coding iff its "hole" (this
     # term minus that atom) is NOT in the model (including the intercept/empty
@@ -1765,7 +1813,23 @@ def _encode_term(
             hole_atoms = tuple(a for j, a in enumerate(term.atoms) if j != i)
             hole = Term(hole_atoms)
             hole_in_model = (hole == _EMPTY_TERM and intercept) or (hole in earlier_terms)
-            encoded_blocks.append(_encode_factor(blk, reduced=hole_in_model))
+            # Cache encoded factor blocks: in a full crossing like `A*B*C*D`
+            # each factor is always REDUCED in every term it appears in, so
+            # one _encode_factor call suffices per (factor, reduced) pair
+            # instead of once per term. Safe to share the same _NumBlock
+            # reference — _khatri_rao and downstream only read `values`.
+            # Key by label rather than id(blk): Call-node atoms aren't in
+            # atom_cache so their _FactorBlock refs can be GC'd between
+            # terms, causing id() reuse to collide across different factors.
+            if cache is not None:
+                enc_key = ("enc", blk.label, hole_in_model)
+                enc = cache.get(enc_key)
+                if enc is None:
+                    enc = _encode_factor(blk, reduced=hole_in_model)
+                    cache[enc_key] = enc
+                encoded_blocks.append(enc)
+            else:
+                encoded_blocks.append(_encode_factor(blk, reduced=hole_in_model))
         else:
             encoded_blocks.append(blk)
 
@@ -1842,13 +1906,14 @@ def materialize(expanded: ExpandedFormula, data: pl.DataFrame) -> pl.DataFrame:
 
     blocks: list[_NumBlock] = []
     running_terms: list[Term] = []
+    atom_cache: dict = {}
 
     if expanded.intercept:
-        blocks.append(_encode_term(_EMPTY_TERM, data, running_terms, expanded.intercept))
+        blocks.append(_encode_term(_EMPTY_TERM, data, running_terms, expanded.intercept, atom_cache))
         running_terms.append(_EMPTY_TERM)
 
     for t in expanded.terms:
-        blocks.append(_encode_term(t, data, running_terms, expanded.intercept))
+        blocks.append(_encode_term(t, data, running_terms, expanded.intercept, atom_cache))
         running_terms.append(t)
 
     all_names: list[str] = []
@@ -1902,11 +1967,12 @@ def _materialize_re_lhs(lhs_ef: ExpandedFormula, data: pl.DataFrame) -> tuple[np
     """
     blocks: list[_NumBlock] = []
     running_terms: list[Term] = []
+    atom_cache: dict = {}
     if lhs_ef.intercept:
-        blocks.append(_encode_term(_EMPTY_TERM, data, running_terms, lhs_ef.intercept))
+        blocks.append(_encode_term(_EMPTY_TERM, data, running_terms, lhs_ef.intercept, atom_cache))
         running_terms.append(_EMPTY_TERM)
     for t in lhs_ef.terms:
-        blocks.append(_encode_term(t, data, running_terms, lhs_ef.intercept))
+        blocks.append(_encode_term(t, data, running_terms, lhs_ef.intercept, atom_cache))
         running_terms.append(t)
     if not blocks:
         return np.zeros((len(data), 0)), []

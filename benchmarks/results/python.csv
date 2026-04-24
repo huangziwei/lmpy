@@ -1,120 +1,303 @@
 library,version,fixture_id,kind,formula,dataset,n_rows,scale,scope,status,error,n_reps,min_s,median_s,max_s
+lmpy,0.0.1,cur_0036,lme4,Reaction ~ Days + (1 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0015182700008153915,0.0015449259954039007,0.0016175009950529784
+lmpy,0.0.1,cur_0037,lme4,Reaction ~ Days + (1 + Days + I(Days^2) | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0016986980044748634,0.001763342006597668,0.0018490359943825752
+lmpy,0.0.1,cur_0038,lme4,Reaction ~ Days + (1 + Days + I(Days^2) || Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0017329760012216866,0.0017435610061511397,0.0018100419838447124
+lmpy,0.0.1,cur_0039,lme4,angle ~ recipe + (recipe | replicate),lme4/cake,270,1,full,ok,,7,0.0024034070083871484,0.0024524430045858026,0.0027904619928449392
+lmpy,0.0.1,cur_0040,lme4,angle ~ recipe + (recipe || replicate),lme4/cake,270,1,full,ok,,7,0.0024673540028743446,0.002512736013159156,0.002569831005530432
+lmpy,0.0.1,cur_0041,lme4,Reaction ~ Days + (0 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0015559860039502382,0.0015759210218675435,0.0016246500017587095
+lmpy,0.0.1,cur_0042,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,ok,,7,0.0022189260052982718,0.002254822989925742,0.0024532980169169605
+lmpy,0.0.1,cur_0043,lme4,yield ~ nitro + (nitro | Block/Variety),nlme/Oats,72,1,full,ok,,7,0.002406279993010685,0.002425000013317913,0.002478693990269676
+lmpy,0.0.1,cur_0044,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,ok,,7,0.0018313420005142689,0.0018661300127860159,0.001883883000118658
+lmpy,0.0.1,cur_0045,lme4,Reaction ~ 1 + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0015158620080910623,0.0015689250139985234,0.001732442993670702
+lmpy,0.0.1,cur_0046,lme4,strength ~ batch + (1 | batch),lme4/Pastes,60,1,full,ok,,7,0.0018479200080037117,0.001877114991657436,0.0019217249937355518
+lmpy,0.0.1,cur_0048,lme4,angle ~ recipe + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.0028055979928467423,0.002865376998670399,0.0029139599937479943
+lmpy,0.0.1,cur_0049,lme4,Yield ~ 1 + (1 | Batch),lme4/Dyestuff,30,1,full,ok,,7,0.001362907001748681,0.001370593992760405,0.0014003730029799044
+lmpy,0.0.1,cur_0051,lme4,Reaction ~ Days + (Days || Subject) + (1 | Days),lme4/sleepstudy,180,1,full,ok,,7,0.0020469270239118487,0.002074087009532377,0.0022718549880664796
+lmpy,0.0.1,lme4_0007,lme4,Yield ~ 1 | Batch,lme4/Dyestuff,30,1,full,ok,,7,0.0013513500161934644,0.001359201007289812,0.0013895599986426532
+lmpy,0.0.1,lme4_0008,lme4,strength ~ (1 | batch) + (1 | sample),lme4/Pastes,60,1,full,ok,,7,0.0018704789981711656,0.0019475279841572046,0.002327742025954649
+lmpy,0.0.1,lme4_0009,lme4,strength ~ (1 | batch/cask),lme4/Pastes,60,1,full,ok,,7,0.002207294979598373,0.002220891008619219,0.0027027490141335875
+lmpy,0.0.1,lme4_0010,lme4,strength ~ (1 | batch) + (1 | batch:cask),lme4/Pastes,60,1,full,ok,,7,0.0023080999962985516,0.0023660570150241256,0.003027723985724151
+lmpy,0.0.1,lme4_0011,lme4,strength ~ (1 | batch/sample),lme4/Pastes,60,1,full,ok,,7,0.002237460983451456,0.002251088008051738,0.0024490130017511547
+lmpy,0.0.1,lme4_0012,lme4,strength ~ (1 | batch) + (1 | cask),lme4/Pastes,60,1,full,ok,,7,0.0017765880038496107,0.0018095539999194443,0.001966148993233219
+lmpy,0.0.1,lme4_0013,lme4,diameter ~ (1 | plate) + (1 | sample),lme4/Penicillin,144,1,full,ok,,7,0.0019050240225624293,0.0019231729966122657,0.002145740989362821
+lmpy,0.0.1,lme4_0014,lme4,distance ~ age + (age | Subject),nlme/Orthodont,108,1,full,ok,,7,0.0015717179921921343,0.001579964009579271,0.0016825110069476068
+lmpy,0.0.1,lme4_0015,lme4,r2 ~ (Anger + Gender + btype + situ)^2 + (1 | id) + (1 | item),lme4/VerbAgg,7584,1,full,ok,,7,0.032921445003012195,0.03378182300366461,0.03450084401993081
+lmpy,0.0.1,lme4_0016,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,ok,,7,0.0019232839986216277,0.0019498160108923912,0.0019795990083366632
+lmpy,0.0.1,lme4_0017,lme4,angle ~ recipe * temperature + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.0034968619875144213,0.003543841012287885,0.0038522859977092594
+lmpy,0.0.1,lme4_0018,lme4,angle ~ recipe + temperature + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.003379364003194496,0.0034288979950360954,0.0035498199868015945
+lmpy,0.0.1,lme4_0019,lme4,angle ~ recipe + temp + (1 | recipe:replicate),lme4/cake,270,1,full,ok,,7,0.0028808290080633014,0.0029328580130822957,0.003169226023601368
+lmpy,0.0.1,lme4_0020,lme4,incidence/size ~ period + (1 | herd),lme4/cbpp,56,1,full,ok,,7,0.0018941269954666495,0.0019164300174452364,0.0020594590168911964
+lmpy,0.0.1,lme4_0022,lme4,incidence/size ~ period + treatment + avg_size + (1 | herd),lme4/cbpp2,56,1,full,ok,,7,0.0019182820105925202,0.0019792449893429875,0.0021052249940112233
+lmpy,0.0.1,lme4_0023,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0016080719942692667,0.0016985830152407289,0.0017874590121209621
+lmpy,0.0.1,lme4_0024,lme4,Reaction ~ Days + (Days || Subject),lme4/sleepstudy,180,1,full,ok,,7,0.001657605986110866,0.0017078340169973671,0.0018984400085173547
+lmpy,0.0.1,lme4_0025,lme4,predation ~ ttt2 + (1 | block),lme4/culcitalogreg,80,1,full,ok,,7,0.0017902349936775863,0.0018706110131461173,0.0018816379888448864
+lmpy,0.0.1,lme4_0030,lme4,"distance ~ age + (age | Subject) + (0 + dummy(Sex, ""Female"") | Subject)",nlme/Orthodont,108,1,full,ok,,7,0.002214271982666105,0.002236863976577297,0.0024049030034802854
+lmpy,0.0.1,lme4_0031,lme4,Reaction ~ Days + (1 | Subject) + (0 + Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.0020828580018132925,0.002112472982844338,0.002303974993992597
+lmpy,0.0.1,lme4_0033,lme4,Reaction ~ Days + (1 | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.001535903022158891,0.00157211598707363,0.0016528909909538925
+lmpy,0.0.1,lme4_0034,lme4,shells ~ factor(year) + prev + offset(log(Area)) + (1 | Site),lme4/gopherdat2,30,1,full,ok,,7,0.0019244799914304167,0.0019447060185484588,0.002002935012569651
+lmpy,0.0.1,lme4_0037,lme4,Reaction ~ Days + (Days | Subject),lme4/sleepstudy,180,1,full,ok,,7,0.001568606006912887,0.0015830140036996454,0.0016059620247688144
+lmpy,0.0.1,lme4_0038,lme4,"cbind(incidence, size - incidence) ~ period + (1 | herd)",lme4/cbpp,56,1,full,ok,,7,0.0019074860028922558,0.0019133030145894736,0.0019486079982016236
+lmpy,0.0.1,lme4_0039,lme4,Reaction ~ 1 | Subject,lme4/sleepstudy,180,1,full,ok,,7,0.0014202040038071573,0.0014614920073654503,0.0015776399814058095
+lmpy,0.0.1,lme4_0041,lme4,y ~ x + (1 | f),synthetic/seed_synth_singleton,100,1,full,ok,,7,0.0014775570016354322,0.0014950990153010935,0.0016615250206086785
+lmpy,0.0.1,lme4_0042,lme4,Mate ~ (1 | Female) + (1 | Male) + Cross,lme4/salamander,360,1,full,ok,,7,0.002569628006312996,0.0026609950000420213,0.002802603004965931
+lmpy,0.0.1,lme4_0043,lme4,imps79 ~ TxDrug * Week + (1 | id),lme4/schizophrenia,1603,1,full,ok,,7,0.003592650988139212,0.004016953986138105,0.004635991004761308
+lmpy,0.0.1,lme4_0044,lme4,outcome ~ time * treatment + (1 | patientID),lme4/toenail,1908,1,full,ok,,7,0.0042204920027870685,0.004571378987748176,0.005130206001922488
 lmpy,0.0.1,cur_0052,mgcv,"y ~ te(x0, x1, bs = c(""tp"", ""cr""))",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: te/ti with bs='tp' margins not yet supported,7,,,
-lmpy,0.0.1,cur_0053,mgcv,"y ~ te(x0, x1, k = c(5, 10))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.00015844099107198417,0.00016424202476628125,0.00020525301806628704
-lmpy,0.0.1,cur_0054,mgcv,"y ~ s(x0, by = x1)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00013008600217290223,0.0001362269977107644,0.00017333897994831204
-lmpy,0.0.1,cur_0055,mgcv,"yield ~ Variety + s(nitro, by = Variety)",nlme/Oats,72,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0005320149939507246,0.0005421910027507693,0.0005863810074515641
-lmpy,0.0.1,cur_0056,mgcv,"y ~ s(x0) + s(x1) + ti(x0, x1)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00017624598694965243,0.0001801530015654862,0.00021613400895148516
-lmpy,0.0.1,cur_0057,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 5),7,0.00022825298947282135,0.00023499000235460699,0.00026653599343262613
-lmpy,0.0.1,cur_0058,mgcv,"y ~ s(x0, k = 50)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 50),7,0.00013408801169134676,0.00014283301425166428,0.000181743991561234
-lmpy,0.0.1,cur_0059,mgcv,"y ~ s(x0, k = 3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.0020528840250335634,0.002245170995593071,0.002340000995900482
-lmpy,0.0.1,cur_0060,mgcv,"temp ~ s(day.of.year, bs = ""cc"", k = 20)",gamair/cairo,3780,1,full,ok,,7,0.0038377769815269858,0.004255097999703139,0.0045457539963535964
-lmpy,0.0.1,cur_0061,mgcv,"distance ~ s(age, Subject, bs = ""fs"")",nlme/Orthodont,108,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00013586899149231613,0.00014227101928554475,0.000179466005647555
-lmpy,0.0.1,cur_0062,mgcv,y ~ te(x0),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.0001201150007545948,0.00013007697998546064,0.0001630979822948575
-lmpy,0.0.1,cur_0063,mgcv,"uptake ~ s(Plant, bs = ""re"")",R/CO2,84,1,full,ok,,7,0.0010694639931898564,0.001169490977190435,0.0012756020005326718
+lmpy,0.0.1,cur_0053,mgcv,"y ~ te(x0, x1, k = c(5, 10))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.00016010698163881898,0.00016383599722757936,0.00020597002003341913
+lmpy,0.0.1,cur_0054,mgcv,"y ~ s(x0, by = x1)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00013533400488086045,0.00015317799989134073,0.00024023099103942513
+lmpy,0.0.1,cur_0055,mgcv,"yield ~ Variety + s(nitro, by = Variety)",nlme/Oats,72,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.000624228996457532,0.0006278170039877295,0.0006547399971168488
+lmpy,0.0.1,cur_0056,mgcv,"y ~ s(x0) + s(x1) + ti(x0, x1)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001778879959601909,0.0001832149864640087,0.0002177440037485212
+lmpy,0.0.1,cur_0057,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + ti(x0, x1, k = c(5, 5))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 5),7,0.00023016598424874246,0.00023373198928311467,0.0002894159988500178
+lmpy,0.0.1,cur_0058,mgcv,"y ~ s(x0, k = 50)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 50),7,0.000134253001306206,0.00013978200149722397,0.00017621900769881904
+lmpy,0.0.1,cur_0059,mgcv,"y ~ s(x0, k = 3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.0020854760077781975,0.0022347320045810193,0.002351656003156677
+lmpy,0.0.1,cur_0060,mgcv,"temp ~ s(day.of.year, bs = ""cc"", k = 20)",gamair/cairo,3780,1,full,ok,,7,0.00355132800177671,0.004038290993776172,0.0049530079995747656
+lmpy,0.0.1,cur_0061,mgcv,"distance ~ s(age, Subject, bs = ""fs"")",nlme/Orthodont,108,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00013651399058289826,0.0001427590032108128,0.0001801449980121106
+lmpy,0.0.1,cur_0062,mgcv,y ~ te(x0),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.00011899400851689279,0.00012414102093316615,0.00016273398068733513
+lmpy,0.0.1,cur_0063,mgcv,"uptake ~ s(Plant, bs = ""re"")",R/CO2,84,1,full,ok,,7,0.0011423540126997977,0.0012085829803254455,0.0013962750090286136
 lmpy,0.0.1,cur_0064,mgcv,"y ~ s(x0, bs = ""ts"") + s(x1, bs = ""ts"")",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='ts' (class dispatch for s(x0)) not yet implemented,7,,,
 lmpy,0.0.1,cur_0065,mgcv,"y ~ s(x0, bs = ""cs"", k = 10)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='cs' (class dispatch for s(x0)) not yet implemented,7,,,
-lmpy,0.0.1,cur_0066,mgcv,"y ~ s(x0, pc = 0.5)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001378619926981628,0.00014488797751255333,0.00018199699115939438
-lmpy,0.0.1,cur_0068,mgcv,"y ~ s(x0, bs = ""cr"", xt = list(border = 2))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.00016256602248176932,0.00016917299944907427,0.0002058560203295201
-lmpy,0.0.1,mgcv_0003,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Machine, Worker, bs = ""re"")",nlme/Machines,54,1,full,ok,,7,0.00290745502570644,0.0031203200051095337,0.0033438710088375956
-lmpy,0.0.1,mgcv_0004,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Worker, bs = ""re"", by = Machine)",nlme/Machines,54,1,full,ok,,7,0.002549632015870884,0.00265827399562113,0.0029572319763246924
-lmpy,0.0.1,mgcv_0005,mgcv,Volume ~ s(Height) + s(Girth),mgcv/trees,31,1,full,ok,,7,0.005279977020109072,0.0054749590053688735,0.006095390010159463
-lmpy,0.0.1,mgcv_0006,mgcv,"Volume ~ s(Height, bs = ""cr"") + s(Girth, bs = ""cr"")",mgcv/trees,31,1,full,ok,,7,0.002152670989744365,0.0022134749742690474,0.002487077988917008
-lmpy,0.0.1,mgcv_0007,mgcv,"Volume ~ s(Height) + s(Girth, bs = ""cr"", k = 20)",mgcv/trees,31,1,full,ok,,7,0.00401721999514848,0.00411209900630638,0.005088256002636626
-lmpy,0.0.1,mgcv_0008,mgcv,"Volume ~ s(Height, Girth, k = 25)",mgcv/trees,31,1,full,ok,,7,0.0031938630272634327,0.0033130169904325157,0.003464114008238539
-lmpy,0.0.1,mgcv_0009,mgcv,"Volume ~ te(Height, Girth, k = 5)",mgcv/trees,31,1,full,ok,,7,0.002073775016469881,0.0021554940030910075,0.0022981020156294107
-lmpy,0.0.1,mgcv_0010,mgcv,Volume ~ Height + s(Girth),mgcv/trees,31,1,full,ok,,7,0.0027572709950618446,0.002876525017200038,0.0035164380096830428
+lmpy,0.0.1,cur_0066,mgcv,"y ~ s(x0, pc = 0.5)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00013497399049811065,0.00014000898227095604,0.00017779399058781564
+lmpy,0.0.1,cur_0068,mgcv,"y ~ s(x0, bs = ""cr"", xt = list(border = 2))",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.0001630480110179633,0.00016851400141604245,0.00020549699547700584
+lmpy,0.0.1,mgcv_0003,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Machine, Worker, bs = ""re"")",nlme/Machines,54,1,full,ok,,7,0.003114027000265196,0.0032815879967529327,0.003720945998793468
+lmpy,0.0.1,mgcv_0004,mgcv,"score ~ Machine + s(Worker, bs = ""re"") + s(Worker, bs = ""re"", by = Machine)",nlme/Machines,54,1,full,ok,,7,0.0027833479980472475,0.0029149829933885485,0.0031998250051401556
+lmpy,0.0.1,mgcv_0005,mgcv,Volume ~ s(Height) + s(Girth),mgcv/trees,31,1,full,ok,,7,0.005400001013185829,0.005587565014138818,0.005912891996558756
+lmpy,0.0.1,mgcv_0006,mgcv,"Volume ~ s(Height, bs = ""cr"") + s(Girth, bs = ""cr"")",mgcv/trees,31,1,full,ok,,7,0.002078335004625842,0.002196062996517867,0.002350777998799458
+lmpy,0.0.1,mgcv_0007,mgcv,"Volume ~ s(Height) + s(Girth, bs = ""cr"", k = 20)",mgcv/trees,31,1,full,ok,,7,0.0038697229756508023,0.00400980599806644,0.004503986012423411
+lmpy,0.0.1,mgcv_0008,mgcv,"Volume ~ s(Height, Girth, k = 25)",mgcv/trees,31,1,full,ok,,7,0.003192383999703452,0.003365017008036375,0.0034415139816701412
+lmpy,0.0.1,mgcv_0009,mgcv,"Volume ~ te(Height, Girth, k = 5)",mgcv/trees,31,1,full,ok,,7,0.0021519710135180503,0.002268726995680481,0.0025913989811670035
+lmpy,0.0.1,mgcv_0010,mgcv,Volume ~ Height + s(Girth),mgcv/trees,31,1,full,ok,,7,0.002778427005978301,0.002878748986404389,0.00296625099144876
 lmpy,0.0.1,mgcv_0012,mgcv,"y ~ s(x0, bs = ""pl"", m = 2) + s(x1, bs = ""pl"", m = 2) + s(x2, bs = ""pl"", m = 3) + s(x3, bs = ""pl"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='pl' (class dispatch for s(x0)) not yet implemented,7,,,
-lmpy,0.0.1,mgcv_0013,mgcv,y ~ s(x),gamair/hubble,24,1,full,ok,,7,0.0026451539888512343,0.002695867995498702,0.0029450269939843565
-lmpy,0.0.1,mgcv_0014,mgcv,y ~ x,gamair/hubble,24,1,full,ok,,7,0.00014601898146793246,0.000155179004650563,0.0002021209802478552
-lmpy,0.0.1,mgcv_0015,mgcv,"accel ~ s(times, k = 40)",MASS/mcycle,133,1,full,ok,,7,0.006102578976424411,0.0063540209957864136,0.006730400986270979
-lmpy,0.0.1,mgcv_0016,mgcv,"accel ~ s(times, k = 11, fx = TRUE)",MASS/mcycle,133,1,full,ok,,7,0.0029185719904489815,0.002979772980324924,0.0030871070048306137
-lmpy,0.0.1,mgcv_0017,mgcv,"accel ~ s(times, k = 11, fx = TRUE, bs = ""cr"")",MASS/mcycle,133,1,full,ok,,7,0.0009949359809979796,0.001039958995534107,0.0012202700017951429
-lmpy,0.0.1,mgcv_0018,mgcv,"accel ~ s(times, k = 40, m = 3)",MASS/mcycle,133,1,full,ok,,7,0.005286296014674008,0.0056094040046446025,0.005673289997503161
-lmpy,0.0.1,mgcv_0020,mgcv,price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year),gamair/wine,47,1,full,ok,,7,0.009768900024937466,0.010298959008650854,0.010871117003262043
-lmpy,0.0.1,mgcv_0026,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001993750047404319,0.00020845100516453385,0.00034508699900470674
-lmpy,0.0.1,mgcv_0027,mgcv,"y ~ s(x, k = 40)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.014707311987876892,0.0154184149869252,0.017036210017977282
-lmpy,0.0.1,mgcv_0028,mgcv,"z ~ s(x, y, k = 100)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.07197049801470712,0.07387071300763637,0.07507182800327428
-lmpy,0.0.1,mgcv_0030,mgcv,y ~ x0 + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,ok,,7,0.019804298994131386,0.020406068011652678,0.021468540013302118
-lmpy,0.0.1,mgcv_0031,mgcv,y ~ x0 + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,ok,,7,0.012934071011841297,0.013622916012536734,0.014681815984658897
-lmpy,0.0.1,mgcv_0036,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00023738399613648653,0.0002450780011713505,0.0002947770117316395
-lmpy,0.0.1,mgcv_0041,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024021699209697545,0.0002446160069666803,0.000279981002677232
-lmpy,0.0.1,mgcv_0042,mgcv,"y ~ s(x0) + s(x1, x2, k = 15) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00018954600091092288,0.0001993380137719214,0.0002330330025870353
-lmpy,0.0.1,mgcv_0044,mgcv,"y ~ s(x0) + te(x1, x2, k = 4) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00019129799329675734,0.00019582899403758347,0.0002320669882465154
-lmpy,0.0.1,mgcv_0046,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 5),7,0.00023985101142898202,0.00024075398687273264,0.0002796729968395084
-lmpy,0.0.1,mgcv_0047,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024254797608591616,0.00024420698173344135,0.00028994999593123794
-lmpy,0.0.1,mgcv_0048,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024261599173769355,0.000254759012022987,0.00033842198899947107
-lmpy,0.0.1,mgcv_0049,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00023797200992703438,0.00024150998797267675,0.0002756440080702305
-lmpy,0.0.1,mgcv_0061,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.000238278997130692,0.0002440650132484734,0.0002750069834291935
-lmpy,0.0.1,mgcv_0062,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.03054988299845718,0.030997655005194247,0.03244761601672508
-lmpy,0.0.1,mgcv_0063,mgcv,"y ~ s(x0) + s(x1) + s(x1, fac, bs = ""sz"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.033399965992430225,0.03429758799029514,0.03617505499278195
-lmpy,0.0.1,mgcv_0064,mgcv,"y ~ te(x0, x1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 7),7,0.00019175998750142753,0.00019795799744315445,0.00023333498393185437
-lmpy,0.0.1,mgcv_0065,mgcv,"y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00023284097551368177,0.0002413660113234073,0.00027619299362413585
-lmpy,0.0.1,mgcv_0066,mgcv,"y ~ s(x0, x1, k = 40) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.04256105801323429,0.04415591398719698,0.0460989759885706
-lmpy,0.0.1,mgcv_0067,mgcv,"y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0002069429901894182,0.00021547797950915992,0.000249411998083815
-lmpy,0.0.1,mgcv_0068,mgcv,"y ~ s(x0, k = 4, fx = TRUE, bs = ""tp"") + s(x1, k = 12) + s(x2, k = 15)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.032119698997121304,0.03309498299495317,0.03363858297234401
-lmpy,0.0.1,mgcv_0069,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.0002079010009765625,0.0002132359950337559,0.0002504450094420463
-lmpy,0.0.1,mgcv_0070,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001672280195634812,0.00017830199794843793,0.00020857900381088257
-lmpy,0.0.1,mgcv_0071,mgcv,y ~ s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,ok,,7,0.012983994005480781,0.013454628002364188,0.01417252401006408
-lmpy,0.0.1,mgcv_0072,mgcv,"y ~ s(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.028498767991550267,0.03072384902043268,0.03242684798897244
-lmpy,0.0.1,mgcv_0073,mgcv,"y ~ s(x, z, k = 40)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.026830688992049545,0.027905001014005393,0.028717387991491705
-lmpy,0.0.1,mgcv_0074,mgcv,"y ~ s(x, z, k = 64)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.04159969702595845,0.04361771899857558,0.04637214500689879
-lmpy,0.0.1,mgcv_0076,mgcv,"y ~ s(x, k = 15)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.01099510700441897,0.012256128014996648,0.01263463098439388
-lmpy,0.0.1,mgcv_0077,mgcv,"y ~ s(x2, by = x1)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.006836893007857725,0.007444463990395889,0.008077445003436878
-lmpy,0.0.1,mgcv_0078,mgcv,"y ~ fac + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.014319640991743654,0.014900687005138025,0.0176484800176695
-lmpy,0.0.1,mgcv_0079,mgcv,"y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2)) + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1",mgcv/gamSim_eg4,400,1,full,ok,,7,0.02808418800123036,0.030320701014716178,0.03139876000932418
-lmpy,0.0.1,mgcv_0080,mgcv,"y ~ fac + s(x2, by = fac, id = 1) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.014958406012738124,0.015645823994418606,0.01645141901099123
-lmpy,0.0.1,mgcv_0081,mgcv,"y ~ fac + s(x2) + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.021092167997267097,0.02251776898629032,0.023331694974331185
-lmpy,0.0.1,mgcv_0083,mgcv,"y ~ s(fac, bs = ""re"") + s(x0) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg6,400,1,full,ok,,7,0.027221727999858558,0.030462572001852095,0.03163249700446613
-lmpy,0.0.1,mgcv_0087,mgcv,"y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00019849499221891165,0.0002048139867838472,0.00024327199207618833
-lmpy,0.0.1,mgcv_0088,mgcv,"y ~ s(x, bs = ""cr"", k = 6) + s(z, bs = ""cr"", k = 6) + te(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0044534909829963,0.0046535560104530305,0.004874767997534946
-lmpy,0.0.1,mgcv_0089,mgcv,"y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004714520007837564,0.004897394013823941,0.005108097015181556
-lmpy,0.0.1,mgcv_0091,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00018739799270406365,0.00019444499048404396,0.0002274650032632053
-lmpy,0.0.1,mgcv_0092,mgcv,"y ~ te(x0, x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.000175278983078897,0.000184807984624058,0.0002169660001527518
-lmpy,0.0.1,mgcv_0093,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00016634201165288687,0.0001714260142762214,0.00020549999317154288
-lmpy,0.0.1,mgcv_0094,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.012667990988120437,0.013725502009037882,0.014959958993131295
-lmpy,0.0.1,mgcv_0095,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.013063591002719477,0.013757078006165102,0.014438746002269909
-lmpy,0.0.1,mgcv_0096,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.00023943299311213195,0.00024479901185259223,0.0002780680079013109
-lmpy,0.0.1,mgcv_0097,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0346333269844763,0.03535950800869614,0.036039025988429785
-lmpy,0.0.1,mgcv_0098,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.034185426018666476,0.03568167801131494,0.08880709199002013
-lmpy,0.0.1,mgcv_0110,mgcv,"y ~ s(x, bs = ""cc"", k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0012159250036347657,0.0013283640146255493,0.0013857209996785969
-lmpy,0.0.1,mgcv_0111,mgcv,"y ~ s(x, k = 10, bs = ""cr"")",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0015308619767893106,0.0015984750061761588,0.0017489040037617087
-lmpy,0.0.1,mgcv_0112,mgcv,"y ~ s(x, k = 10)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0070650480047333986,0.007241164013976231,0.00792949300375767
-lmpy,0.0.1,mgcv_0114,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 7),7,0.00021646000095643103,0.000220718007767573,0.0002689500106498599
-lmpy,0.0.1,mgcv_0115,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 7),7,0.00022430700482800603,0.00022893399000167847,0.0002652569964993745
-lmpy,0.0.1,mgcv_0116,mgcv,"y ~ x0 + s(x1, x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.03664959201705642,0.03808879101416096,0.038555525010451674
-lmpy,0.0.1,mgcv_0117,mgcv,"y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: c(...) length 2 doesn't match margin count 3,7,0.00021659000776708126,0.00023460498778149486,0.0002617310092318803
-lmpy,0.0.1,mgcv_0118,mgcv,y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00021889098570682108,0.00022641601390205324,0.0002636580029502511
-lmpy,0.0.1,mgcv_0119,mgcv,y ~ s(x0) + s(x1) + s(x2) + x3,mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0002380079822614789,0.00024093399406410754,0.00028206000570207834
-lmpy,0.0.1,mgcv_0120,mgcv,y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00035441300133243203,0.00035702899913303554,0.0003911870007868856
-lmpy,0.0.1,mgcv_0121,mgcv,y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0003486060013528913,0.00035519199445843697,0.00039793900214135647
-lmpy,0.0.1,mgcv_0123,mgcv,"y ~ s(x, k = 5)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.006855493003968149,0.007082636991981417,0.008126013999572024
-lmpy,0.0.1,mgcv_0124,mgcv,"travel ~ s(Rail, bs = ""re"")",nlme/Rail,18,1,full,ok,,7,0.0011018909863196313,0.0011747849930543453,0.0013364189944695681
-lmpy,0.0.1,mgcv_0125,mgcv,"y ~ fac + s(x1, by = fac) + x2",mgcv/gamSim_eg4,400,1,full,ok,,7,0.008171396009856835,0.008315643994137645,0.008709446992725134
+lmpy,0.0.1,mgcv_0013,mgcv,y ~ s(x),gamair/hubble,24,1,full,ok,,7,0.0026171570061706007,0.002655391988810152,0.0027277689951006323
+lmpy,0.0.1,mgcv_0014,mgcv,y ~ x,gamair/hubble,24,1,full,ok,,7,0.0001493559975642711,0.0001570679887663573,0.0001962249807547778
+lmpy,0.0.1,mgcv_0015,mgcv,"accel ~ s(times, k = 40)",MASS/mcycle,133,1,full,ok,,7,0.005993787985062227,0.0063087289745453745,0.0064811750198714435
+lmpy,0.0.1,mgcv_0016,mgcv,"accel ~ s(times, k = 11, fx = TRUE)",MASS/mcycle,133,1,full,ok,,7,0.0027943800087086856,0.0028734669904224575,0.0032247639901470393
+lmpy,0.0.1,mgcv_0017,mgcv,"accel ~ s(times, k = 11, fx = TRUE, bs = ""cr"")",MASS/mcycle,133,1,full,ok,,7,0.0010191219917032868,0.0010626180155668408,0.0011558500118553638
+lmpy,0.0.1,mgcv_0018,mgcv,"accel ~ s(times, k = 40, m = 3)",MASS/mcycle,133,1,full,ok,,7,0.005311576009262353,0.0055150889966171235,0.005683208990376443
+lmpy,0.0.1,mgcv_0020,mgcv,price ~ s(h.rain) + s(s.temp) + s(h.temp) + s(year),gamair/wine,47,1,full,ok,,7,0.009404612996149808,0.009736619016621262,0.009860746999038383
+lmpy,0.0.1,mgcv_0026,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00018885999452322721,0.0001949419965967536,0.00023292200057767332
+lmpy,0.0.1,mgcv_0027,mgcv,"y ~ s(x, k = 40)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.01506792800500989,0.015654816990718246,0.01733389901346527
+lmpy,0.0.1,mgcv_0028,mgcv,"z ~ s(x, y, k = 100)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.07359122499474324,0.0749560390249826,0.0771280399931129
+lmpy,0.0.1,mgcv_0030,mgcv,y ~ x0 + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,full,ok,,7,0.020184902008622885,0.021391043002950028,0.021935002005193383
+lmpy,0.0.1,mgcv_0031,mgcv,y ~ x0 + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,ok,,7,0.014191930997185409,0.01459944000816904,0.015345048974268138
+lmpy,0.0.1,mgcv_0036,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 6) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.000239395973039791,0.0002459279785398394,0.00028357599512673914
+lmpy,0.0.1,mgcv_0041,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 20) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024260100326500833,0.0002483160060364753,0.0002856680075637996
+lmpy,0.0.1,mgcv_0042,mgcv,"y ~ s(x0) + s(x1, x2, k = 15) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.000190042017493397,0.00019639698439277709,0.00023735201102681458
+lmpy,0.0.1,mgcv_0044,mgcv,"y ~ s(x0) + te(x1, x2, k = 4) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00019284000154584646,0.00019779900321736932,0.00023011298617348075
+lmpy,0.0.1,mgcv_0046,mgcv,"y ~ s(x0, k = 5) + s(x1, k = 5) + s(x2, k = 5) + s(x3, k = 5)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 5),7,0.0002387790009379387,0.00024463399313390255,0.00028413598192855716
+lmpy,0.0.1,mgcv_0047,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 12) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024088297504931688,0.00025141501100733876,0.0003731940232682973
+lmpy,0.0.1,mgcv_0048,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 24) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00023888499708846211,0.0002453030028846115,0.00027739102370105684
+lmpy,0.0.1,mgcv_0049,mgcv,"y ~ s(x0, k = 6) + s(x1, k = 6) + s(x2, k = 40) + s(x3, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 6),7,0.00024072997621260583,0.00025365600595250726,0.00028026700601913035
+lmpy,0.0.1,mgcv_0061,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.0002502140123397112,0.0002689309767447412,0.0003008230123668909
+lmpy,0.0.1,mgcv_0062,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.02878569101449102,0.03012955898884684,0.0315150530077517
+lmpy,0.0.1,mgcv_0063,mgcv,"y ~ s(x0) + s(x1) + s(x1, fac, bs = ""sz"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.03362033501616679,0.03544124399195425,0.036887808004394174
+lmpy,0.0.1,mgcv_0064,mgcv,"y ~ te(x0, x1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 7),7,0.000191683997400105,0.00019558699568733573,0.00023623800370842218
+lmpy,0.0.1,mgcv_0065,mgcv,"y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0002392290043644607,0.00024165699142031372,0.0002833619946613908
+lmpy,0.0.1,mgcv_0066,mgcv,"y ~ s(x0, x1, k = 40) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.04560438101179898,0.04756375899887644,0.05010469298576936
+lmpy,0.0.1,mgcv_0067,mgcv,"y ~ s(x0, sp = 0.01) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00021522899623960257,0.00021667798864655197,0.00025303999427706003
+lmpy,0.0.1,mgcv_0068,mgcv,"y ~ s(x0, k = 4, fx = TRUE, bs = ""tp"") + s(x1, k = 12) + s(x2, k = 15)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.03193162800744176,0.03316291602095589,0.03405854199081659
+lmpy,0.0.1,mgcv_0069,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.0002117280091624707,0.0002182199968956411,0.00024924002354964614
+lmpy,0.0.1,mgcv_0070,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00016972399316728115,0.00017907199799083173,0.00022375499247573316
+lmpy,0.0.1,mgcv_0071,mgcv,y ~ s(x1) + s(x2),mgcv/gamSim_eg5,400,1,full,ok,,7,0.013401053001871333,0.013994987006299198,0.014680327993119135
+lmpy,0.0.1,mgcv_0072,mgcv,"y ~ s(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.032286358007695526,0.032557674014242366,0.03355301500414498
+lmpy,0.0.1,mgcv_0073,mgcv,"y ~ s(x, z, k = 40)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.027262189018074423,0.027700954000465572,0.027963253000052646
+lmpy,0.0.1,mgcv_0074,mgcv,"y ~ s(x, z, k = 64)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.04360249298042618,0.04411939898272976,0.04464223000104539
+lmpy,0.0.1,mgcv_0076,mgcv,"y ~ s(x, k = 15)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.011051519977627322,0.011880036996444687,0.012182225997094065
+lmpy,0.0.1,mgcv_0077,mgcv,"y ~ s(x2, by = x1)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.006687521992716938,0.006991417001700029,0.007448916992871091
+lmpy,0.0.1,mgcv_0078,mgcv,"y ~ fac + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.01562898699194193,0.016488900990225375,0.017244134010979906
+lmpy,0.0.1,mgcv_0079,mgcv,"y ~ s(x2, by = as.numeric(fac == 1)) + s(x2, by = as.numeric(fac == 2)) + s(x2, by = as.numeric(fac == 3)) + s(x0) - 1",mgcv/gamSim_eg4,400,1,full,ok,,7,0.026343136007199064,0.027637199993478134,0.028154060011729598
+lmpy,0.0.1,mgcv_0080,mgcv,"y ~ fac + s(x2, by = fac, id = 1) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.014658036001492292,0.015533491998212412,0.017257333995075896
+lmpy,0.0.1,mgcv_0081,mgcv,"y ~ fac + s(x2) + s(x2, by = fac) + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.021553811006015167,0.023110932001145557,0.024741041008383036
+lmpy,0.0.1,mgcv_0083,mgcv,"y ~ s(fac, bs = ""re"") + s(x0) + s(x1) + s(x2) + s(x3)",mgcv/gamSim_eg6,400,1,full,ok,,7,0.027035612001782283,0.027868700010003522,0.028271693998249248
+lmpy,0.0.1,mgcv_0087,mgcv,"y ~ s(x0) + s(x1) + s(x0, x1) + s(x2)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00020215398399159312,0.00020644199685193598,0.00023802099167369306
+lmpy,0.0.1,mgcv_0088,mgcv,"y ~ s(x, bs = ""cr"", k = 6) + s(z, bs = ""cr"", k = 6) + te(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004587989009451121,0.004751991014927626,0.005094622989417985
+lmpy,0.0.1,mgcv_0089,mgcv,"y ~ ti(x, k = 6) + ti(z, k = 6) + ti(x, z, k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0046676379861310124,0.004927959002088755,0.005196711979806423
+lmpy,0.0.1,mgcv_0091,mgcv,y ~ s(x0) + s(x1) + s(x2) + s(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00020338900503702462,0.00022866600193083286,0.0004283590242266655
+lmpy,0.0.1,mgcv_0092,mgcv,"y ~ te(x0, x1) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 5),7,0.0001776280114427209,0.00018269501742906868,0.00022174001787789166
+lmpy,0.0.1,mgcv_0093,mgcv,y ~ s(x0) + s(x1) + s(x2),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0001680089917499572,0.00017383100930601358,0.0002094759838655591
+lmpy,0.0.1,mgcv_0094,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.013656135997734964,0.014562377007678151,0.018184765009209514
+lmpy,0.0.1,mgcv_0095,mgcv,"y ~ s(x, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.012480020988732576,0.013749917998211458,0.014498419011943042
+lmpy,0.0.1,mgcv_0096,mgcv,"y ~ s(x0, bs = ""cr"") + s(x1, bs = ""cr"") + s(x2, bs = ""cr"") + s(x3, bs = ""cr"")",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: cr smooth: fewer unique x than knots (4 < 10),7,0.00024325598496943712,0.0002468499878887087,0.00028031101101078093
+lmpy,0.0.1,mgcv_0097,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.03514202299993485,0.03584586101351306,0.0364053689991124
+lmpy,0.0.1,mgcv_0098,mgcv,"y ~ s(x, z, k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.03504530698410235,0.0358937939745374,0.03719930400256999
+lmpy,0.0.1,mgcv_0110,mgcv,"y ~ s(x, bs = ""cc"", k = 6)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0012390210176818073,0.0013292530202306807,0.0014082279813010246
+lmpy,0.0.1,mgcv_0111,mgcv,"y ~ s(x, k = 10, bs = ""cr"")",mgcv/gamSim_eg2,400,1,full,ok,,7,0.001536311989184469,0.00157756800763309,0.00174387899460271
+lmpy,0.0.1,mgcv_0112,mgcv,"y ~ s(x, k = 10)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.006983194005442783,0.007175951002864167,0.00779194402275607
+lmpy,0.0.1,mgcv_0114,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 1, k = 7) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 7),7,0.00021332100732252002,0.0002167779894080013,0.0002516890235710889
+lmpy,0.0.1,mgcv_0115,mgcv,"y ~ t2(x0, x1, bs = ""tp"", m = 2, k = 7, full = TRUE) + s(x2) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 7),7,0.00023361199419014156,0.00023758498718962073,0.00026214102399535477
+lmpy,0.0.1,mgcv_0116,mgcv,"y ~ x0 + s(x1, x2) + s(x3)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.03746788500575349,0.038599678984610364,0.03957633799291216
+lmpy,0.0.1,mgcv_0117,mgcv,"y ~ te(x0, x1, x2, d = c(1, 2), k = c(5, 15)) + s(x3)",mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: c(...) length 2 doesn't match margin count 3,7,0.00021533199469558895,0.0002227890072390437,0.0002559900167398155
+lmpy,0.0.1,mgcv_0118,mgcv,y ~ s(x0) + s(I(x1^2)) + s(x2) + offset(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0002213970001321286,0.0002255669969599694,0.0002655360149219632
+lmpy,0.0.1,mgcv_0119,mgcv,y ~ s(x0) + s(x1) + s(x2) + x3,mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.0002422330144327134,0.0002475910005159676,0.00028466799994930625
+lmpy,0.0.1,mgcv_0120,mgcv,y ~ s(x0) + s(I(x1/2)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00035842100623995066,0.00036204897332936525,0.00039996299892663956
+lmpy,0.0.1,mgcv_0121,mgcv,y ~ s(x0) + s(scale(x1)) + s(x2) + scale(x3),mgcv/gamSim_eg5,400,1,parametric,ok,degraded: ValueError: tp smooth: fewer unique covariate rows than k (4 < 10),7,0.00034076301380991936,0.00034775998210534453,0.0003911239909939468
+lmpy,0.0.1,mgcv_0123,mgcv,"y ~ s(x, k = 5)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0068938340118620545,0.007195141981355846,0.007494607998523861
+lmpy,0.0.1,mgcv_0124,mgcv,"travel ~ s(Rail, bs = ""re"")",nlme/Rail,18,1,full,ok,,7,0.0010447249806020409,0.0011509479954838753,0.0012313550105318427
+lmpy,0.0.1,mgcv_0125,mgcv,"y ~ fac + s(x1, by = fac) + x2",mgcv/gamSim_eg4,400,1,full,ok,,7,0.008833935018628836,0.008978019002825022,0.009487534000072628
 lmpy,0.0.1,mgcv_0128,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='tr' (class dispatch for s(x0)) not yet implemented,7,,,
 lmpy,0.0.1,mgcv_0129,mgcv,"y ~ s(x0, bs = ""tr"", m = 2) + s(x1, bs = ""ps"", m = c(1, 3)) + s(x2, bs = ""tr"", m = 3) + s(x3, bs = ""tr"", m = 2)",mgcv/gamSim_eg5,400,1,full,unsupported,NotImplementedError: smooth bs='tr' (class dispatch for s(x0)) not yet implemented,7,,,
 lmpy,0.0.1,mgcv_0130,mgcv,"y ~ te(x, z, bs = c(""tr"", ""tr""), m = c(2, 2))",mgcv/gamSim_eg2,400,1,full,unsupported,NotImplementedError: te/ti margin with bs='tr' not yet supported,7,,,
-lmpy,0.0.1,mgcv_0131,mgcv,"y ~ s(x, bs = ""ad"", k = 40, m = 5)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.001934443978825584,0.0019750319770537317,0.002089012006763369
-lmpy,0.0.1,mgcv_0133,mgcv,"y ~ s(x, z, k = 150)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.1205010240082629,0.12230357900261879,0.13037581599201076
-lmpy,0.0.1,mgcv_0134,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 1)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.005290900997351855,0.0053463890217244625,0.0055177850008476526
-lmpy,0.0.1,mgcv_0135,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 3)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.034809139993740246,0.03589833399746567,0.03742795399739407
-lmpy,0.0.1,mgcv_0137,mgcv,"y ~ s(x, m = 1, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.015704146004281938,0.016668730997480452,0.01809849397977814
-lmpy,0.0.1,mgcv_0138,mgcv,"y ~ s(x, bs = ""bs"", m = c(3, 1), k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0038682399899698794,0.003988156997365877,0.004268472985131666
-lmpy,0.0.1,mgcv_0139,mgcv,"y ~ s(x, bs = ""cc"", k = 12) + s(z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.008414509007707238,0.008629588002804667,0.009007732995087281
-lmpy,0.0.1,mgcv_0143,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.0282095420116093,0.029000448004808277,0.032819274987559766
-lmpy,0.0.1,mgcv_0144,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.05001775300479494,0.054257769021205604,0.056676451000384986
-lmpy,0.0.1,mgcv_0145,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(1, 0.5))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0610220110102091,0.06403656300972216,0.06520740801352076
-lmpy,0.0.1,mgcv_0146,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(-1, 0.5))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.06318464898504317,0.06437449000077322,0.0655764109978918
-lmpy,0.0.1,mgcv_0151,mgcv,"y ~ s(x, bs = ""cp"") + s(z, bs = ""ps"")",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0036677360185422003,0.0036788840079680085,0.003958779998356476
-lmpy,0.0.1,mgcv_0152,mgcv,"y ~ s(x, bs = ""cp"", k = 12) + s(z, bs = ""ps"", k = 13)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.00414244199055247,0.004391374008264393,0.004744911013403907
-lmpy,0.0.1,mgcv_0162,mgcv,"y ~ s(x2) + s(fac, x2, bs = ""sz"") + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.020582104014465585,0.02188976400066167,0.022583106998354197
-lmpy,0.0.1,mgcv_0164,mgcv,"y ~ s(x, m = c(2, 0)) + x",mgcv/gamSim_eg2,400,1,full,ok,,7,0.007322018995182589,0.007740941015072167,0.008200453012250364
-lmpy,0.0.1,mgcv_0165,mgcv,y ~ s(x),mgcv/gamSim_eg2,400,1,full,ok,,7,0.006735476024914533,0.0070400840195361525,0.007294857990927994
-lmpy,0.0.1,mgcv_0168,mgcv,"y ~ s(x, bs = ""cc"", k = 10) + s(z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.007547126995632425,0.00771363900275901,0.007843300991225988
-lmpy,0.0.1,mgcv_0172,mgcv,"y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = ""re"")",mgcv/gamSim_eg6,400,1,full,ok,,7,0.02815442401333712,0.02844206601730548,0.028812090982683003
-lmpy,0.0.1,mgcv_0173,mgcv,"y ~ te(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0025085019879043102,0.0025556150067131966,0.002634304983075708
-lmpy,0.0.1,mgcv_0174,mgcv,"y ~ t2(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.003428091004025191,0.0034924999927170575,0.003529239009367302
-lmpy,0.0.1,mgcv_0175,mgcv,"y ~ t2(x, z, bs = c(""tp"", ""tp""))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.013565190020017326,0.014019848982570693,0.014256975002354011
-lmpy,0.0.1,mgcv_0178,mgcv,"y ~ ti(x) + ti(z) + ti(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004464363999431953,0.004510046972427517,0.004612863005604595
-lmpy,0.0.1,mgcv_0179,mgcv,"y ~ ti(x) + ti(x, z, mc = c(0, 1))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.003358593996381387,0.003395462001208216,0.003475655015790835
-lmpy,0.0.1,mgcv_0181,mgcv,"y ~ s(x, bs = ""cc"", k = 10)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0013311940128915012,0.0013821279862895608,0.0014535250084009022
-lmpy,0.0.1,mgcv_0182,mgcv,"y ~ s(x0, x1, x2)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.08279647000017576,0.0833716279885266,0.08469531201990321
+lmpy,0.0.1,mgcv_0131,mgcv,"y ~ s(x, bs = ""ad"", k = 40, m = 5)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0019655479991342872,0.0020987849857192487,0.002229409001301974
+lmpy,0.0.1,mgcv_0133,mgcv,"y ~ s(x, z, k = 150)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.1225558930018451,0.12350976199377328,0.12551873200573027
+lmpy,0.0.1,mgcv_0134,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 1)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.005569411994656548,0.005832114984514192,0.005950449005467817
+lmpy,0.0.1,mgcv_0135,mgcv,"y ~ s(x, z, bs = ""ad"", k = 15, m = 3)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.03442934900522232,0.03512220398988575,0.03566085599595681
+lmpy,0.0.1,mgcv_0137,mgcv,"y ~ s(x, m = 1, k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.014908565004589036,0.015771840990055352,0.01654387600137852
+lmpy,0.0.1,mgcv_0138,mgcv,"y ~ s(x, bs = ""bs"", m = c(3, 1), k = 20)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.003654997010016814,0.0037581629876513034,0.003940027003409341
+lmpy,0.0.1,mgcv_0139,mgcv,"y ~ s(x, bs = ""cc"", k = 12) + s(z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.007753879006486386,0.008303181995870546,0.010147146007511765
+lmpy,0.0.1,mgcv_0143,mgcv,"y ~ s(x0) + s(x1, fac, bs = ""fs"", k = 5) + s(x2, k = 20)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.029327355994610116,0.02985170899773948,0.030727847013622522
+lmpy,0.0.1,mgcv_0144,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.05190120998304337,0.05495831501320936,0.05719369600410573
+lmpy,0.0.1,mgcv_0145,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(1, 0.5))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.060672154009807855,0.06531792497844435,0.06649298701086082
+lmpy,0.0.1,mgcv_0146,mgcv,"y ~ s(x, z, bs = ""gp"", k = 50, m = c(-1, 0.5))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.06359084800351411,0.06410957899061032,0.06444810898392461
+lmpy,0.0.1,mgcv_0151,mgcv,"y ~ s(x, bs = ""cp"") + s(z, bs = ""ps"")",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0037059260066598654,0.003916927991667762,0.004052631004014984
+lmpy,0.0.1,mgcv_0152,mgcv,"y ~ s(x, bs = ""cp"", k = 12) + s(z, bs = ""ps"", k = 13)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004215777007630095,0.004312789998948574,0.0044163230049889535
+lmpy,0.0.1,mgcv_0162,mgcv,"y ~ s(x2) + s(fac, x2, bs = ""sz"") + s(x0)",mgcv/gamSim_eg4,400,1,full,ok,,7,0.020415189006598666,0.021490790008101612,0.02252255499479361
+lmpy,0.0.1,mgcv_0164,mgcv,"y ~ s(x, m = c(2, 0)) + x",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0070690780121367425,0.007308119005756453,0.007858473982196301
+lmpy,0.0.1,mgcv_0165,mgcv,y ~ s(x),mgcv/gamSim_eg2,400,1,full,ok,,7,0.006992637005168945,0.0071920499904081225,0.007650974002899602
+lmpy,0.0.1,mgcv_0168,mgcv,"y ~ s(x, bs = ""cc"", k = 10) + s(z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.007712256017839536,0.007990080979652703,0.00881457602372393
+lmpy,0.0.1,mgcv_0172,mgcv,"y ~ s(x0, m = 1) + s(x1) + s(x2) + s(x3) + s(fac, bs = ""re"")",mgcv/gamSim_eg6,400,1,full,ok,,7,0.02945068498956971,0.029666371003258973,0.030576096003642306
+lmpy,0.0.1,mgcv_0173,mgcv,"y ~ te(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.002491436986019835,0.002673815004527569,0.0028106929967179894
+lmpy,0.0.1,mgcv_0174,mgcv,"y ~ t2(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0034342930011916906,0.0035679400025401264,0.0037423589965328574
+lmpy,0.0.1,mgcv_0175,mgcv,"y ~ t2(x, z, bs = c(""tp"", ""tp""))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.01451636099955067,0.014876607980113477,0.015205481991870329
+lmpy,0.0.1,mgcv_0178,mgcv,"y ~ ti(x) + ti(z) + ti(x, z)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.004498966009123251,0.004696111980592832,0.004914782999549061
+lmpy,0.0.1,mgcv_0179,mgcv,"y ~ ti(x) + ti(x, z, mc = c(0, 1))",mgcv/gamSim_eg2,400,1,full,ok,,7,0.003361898008733988,0.0034160350041929632,0.003569955995772034
+lmpy,0.0.1,mgcv_0181,mgcv,"y ~ s(x, bs = ""cc"", k = 10)",mgcv/gamSim_eg2,400,1,full,ok,,7,0.0013156839995644987,0.0013431439874693751,0.0013966400001663715
+lmpy,0.0.1,mgcv_0182,mgcv,"y ~ s(x0, x1, x2)",mgcv/gamSim_eg5,400,1,full,ok,,7,0.08533611500752158,0.08785183500731364,0.09043918698444031
+lmpy,0.0.1,cur_0001,wr,"Sepal.Length ~ C(Species, contr.treatment)",R/iris,150,1,full,ok,,7,0.0006253269966691732,0.0006324609857983887,0.000678215001244098
+lmpy,0.0.1,cur_0002,wr,"Sepal.Length ~ C(Species, contr.sum)",R/iris,150,1,full,ok,,7,0.0006081869942136109,0.0006206899997778237,0.0006426780018955469
+lmpy,0.0.1,cur_0003,wr,"Sepal.Length ~ C(Species, contr.helmert)",R/iris,150,1,full,ok,,7,0.0006033069803379476,0.0006113139970693737,0.0006352899945341051
+lmpy,0.0.1,cur_0004,wr,"Sepal.Length ~ C(Species, contr.poly)",R/iris,150,1,full,ok,,7,0.0007679380069021136,0.000776152010075748,0.000798386987298727
+lmpy,0.0.1,cur_0005,wr,"Sepal.Length ~ C(Species, contr.SAS)",R/iris,150,1,full,ok,,7,0.0006318360101431608,0.0006497360009234399,0.0006914430123288184
+lmpy,0.0.1,cur_0006,wr,"circumference ~ C(Tree, contr.poly) + age",R/Orange,35,1,full,ok,,7,0.0008503739954903722,0.0008539289992768317,0.0008906260190997273
+lmpy,0.0.1,cur_0007,wr,mpg ~ wt + hp - hp,R/mtcars,32,1,full,ok,,7,0.00018153199926018715,0.0001881360076367855,0.00023852402227930725
+lmpy,0.0.1,cur_0008,wr,mpg ~ cyl:disp,R/mtcars,32,1,full,ok,,7,0.00021456601098179817,0.0002199149748776108,0.0002577230043243617
+lmpy,0.0.1,cur_0009,wr,breaks ~ wool + tension + wool %in% tension,R/warpbreaks,54,1,full,ok,,7,0.0011361240176483989,0.0011397430207580328,0.0011758019973058254
+lmpy,0.0.1,cur_0010,wr,mpg ~ . - carb,R/mtcars,32,1,full,ok,,7,0.00044628302566707134,0.0004506039840634912,0.0004971649905201048
+lmpy,0.0.1,cur_0011,wr,mpg ~ (wt + hp) * cyl,R/mtcars,32,1,full,ok,,7,0.000323282991303131,0.0003338310052640736,0.00037233400507830083
+lmpy,0.0.1,cur_0012,wr,mpg ~ wt + 0,R/mtcars,32,1,full,ok,,7,0.0001355909917037934,0.00013941200450062752,0.00017270399257540703
+lmpy,0.0.1,cur_0013,wr,mpg ~ 0 + wt,R/mtcars,32,1,full,ok,,7,0.0001366540091112256,0.00014026701683178544,0.0001684890012256801
+lmpy,0.0.1,cur_0014,wr,mpg ~ 1 + wt,R/mtcars,32,1,full,ok,,7,0.00016179701196961105,0.00016795299598015845,0.00019599299412220716
+lmpy,0.0.1,cur_0015,wr,"Sepal.Length ~ 0 + C(Species, contr.treatment)",R/iris,150,1,full,ok,,7,0.0005983129958622158,0.0006083339976612478,0.0006325540016405284
+lmpy,0.0.1,cur_0016,wr,mpg ~ I(wt + hp),R/mtcars,32,1,full,ok,,7,0.00019876999431289732,0.00020640899310819805,0.00023918197257444263
+lmpy,0.0.1,cur_0017,wr,mpg ~ log1p(hp),R/mtcars,32,1,full,ok,,7,0.00017829600255936384,0.000186456018127501,0.00023784200311638415
+lmpy,0.0.1,cur_0018,wr,mpg ~ exp(qsec/10),R/mtcars,32,1,full,ok,,7,0.0002020370156969875,0.00020812000730074942,0.00023797800531610847
+lmpy,0.0.1,cur_0019,wr,mpg ~ sqrt(wt),R/mtcars,32,1,full,ok,,7,0.00017146201571449637,0.0001758619910106063,0.00020688498625531793
+lmpy,0.0.1,cur_0020,wr,"mpg ~ poly(wt, 2, raw = TRUE)",R/mtcars,32,1,full,ok,,7,0.0002278159954585135,0.00023042698740027845,0.00027264299569651484
+lmpy,0.0.1,cur_0021,wr,mpg ~ bs(wt),R/mtcars,32,1,full,ok,,7,0.0007287909975275397,0.0007448689721059054,0.0008115090022329241
+lmpy,0.0.1,cur_0022,wr,"mpg ~ bs(wt, degree = 2)",R/mtcars,32,1,full,ok,,7,0.0006570510158780962,0.0006651010189671069,0.0007042640063446015
+lmpy,0.0.1,cur_0023,wr,"mpg ~ cut(wt, breaks = c(0, 3, 4, 6))",R/mtcars,32,1,full,ok,,7,0.000348280998878181,0.00035684998147189617,0.0004033499862998724
+lmpy,0.0.1,cur_0024,wr,Reaction ~ Days + offset(Days),lme4/sleepstudy,180,1,full,ok,,7,0.00018411499331705272,0.00019214200438000262,0.00022383200121112168
+lmpy,0.0.1,cur_0025,wr,mpg ~ I(wt > 3),R/mtcars,32,1,full,ok,,7,0.0002047909947577864,0.00021290298900566995,0.00024473699158988893
+lmpy,0.0.1,cur_0026,wr,"Sepal.Length ~ relevel(Species, ref = ""virginica"")",R/iris,150,1,full,ok,,7,0.0006890280055813491,0.0006944889901205897,0.0007375240093097091
+lmpy,0.0.1,cur_0027,wr,"Sepal.Length ~ poly(Petal.Length, 2) * Species",R/iris,150,1,full,ok,,7,0.0011713170097209513,0.001179621001938358,0.001214932999573648
+lmpy,0.0.1,cur_0028,wr,"Sepal.Length ~ poly(Petal.Length, 2, raw = TRUE) * Species",R/iris,150,1,full,ok,,7,0.000894973985850811,0.0009028839995153248,0.0009280349768232554
+lmpy,0.0.1,cur_0029,wr,"Sepal.Length ~ Species:cut(Petal.Length, 3)",R/iris,150,1,full,ok,,7,0.0009058220020961016,0.0009742690017446876,0.0011055759969167411
+lmpy,0.0.1,cur_0030,wr,mpg ~ wt + hp:I(wt^2),R/mtcars,32,1,full,ok,,7,0.0003115749859716743,0.0003201930085197091,0.0003589330008253455
+lmpy,0.0.1,cur_0031,wr,mpg ~ wt + wt,R/mtcars,32,1,full,ok,,7,0.00016662999405525625,0.00016906601376831532,0.0002024369896389544
+lmpy,0.0.1,cur_0032,wr,mpg ~ wt * hp - wt:hp,R/mtcars,32,1,full,ok,,7,0.000257895007962361,0.00026287700165994465,0.00029780901968479156
+lmpy,0.0.1,cur_0033,wr,mpg ~ wt - cyl,R/mtcars,32,1,full,ok,,7,0.00016920801135711372,0.0001757760182954371,0.0002106869942508638
+lmpy,0.0.1,cur_0034,wr,mpg ~ wt - wt,R/mtcars,32,1,full,ok,,7,0.00011841199011541903,0.00012048400822095573,0.0001503000094089657
+lmpy,0.0.1,cur_0035,wr,breaks ~ wool:tension,R/warpbreaks,54,1,full,ok,,7,0.00103643600596115,0.0010395730205345899,0.0010673310025595129
+lmpy,0.0.1,cur_0067,wr,height ~ weight + I(weight^2) + I(weight^3) + I(weight^4) + I(weight^5) + I(weight^6) + I(weight^7) + I(weight^8) + I(weight^9) + I(weight^10) + I(weight^11) + I(weight^12) + I(weight^13) + I(weight^14),R/women,15,1,full,ok,,7,0.001028475002385676,0.0010435529984533787,0.0010627490119077265
+lmpy,0.0.1,cur_0069,wr,y ~ f * g,synthetic/seed_synth_empty_cell,120,1,full,ok,,7,0.001112766971345991,0.0011200080043636262,0.0011498240055516362
+lmpy,0.0.1,cur_0070,wr,"breaks ~ (C(wool, contr.sum) + tension)^2",R/warpbreaks,54,1,full,ok,,7,0.0015405629819724709,0.0015801120025571436,0.001656030013691634
+lmpy,0.0.1,wr_0001,wr,stack.loss ~ .,R/stackloss,21,1,full,ok,,7,0.00022359899594448507,0.00023314100690186024,0.00026970001636072993
+lmpy,0.0.1,wr_0002,wr,y ~ x - 1,gamair/hubble,24,1,full,ok,,7,0.00012876797700300813,0.00013373701949603856,0.00016456001321785152
+lmpy,0.0.1,wr_0003,wr,count ~ time.ipc + prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.00020165799651294947,0.00020483799744397402,0.00025260201073251665
+lmpy,0.0.1,wr_0004,wr,count ~ time.ipc + I(prop.partner * time.ipc),gamair/sperm.comp1,15,1,full,ok,,7,0.00025372201343998313,0.0002696939918678254,0.0003599789924919605
+lmpy,0.0.1,wr_0005,wr,count ~ prop.partner,gamair/sperm.comp1,15,1,full,ok,,7,0.00014808200648985803,0.0001514520263299346,0.00018607897800393403
+lmpy,0.0.1,wr_0006,wr,count ~ 1,gamair/sperm.comp1,15,1,full,ok,,7,9.429999045096338e-05,9.702399256639183e-05,0.00012404500739648938
+lmpy,0.0.1,wr_0007,wr,count ~ f.age + f.height + f.weight + m.age + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.000910664995899424,0.0009693180036265403,0.0013068589905742556
+lmpy,0.0.1,wr_0008,wr,count ~ f.age + f.height + f.weight + m.height + m.weight + m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.0008495530055370182,0.0009124270000029355,0.0009505060152150691
+lmpy,0.0.1,wr_0009,wr,count ~ f.weight,gamair/sperm.comp2,24,1,full,ok,,7,0.00037711698678322136,0.0005064669821877033,0.0006358720129355788
+lmpy,0.0.1,wr_0010,wr,count ~ m.vol,gamair/sperm.comp2,24,1,full,ok,,7,0.0004895899910479784,0.0005724460061173886,0.0006369579932652414
+lmpy,0.0.1,wr_0011,wr,y ~ z,MASS/topo,52,1,full,ok,,7,0.00014940398978069425,0.00015638498007319868,0.00019432202680036426
+lmpy,0.0.1,wr_0012,wr,y ~ x + z,MASS/topo,52,1,full,ok,,7,0.00019543099915608764,0.00019837002037093043,0.00023065999266691506
+lmpy,0.0.1,wr_0013,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.000372195994714275,0.00038038200000301003,0.00041867399704642594
+lmpy,0.0.1,wr_0014,wr,weight ~ 1,gamair/mpg,205,1,full,ok,,7,0.00010481697972863913,0.00011181202717125416,0.00014811899745836854
+lmpy,0.0.1,wr_0015,wr,loss ~ hard + tens + I(hard * tens) + I(hard^2) + I(tens^2) + I(hard^2 * tens) + I(tens^2 * hard) + I(tens^3) + I(hard^3),MASS/Rubber,30,1,full,ok,,7,0.0007419100147671998,0.0007607029983773828,0.0007865259831305593
+lmpy,0.0.1,wr_0016,wr,breaks ~ wool * tension,R/warpbreaks,54,1,full,ok,,7,0.001108636992285028,0.0011197979911230505,0.001139354018960148
+lmpy,0.0.1,wr_0017,wr,dist ~ speed + I(speed^2),R/cars,50,1,full,ok,,7,0.00024722798843868077,0.00025436398573219776,0.0002976480172947049
+lmpy,0.0.1,wr_0018,wr,dist ~ speed + I(speed^2) - 1,R/cars,50,1,full,ok,,7,0.00023024299298413098,0.00023252901155501604,0.00026825201348401606
+lmpy,0.0.1,wr_0019,wr,dist ~ I(speed^2),R/cars,50,1,full,ok,,7,0.00019079699995927513,0.00019707597675733268,0.0002271339762955904
+lmpy,0.0.1,wr_0022,wr,area ~ CO2 + tree,gamair/stomata,24,1,full,ok,,7,0.0010515009926166385,0.0010556699999142438,0.0011174399987794459
+lmpy,0.0.1,wr_0023,wr,area ~ CO2,gamair/stomata,24,1,full,ok,,7,0.0005760859930887818,0.0005818369972985238,0.0006344180146697909
+lmpy,0.0.1,wr_0024,wr,area ~ tree,gamair/stomata,24,1,full,ok,,7,0.0006165869999676943,0.0006230240105651319,0.0006461460143327713
+lmpy,0.0.1,wr_0025,wr,travel ~ Rail,nlme/Rail,18,1,full,ok,,7,0.0006122000049799681,0.0006179199845064431,0.0006430319917853922
+lmpy,0.0.1,wr_0026,wr,travel ~ 1,nlme/Rail,18,1,full,ok,,7,9.611001587472856e-05,0.00010130699956789613,0.000129469990497455
+lmpy,0.0.1,wr_0027,wr,score ~ Worker * Machine,nlme/Machines,54,1,full,ok,,7,0.0012522369797807187,0.001258019998203963,0.0012953799741808325
+lmpy,0.0.1,wr_0028,wr,score ~ Worker + Machine,nlme/Machines,54,1,full,ok,,7,0.0010806980135384947,0.0010967760172206908,0.0011231040116399527
+lmpy,0.0.1,wr_0029,wr,score ~ 1,nlme/Machines,54,1,full,ok,,7,9.375798981636763e-05,9.650900028645992e-05,0.0001310560037381947
+lmpy,0.0.1,wr_0035,wr,"y ~ poly(x, 5)",gamair/hubble,24,1,full,ok,,7,0.00040854999679140747,0.0004193370114080608,0.00045484298607334495
+lmpy,0.0.1,wr_0036,wr,"y ~ poly(x, 10)",gamair/hubble,24,1,full,ok,,7,0.0004785069904755801,0.0004828890087082982,0.0005106989992782474
+lmpy,0.0.1,wr_0039,wr,"accel ~ poly(times, 11)",MASS/mcycle,133,1,full,ok,,7,0.0005677430017385632,0.0005785179964732379,0.0006018219864927232
+lmpy,0.0.1,wr_0040,wr,Claims ~ District + Group + Age + offset(log(Holders)),MASS/Insurance,64,1,full,ok,,7,0.0015273400058504194,0.0015515349805355072,0.001579727977514267
+lmpy,0.0.1,wr_0043,wr,Freq ~ Infl * Type * Cont + Sat,MASS/housing,72,1,full,ok,,7,0.002307649003341794,0.0023188820050563663,0.002361141989240423
+lmpy,0.0.1,wr_0044,wr,y ~ trt * week,MASS/bacteria,220,1,full,ok,,7,0.0007639639952685684,0.0007669939950574189,0.000805753021268174
+lmpy,0.0.1,wr_0045,wr,y ~ trt + week,MASS/bacteria,220,1,full,ok,,7,0.0006906420167069882,0.0007060740026645362,0.0007921360083855689
+lmpy,0.0.1,wr_0046,wr,y ~ trt + I(week > 2),MASS/bacteria,220,1,full,ok,,7,0.0007216939993668348,0.0007267030014190823,0.0007756919949315488
+lmpy,0.0.1,wr_0048,wr,low ~ .,MASS/birthwt,189,1,full,ok,,7,0.00045323901576921344,0.00046067198854871094,0.0005014360067434609
+lmpy,0.0.1,wr_0049,wr,y ~ x1 + x2 + x3 + x4,MASS/cement,13,1,full,ok,,7,0.0002818589855451137,0.0002895680081564933,0.00038809399120509624
+lmpy,0.0.1,wr_0051,wr,"cbind(y, n - y) ~ P * A + V",MASS/eagles,8,1,full,ok,,7,0.0015399239782709628,0.0015487550117541105,0.0016654289793223143
+lmpy,0.0.1,wr_0052,wr,y ~ lbase * trt + lage + V4,MASS/epil,236,1,full,ok,,7,0.0008387500129174441,0.000845053989905864,0.0008900650136638433
+lmpy,0.0.1,wr_0055,wr,Days + 0.1 ~ Age * Eth * Sex * Lrn,MASS/quine,146,1,full,ok,,7,0.002693489019293338,0.00273488400853239,0.0028855949931312352
+lmpy,0.0.1,wr_0057,wr,Days ~ .^2,MASS/quine,146,1,full,ok,,7,0.0022796929988544434,0.0022897069866303355,0.002301050000824034
+lmpy,0.0.1,wr_0058,wr,"cbind(Menarche, Total - Menarche) ~ Age",MASS/menarche,25,1,full,ok,,7,0.00017647899221628904,0.00018357299268245697,0.00022690999321639538
+lmpy,0.0.1,wr_0059,wr,Days ~ .^4,MASS/quine,146,1,full,ok,,7,0.0026771130214910954,0.0026872069865930825,0.0028861479950137436
+lmpy,0.0.1,wr_0061,wr,Gas ~ Temp,MASS/whiteside,56,1,full,ok,,7,0.00014761401689611375,0.0001520249934401363,0.00019405101193115115
+lmpy,0.0.1,wr_0062,wr,Gas ~ Insul/Temp - 1,MASS/whiteside,56,1,full,ok,,7,0.0006683740066364408,0.0006971110124140978,0.000841205008327961
+lmpy,0.0.1,wr_0063,wr,Gas ~ Insul/(Temp + I(Temp^2)) - 1,MASS/whiteside,56,1,full,ok,,7,0.0008343190129380673,0.0008578289998695254,0.0009377999813295901
+lmpy,0.0.1,wr_0064,wr,Gas ~ Insul + Temp,MASS/whiteside,56,1,full,ok,,7,0.000652098999125883,0.0006559389876201749,0.000714872992830351
+lmpy,0.0.1,wr_0065,wr,Gas ~ Insul * Temp,MASS/whiteside,56,1,full,ok,,7,0.0007203370041679591,0.0007541109807789326,0.0008933419885579497
+lmpy,0.0.1,wr_0066,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,ok,,7,0.00034259899985045195,0.000349442008882761,0.0003969350073020905
+lmpy,0.0.1,wr_0067,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,ok,,7,0.0012713350006379187,0.001330997998593375,0.0015531749813817441
+lmpy,0.0.1,wr_0068,wr,follicles ~ sin(2 * pi * Time) + cos(2 * pi * Time),nlme/Ovary,308,1,full,ok,,7,0.0003402660076972097,0.0003652989980764687,0.00046678201761096716
+lmpy,0.0.1,wr_0069,wr,pixel ~ day + I(day^2),nlme/Pixel,102,1,full,ok,,7,0.0002447259903419763,0.00025222700787708163,0.0003053869877476245
+lmpy,0.0.1,wr_0070,wr,distance ~ age,nlme/Orthodont,108,1,full,ok,,7,0.00015430100029334426,0.00016196499927900732,0.00023861898807808757
+lmpy,0.0.1,wr_0071,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.0007358459988608956,0.000746930978493765,0.0008032860059756786
+lmpy,0.0.1,wr_0072,wr,weight ~ Time * Diet,nlme/BodyWeight,176,1,full,ok,,7,0.0007243499858304858,0.0007503990200348198,0.0008381539955735207
+lmpy,0.0.1,wr_0073,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.0007846549851819873,0.0007880530029069632,0.0008158920099958777
+lmpy,0.0.1,wr_0074,wr,rate ~ (pressure + I(pressure^2) + I(pressure^3) + I(pressure^4)) * QB,nlme/Dialyzer,140,1,full,ok,,7,0.001220202015247196,0.0012297039793338627,0.0012561480107251555
+lmpy,0.0.1,wr_0075,wr,yield ~ variety - 1,nlme/Wheat2,224,1,full,ok,,7,0.0011134619999211282,0.0011277300072833896,0.0011632709938567132
+lmpy,0.0.1,wr_0076,wr,distance ~ Sex * I(age - 11),nlme/Orthodont,108,1,full,ok,,7,0.0007987270073499531,0.0008639269799459726,0.0009094589913729578
+lmpy,0.0.1,wr_0077,wr,distance ~ age * Sex,nlme/Orthodont,108,1,full,ok,,7,0.0007303989841602743,0.0007370979874394834,0.0007547639834228903
+lmpy,0.0.1,wr_0079,wr,effort ~ Type,nlme/ergoStool,36,1,full,ok,,7,0.000601100007770583,0.0006095229764468968,0.000636517012026161
+lmpy,0.0.1,wr_0080,wr,distance ~ age + Sex,nlme/Orthodont,108,1,full,ok,,7,0.0006389849877450615,0.0006507110083475709,0.0006666979752480984
+lmpy,0.0.1,wr_0081,wr,pixel ~ day + day^2,nlme/Pixel,102,1,full,ok,,7,0.00018557999283075333,0.0001927150005940348,0.00023122000857256353
+lmpy,0.0.1,wr_0082,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.0007037330069579184,0.0007059080235194415,0.0007300589932128787
+lmpy,0.0.1,wr_0084,wr,Fertility ~ .,R/swiss,47,1,full,ok,,7,0.0002960540005005896,0.0003035899717360735,0.00040698397788219154
+lmpy,0.0.1,wr_0085,wr,yield ~ block + N * P * K,MASS/npk,24,1,full,ok,,7,0.0021253360027913004,0.002140652999514714,0.0021892559889238328
+lmpy,0.0.1,wr_0086,wr,sr ~ .,faraway/savings,50,1,full,ok,,7,0.00025778700364753604,0.0002600309962872416,0.00029626302421092987
+lmpy,0.0.1,wr_0087,wr,sr ~ 1,faraway/savings,50,1,full,ok,,7,9.377498645335436e-05,9.632299770601094e-05,0.00012560898903757334
+lmpy,0.0.1,wr_0088,wr,yield ~ block + N * P + K,MASS/npk,24,1,full,ok,,7,0.001976250990992412,0.00200501098879613,0.0020958399982191622
+lmpy,0.0.1,wr_0090,wr,y ~ x + I(x^2) + I(x^3) + I((x - 10)^2),faraway/cathedral,25,1,full,ok,,7,0.00042253799620084465,0.00042837599175982177,0.0004667240136768669
+lmpy,0.0.1,wr_0091,wr,Sepal.Width ~ Species,R/iris,150,1,full,ok,,7,0.0006033319805283099,0.0006114139978308231,0.0006648930138908327
+lmpy,0.0.1,wr_0092,wr,Sepal.Width ~ Sepal.Length,R/iris,150,1,full,ok,,7,0.00015404997975565493,0.00015928500215522945,0.00019147401326335967
+lmpy,0.0.1,wr_0094,wr,100/mpg ~ disp + hp + wt + am,R/mtcars,32,1,full,ok,,7,0.0002900540130212903,0.0002982669975608587,0.0003293390036560595
+lmpy,0.0.1,wr_0097,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.0001471980067435652,0.0001533889735583216,0.00018429200281389058
+lmpy,0.0.1,wr_0098,wr,y + 10 ~ I(x - 3.8),faraway/cathedral,25,1,full,ok,,7,0.00020058799418620765,0.00020180997671559453,0.00023524800781160593
+lmpy,0.0.1,wr_0099,wr,log(Volume) ~ log(Girth) + log(Height),mgcv/trees,31,1,full,ok,,7,0.0002450280007906258,0.0002548840129747987,0.00028224100242368877
+lmpy,0.0.1,wr_0100,wr,y ~ x,faraway/cathedral,25,1,full,ok,,7,0.00014748002286069095,0.00015052399248816073,0.0001842050114646554
+lmpy,0.0.1,wr_0101,wr,Postwt ~ Prewt + Treat + offset(Prewt),MASS/anorexia,72,1,full,ok,,7,0.0006743340054526925,0.0006829549965914339,0.000714908994268626
+lmpy,0.0.1,wr_0105,wr,sr ~ pop15 + pop75 + dpi + ddpi,faraway/savings,50,1,full,ok,,7,0.0002800690126605332,0.0002900789841078222,0.00037300901021808386
+lmpy,0.0.1,wr_0108,wr,y ~ 0,faraway/cathedral,25,1,full,ok,,7,4.0917017031461e-05,4.325900226831436e-05,6.912997923791409e-05
+lmpy,0.0.1,wr_0109,wr,weight ~ group,R/PlantGrowth,30,1,full,ok,,7,0.00036472699139267206,0.00037789600901305676,0.0004257360124029219
+lmpy,0.0.1,wr_0110,wr,weight ~ group - 1,R/PlantGrowth,30,1,full,ok,,7,0.00033884000731632113,0.00034535600570961833,0.0003696810163091868
+lmpy,0.0.1,wr_0112,wr,x ~ 1,faraway/cathedral,25,1,full,ok,,7,9.188198600895703e-05,9.655600297264755e-05,0.00012379299732856452
+lmpy,0.0.1,wr_0113,wr,rating ~ .,R/attitude,30,1,full,ok,,7,0.0003280010132584721,0.0003322889970149845,0.0003719870001077652
+lmpy,0.0.1,wr_0114,wr,distance ~ Sex * age,nlme/Orthodont,108,1,full,ok,,7,0.0007005039951764047,0.0007069580024108291,0.0007452880090568215
+lmpy,0.0.1,wr_0115,wr,"weight ~ poly(height, 2)",R/women,15,1,full,ok,,7,0.000352696020854637,0.0003611269930843264,0.0004170319880358875
+lmpy,0.0.1,wr_0116,wr,"cbind(ncases, ncontrols) ~ agegp + tobgp + alcgp",R/esoph,88,1,full,ok,,7,0.0016007449885364622,0.0016070220153778791,0.0016533590096514672
+lmpy,0.0.1,wr_0117,wr,ncases/(ncases + ncontrols) ~ agegp + tobgp + alcgp,R/esoph,88,1,full,ok,,7,0.0016043710056692362,0.0016201569815166295,0.0016296750109177083
+lmpy,0.0.1,wr_0118,wr,"cbind(ncases, ncontrols) ~ agegp",R/esoph,88,1,full,ok,,7,0.0006653460150118917,0.0006877490086480975,0.0007453439757227898
+lmpy,0.0.1,wr_0119,wr,dist ~ speed,R/cars,50,1,full,ok,,7,0.00015382099081762135,0.00015862300642766058,0.0002016749931499362
+lmpy,0.0.1,wr_0120,wr,~a + b,faraway/speedo,16,1,full,ok,,7,0.0010498809861019254,0.0010584730189293623,0.0010962480155285448
+lmpy,0.0.1,wr_0121,wr,extra ~ group,R/sleep,20,1,full,ok,,7,0.0005908359889872372,0.0005921770061831921,0.0006243029783945531
+lmpy,0.0.1,wr_0125,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.0010588470031507313,0.0010824099881574512,0.0011837960046250373
+lmpy,0.0.1,wr_0126,wr,yield ~ block + N + K,MASS/npk,24,1,full,ok,,7,0.0015423999866470695,0.0015915870026219636,0.001670786994509399
+lmpy,0.0.1,wr_0130,wr,x ~ z,MASS/topo,52,1,full,ok,,7,0.00014948498574085534,0.00015695698675699532,0.0002076679957099259
+lmpy,0.0.1,wr_0135,wr,"weight ~ group + I(group != ""Ctl"")",R/PlantGrowth,30,1,full,ok,,7,0.0004974900220986456,0.000555659004021436,0.0006383459840435535
+lmpy,0.0.1,wr_0136,wr,"y ~ ns(x, 6) + z",MASS/topo,52,1,full,ok,,7,0.0031697980011813343,0.0032237099949270487,0.0033992520184256136
+lmpy,0.0.1,wr_0137,wr,log(time) ~ log(climb) + log(dist),MASS/hills,35,1,full,ok,,7,0.0002554150123614818,0.0002751339925453067,0.00032300601014867425
+lmpy,0.0.1,wr_0138,wr,breaks ~ wool + tension,R/warpbreaks,54,1,full,ok,,7,0.0010577549983281642,0.0010634589998517185,0.0011348779953550547
+lmpy,0.0.1,wr_0139,wr,y ~ 1,faraway/cathedral,25,1,full,ok,,7,9.29440138861537e-05,9.545500506646931e-05,0.0001289149804506451
+lmpy,0.0.1,wr_0141,wr,"breaks ~ wool + C(tension, base = 2)",R/warpbreaks,54,1,full,ok,,7,0.0010906499810516834,0.0011020509991794825,0.0014364999951794744
+lmpy,0.0.1,wr_0142,wr,"cbind(ncases, ncontrols) ~ agegp + C(tobgp, , 1) + C(alcgp, , 1)",R/esoph,88,1,full,ok,,7,0.0016191290051210672,0.0016250080079771578,0.0016782220045570284
