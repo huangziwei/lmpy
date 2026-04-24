@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 
 import pandas as pd
 
@@ -78,14 +79,39 @@ def prepare_design(formula: str, data: pd.DataFrame) -> Design:
     return Design(expanded=expanded, data=data_clean, X=X, y=y, response=response)
 
 
+def _find_bundled_dataset(package: str, name: str) -> Path | None:
+    """Walk up from CWD looking for a bundled ``datasets/{package}/{name}.csv``.
+
+    Returns the first match in CWD or any ancestor, or ``None`` if no
+    bundled copy exists anywhere up the tree (e.g. when ``lmpy`` is
+    installed as a package and the caller is outside the source repo).
+    """
+    rel = Path("datasets") / package / f"{name}.csv"
+    cwd = Path.cwd()
+    for ancestor in (cwd, *cwd.parents):
+        candidate = ancestor / rel
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def data(name: str, package: str = "R", save_to: str = "./data",
          overwrite: bool = False) -> pd.DataFrame:
     """Load a named dataset from this repo's published ``datasets/`` tree.
 
-    Caches the CSV under ``save_to/{package}/{name}.csv`` on first
-    access; pass ``overwrite=True`` to re-download.
+    Looks first for a bundled ``datasets/{package}/{name}.csv`` by
+    walking up from the current working directory — so in-repo callers
+    (notebooks under ``example/``, dev scripts) read the checked-in copy
+    directly and never download. If no bundled copy is found, caches the
+    CSV under ``save_to/{package}/{name}.csv`` on first access. Pass
+    ``overwrite=True`` to bypass both lookups and re-download.
     """
     import polars as pl
+
+    if not overwrite:
+        bundled = _find_bundled_dataset(package, name)
+        if bundled is not None:
+            return pl.read_csv(bundled, null_values="NA").to_pandas()
 
     datapath = os.path.join(save_to, package)
     os.makedirs(datapath, exist_ok=True)
