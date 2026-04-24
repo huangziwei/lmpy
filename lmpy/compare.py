@@ -7,7 +7,6 @@ each other.
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 from scipy.stats import chi2, f
 
@@ -44,92 +43,124 @@ def BIC(*models) -> None:
     print(rows.to_string(formatters={"BIC": "{:.2f}".format}))
 
 
-def anova(m0, m1):
-    """Compare two nested fits.
+def anova(*models):
+    """Compare two or more nested fits.
 
-    - Two ``lm`` fits → F-test ANOVA table.
-    - Two ``lme`` fits → likelihood-ratio test (lme4-style). REML fits are
-      internally refit by ML before the LRT (the LRT statistic requires ML).
+    - All ``lm`` fits → F-test ANOVA table (incremental for 3+).
+    - All ``lme`` fits → likelihood-ratio test (lme4-style, incremental
+      for 3+). REML fits are internally refit by ML before the LRT.
+
+    Rows are sorted by parameter count (smaller model first), matching
+    R's ``anova``. Row labels ``model 0..N`` preserve *input* order so
+    they remain traceable to the passed arguments.
     """
-    if isinstance(m0, lme) and isinstance(m1, lme):
-        return _anova_lme(m0, m1)
-    if isinstance(m0, lm) and isinstance(m1, lm):
-        return _anova_lm(m0, m1)
-    raise TypeError(
-        "anova(): both models must be the same type (two lm or two lme)"
-    )
+    if len(models) < 2:
+        raise TypeError("anova(): need at least two models")
+    if all(isinstance(m, lme) for m in models):
+        return _anova_lme(*models)
+    if all(isinstance(m, lm) for m in models):
+        return _anova_lm(*models)
+    raise TypeError("anova(): all models must be the same type (lm or lme)")
 
 
-def _anova_lm(m0, m1):
-    """F-test ANOVA table comparing two nested ``lm`` fits."""
+def _anova_lm(*models):
+    """F-test ANOVA table comparing nested ``lm`` fits."""
+    # Sort ascending by npar (= descending by df_residuals, matching R).
+    order = sorted(range(len(models)), key=lambda i: models[i].df_residuals,
+                   reverse=True)
+    labels = [f"model {i}" for i in range(len(models))]
+
+    dfs  = [models[i].df_residuals for i in order]
+    rss  = [models[i].rss           for i in order]
+    # R uses the largest (least-constrained) model's MSE as the F denom.
+    mse_full = rss[-1] / dfs[-1]
+
+    df_col, sos_col, f_col, p_col, sig_col = [""], [""], [""], [""], [""]
+    for k in range(1, len(order)):
+        d_df = dfs[k - 1] - dfs[k]
+        d_rss = rss[k - 1] - rss[k]
+        if d_df <= 0:
+            df_col.append(f"{d_df:.0f}"); sos_col.append(f"{d_rss:.3f}")
+            f_col.append(""); p_col.append(""); sig_col.append("")
+            continue
+        fstat = (d_rss / d_df) / mse_full
+        p = float(f.sf(fstat, d_df, dfs[-1]))
+        df_col.append(f"{d_df:.0f}")
+        sos_col.append(f"{d_rss:.3f}")
+        f_col.append(f"{fstat:.3f}")
+        p_col.append(f"{p:.4g}")
+        sig_col.append(significance_code([p])[0])
+
     docstring = "Analysis of Variance Table\n\n"
-    for i, model in enumerate([m0, m1]):
-        docstring += f"model {i}: {model.formula}\n"
+    for i, m in enumerate(models):
+        docstring += f"{labels[i]}: {m.formula}\n"
 
-    df0, df1 = m0.df_residuals, m1.df_residuals
-    rss0, rss1 = m0.rss, m1.rss
-
-    fstat = ((rss0 - rss1) / (df0 - df1)) / (rss1 / df1)
-    f_p_value = f.sf(fstat, df0 - df1, df1)
-    sig = significance_code([f_p_value])[0]
-
-    df_model = ["", f"{df0 - df1:.0f}"]
-    SoS = ["", f"{np.sum((m1.yhat.values - m1.y.values.mean())**2):.3f}"]
-
-    df = pd.DataFrame.from_dict(
-        {
-            "Res.Df": [df0, df1],
-            "RSS": [rss0, rss1],
-            "Df": df_model,
-            "Sum of Sq": SoS,
-            "F": ["", f"{fstat:.3f}"],
-            "Pr(>F)": ["", f"{f_p_value:.3f}"],
-            " ": ["", sig],
-        }
-    )
+    df_ = pd.DataFrame.from_dict({
+        "Res.Df":    dfs,
+        "RSS":       [f"{r:.3f}" for r in rss],
+        "Df":        df_col,
+        "Sum of Sq": sos_col,
+        "F":         f_col,
+        "Pr(>F)":    p_col,
+        " ":         sig_col,
+    })
+    df_.index = [labels[i] for i in order]
 
     print(docstring)
-    print(df.to_string(formatters={"RSS": "{:.3f}".format}))
+    print(df_.to_string())
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
 
 
-def _anova_lme(m0, m1):
-    """Likelihood-ratio test for two nested ``lme`` fits (lme4-style)."""
+def _anova_lme(*models):
+    """Likelihood-ratio test for nested ``lme`` fits (lme4-style)."""
     # LRT requires ML; silently refit any REML inputs.
-    if m0.REML:
-        m0 = lme(m0.formula, m0.data, REML=False)
-    if m1.REML:
-        m1 = lme(m1.formula, m1.data, REML=False)
-    # Match lme4: sort so smaller-npar model prints first.
-    if m0.npar > m1.npar:
-        m0, m1 = m1, m0
+    models = tuple(
+        (lme(m.formula, m.data, REML=False) if m.REML else m) for m in models
+    )
+    # Sort ascending by npar, preserving original indices for row labels.
+    order = sorted(range(len(models)), key=lambda i: models[i].npar)
+    labels = [f"model {i}" for i in range(len(models))]
 
-    chisq = m0.deviance - m1.deviance
-    df_d = m1.npar - m0.npar
-    p = float(chi2.sf(chisq, df_d)) if df_d > 0 else float("nan")
-    sig = significance_code([p])[0]
+    npar_col, aic_col, bic_col, ll_col, dev_col = [], [], [], [], []
+    chi_col, dfc_col, p_col, sig_col = [], [], [], []
+    for k, idx in enumerate(order):
+        m = models[idx]
+        npar_col.append(m.npar)
+        aic_col.append(f"{m.AIC:.4f}")
+        bic_col.append(f"{m.BIC:.4f}")
+        ll_col.append(f"{m.loglike:.4f}")
+        dev_col.append(f"{m.deviance:.4f}")
+        if k == 0:
+            chi_col.append(""); dfc_col.append(""); p_col.append(""); sig_col.append("")
+            continue
+        prev = models[order[k - 1]]
+        chisq = prev.deviance - m.deviance
+        d_df = m.npar - prev.npar
+        p = float(chi2.sf(chisq, d_df)) if d_df > 0 else float("nan")
+        chi_col.append(f"{chisq:.4f}")
+        dfc_col.append(f"{d_df}")
+        p_col.append(f"{p:.4g}")
+        sig_col.append(significance_code([p])[0])
 
     docstring = "Analysis of Variance Table (likelihood ratio test)\n\n"
-    docstring += f"model 0: {m0.formula}\n"
-    docstring += f"model 1: {m1.formula}\n"
+    for i, m in enumerate(models):
+        docstring += f"{labels[i]}: {m.formula}\n"
 
-    df = pd.DataFrame.from_dict(
-        {
-            "npar":     [m0.npar, m1.npar],
-            "AIC":      [f"{m0.AIC:.4f}", f"{m1.AIC:.4f}"],
-            "BIC":      [f"{m0.BIC:.4f}", f"{m1.BIC:.4f}"],
-            "logLik":   [f"{m0.loglike:.4f}", f"{m1.loglike:.4f}"],
-            "deviance": [f"{m0.deviance:.4f}", f"{m1.deviance:.4f}"],
-            "Chisq":    ["", f"{chisq:.4f}"],
-            "Df":       ["", f"{df_d}"],
-            "Pr(>Chisq)": ["", f"{p:.4g}"],
-            " ":        ["", sig],
-        }
-    )
-    df.index = ["model 0", "model 1"]
+    df_ = pd.DataFrame.from_dict({
+        "npar":       npar_col,
+        "AIC":        aic_col,
+        "BIC":        bic_col,
+        "logLik":     ll_col,
+        "deviance":   dev_col,
+        "Chisq":      chi_col,
+        "Df":         dfc_col,
+        "Pr(>Chisq)": p_col,
+        " ":          sig_col,
+    })
+    df_.index = [labels[i] for i in order]
 
     print(docstring)
-    print(df.to_string())
+    print(df_.to_string())
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
