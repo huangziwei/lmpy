@@ -304,6 +304,41 @@ def test_data_helper_applies_schema_sidecar():
         f"Machine should be pl.Enum, got {d.schema['Machine']}"
 
 
+def test_factor_helper():
+    """`lmpy.factor()` is the polars equivalent of R's factor() — the
+    user-side fix for wild-data Int64-stored factor columns.
+    """
+    from lmpy import factor
+    from lmpy.formula import _ORDERED_COLS_CV, set_ordered_cols
+
+    df = pl.read_csv("datasets/nlme/Machines.csv", null_values="NA")
+    assert df.schema["Worker"] == pl.Int64  # the wild-data scenario
+
+    # Auto-detect levels, alphanumeric sort
+    out = factor(df["Worker"])
+    assert isinstance(out.dtype, pl.Enum)
+    assert out.dtype.categories.to_list() == ["1", "2", "3", "4", "5", "6"]
+    assert out.name == "Worker"  # preserved → with_columns replaces
+
+    # Explicit levels override sort order
+    out2 = factor(df["Worker"], levels=["6", "2", "4", "1", "3", "5"])
+    assert out2.dtype.categories.to_list() == ["6", "2", "4", "1", "3", "5"]
+
+    # Casting fixes the s(...,bs='re') breakage end-to-end
+    set_ordered_cols(frozenset())  # clean slate
+    df_fixed = df.with_columns(factor(df["Worker"]))
+    m = gam("score ~ Machine + s(Worker, bs='re')", data=df_fixed, method="REML")
+    # degraded path would give edf ~ 2; correct path gives ~5
+    assert m.edf_total > 4.0, f"factor() didn't fix the re basis: edf={m.edf_total}"
+
+    # ordered=True adds to contextvar; ordered=False leaves it alone
+    set_ordered_cols(frozenset())
+    factor(df["Worker"], ordered=True)
+    assert "Worker" in _ORDERED_COLS_CV.get()
+    factor(df["Worker"], ordered=False)
+    assert "Worker" in _ORDERED_COLS_CV.get(), "ordered=False shouldn't unregister"
+
+
 # ---------------------------------------------------------------------------
 # Cross-cutting: sp passthrough reproduces a fixed-sp fit
 # ---------------------------------------------------------------------------

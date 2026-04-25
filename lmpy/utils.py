@@ -36,7 +36,45 @@ from .formula import (
     set_ordered_cols,
 )
 
-__all__ = ["Design", "prepare_design", "data", "significance_code", "format_df"]
+__all__ = ["Design", "prepare_design", "data", "factor",
+           "significance_code", "format_df"]
+
+
+def factor(series: pl.Series, levels=None, ordered: bool = False) -> pl.Series:
+    """Polars equivalent of R's ``factor()`` — cast a Series to ``pl.Enum``.
+
+    Use with ``df.with_columns(factor(df["col"]))``. The returned Series
+    keeps its input name, so ``with_columns`` replaces the original column.
+
+    Parameters
+    ----------
+    series : pl.Series
+        Column to convert. Int64 inputs route through Utf8 (``pl.Enum``
+        can't accept integers directly).
+    levels : list | None, optional
+        Level order. If None, auto-detected via ``unique().sort()`` on the
+        string-cast values — that's Unicode collation, which can diverge
+        from R's locale-aware ``factor()`` default for non-ASCII or
+        punctuation-heavy levels. For poly contrasts on ordered factors,
+        pass levels explicitly to control the order.
+    ordered : bool, optional
+        If True, also register the series's name in lmpy's ordered-cols
+        contextvar so subsequent ``gam``/``lm``/``lme`` calls in this
+        session apply poly contrasts. Process-global; pair with
+        ``lmpy.formula.with_ordered_cols`` if you need scoped use.
+        ``ordered=False`` does NOT remove an already-registered name —
+        call ``set_ordered_cols(frozenset())`` to clear.
+    """
+    s = series.cast(pl.Utf8)
+    if levels is None:
+        levels_list = s.drop_nulls().unique().sort().to_list()
+    else:
+        levels_list = [str(v) for v in levels]
+    out = s.cast(pl.Enum(levels_list))
+    if ordered and series.name:
+        from .formula import _ORDERED_COLS_CV
+        set_ordered_cols(_ORDERED_COLS_CV.get() | frozenset({series.name}))
+    return out
 
 
 _MAX_DECIMALS = 6
