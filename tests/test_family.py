@@ -1,0 +1,407 @@
+"""mgcv-oracle regression tests for lmpy.family.
+
+Pins per-link and per-family numerics against the canonical R/mgcv values
+generated with stats::make.link / stats::<family>() / mgcv:::fix.family.*
+at fixed (μ, η, scale) inputs. Test points cover the boundary of each
+link's domain so that overflow/underflow paths get exercised too.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from lmpy.family import (
+    Binomial,
+    CauchitLink,
+    CloglogLink,
+    Gamma,
+    Gaussian,
+    InverseGaussian,
+    InverseSquareLink,
+    LogitLink,
+    Poisson,
+    ProbitLink,
+    SqrtLink,
+)
+
+
+MUS = np.array([0.05, 0.2, 0.5, 0.8, 0.95])
+ETAS = np.array([-2.5, -0.5, 0.0, 0.7, 2.0])
+
+
+# ---------------------------------------------------------------------------
+# Links — values pinned to R::stats::make.link + mgcv:::fix.family.link.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "cls,link_oracle,linkinv_oracle,mu_eta_oracle,d2_oracle,d3_oracle,d4_oracle",
+    [
+        (
+            LogitLink,
+            [-2.9444389791664403, -1.3862943611198906, 0.0, 1.3862943611198908, 2.9444389791664394],
+            [0.07585818002124356, 0.37754066879814546, 0.5, 0.66818777216816616, 0.88079707797788243],
+            [0.070103716545108177, 0.23500371220159449, 0.25, 0.22171287329310907, 0.10499358540350652],
+            [-398.89196675900268, -23.437499999999996, 0.0, 23.437500000000014, 398.89196675900212],
+            [16002.33270155999, 253.90624999999994, 32.0, 253.90625000000017, 16002.332701559952],
+            [-959992.63357402082, -3735.3515624999991, 0.0, 3735.3515625000032, 959992.63357401767],
+        ),
+        (
+            ProbitLink,
+            [-1.6448536269514726, -0.84162123357291418, 0.0, 0.84162123357291441, 1.6448536269514715],
+            [0.0062096653257761349, 0.30853753872598694, 0.5, 0.75803634777692697, 0.97724986805182079],
+            [0.01752830049356854, 0.35206532676429952, 0.3989422804014327, 0.31225393336676127, 0.053990966513188063],
+            [-154.6356833289386, -10.737885188829354, 0.0, 10.737885188829367, 154.63568332893792],
+            [5843.9347164857427, 110.1329652673685, 15.749609945722417, 110.13296526736866, 5843.9347164857027],
+            [-337755.43402393488, -1541.2451459794413, 0.0, 1541.2451459794445, 337755.4340239318],
+        ),
+        (
+            CauchitLink,
+            [-6.3137515146750438, -1.3763819204711736, 0.0, 1.3763819204711742, 6.3137515146750376],
+            [0.12111894159084341, 0.35241638234956674, 0.5, 0.69440011221421472, 0.85241638234956674],
+            [0.043904811887419404, 0.25464790894703254, 0.31830988618379069, 0.21363079609650382, 0.063661977236758135],
+            [-5092.749842851993, -78.637795426380578, 0.0, 78.637795426380677, 5092.7498428519775],
+            [305581.72289978294, 1199.5876940407713, 62.012553360599632, 1199.5876940407732, 305581.72289978171],
+            [-24446195.30522709, -23852.714815240906, 0.0, 23852.71481524095, 24446195.30522697],
+        ),
+        (
+            CloglogLink,
+            [-2.9701952490421637, -1.4999399867595158, -0.36651292058166435, 0.4758849953271107, 1.0971887003649483],
+            [0.07880634482448419, 0.45476078810739495, 0.63212055882855767, 0.86651320334191617, 0.99938202101066886],
+            [0.075616179917426515, 0.33070429889041808, 0.36787944117144233, 0.26880939818177735, 0.0045662814201279153],
+            [-399.54304335262657, -24.377665865346501, -2.5546957604665774, 5.8819458413853711, 88.952114337550896],
+            [16000.865329326627, 251.39709691607473, 21.17475642459932, 70.530011682474793, 3261.7900829111441],
+            [-959997.46017832356, -3745.1331057436109, -67.169617126383642, 915.99384298698556, 183838.66891563043],
+        ),
+        (
+            SqrtLink,
+            [0.22360679774997896, 0.44721359549995793, 0.70710678118654757, 0.89442719099991586, 0.97467943448089633],
+            [6.25, 0.25, 0.0, 0.48999999999999994, 4.0],
+            [-5.0, -1.0, 0.0, 1.3999999999999999, 4.0],
+            [-22.360679774997894, -2.7950849718747368, -0.70710678118654757, -0.3493856214843421, -0.26999430318030371],
+            [670.82039324993684, 20.963137289060526, 2.1213203435596428, 0.65509804028314145, 0.42630679449521647],
+            [-33541.019662496838, -262.03921611325654, -10.606601717798213, -2.0471813758848167, -1.1218599855137275],
+        ),
+        (
+            InverseSquareLink,
+            [400.0, 25.0, 4.0, 1.5624999999999998, 1.10803324099723],
+            # linkinv at η<0 is NaN in R; we only check the η>0 entries.
+            [np.nan, np.nan, np.nan, 1.1952286093343936, 0.70710678118654746],
+            [np.nan, np.nan, np.nan, -0.8537347209531384, -0.17677669529663687],
+            [959999.99999999977, 3749.9999999999991, 96.0, 14.648437499999996, 7.3664259789289535],
+            [-76799999.99999997, -74999.999999999971, -768.0, -73.242187499999972, -31.016530437595598],
+            [7679999999.9999971, 1874999.9999999993, 7680.0, 457.76367187499983, 163.24489703997685],
+        ),
+    ],
+)
+def test_link_values_match_mgcv(
+    cls, link_oracle, linkinv_oracle, mu_eta_oracle, d2_oracle, d3_oracle, d4_oracle,
+):
+    lk = cls()
+    np.testing.assert_allclose(lk.link(MUS), link_oracle, rtol=1e-12, atol=0,
+                               err_msg=f"{lk.name}.link")
+    np.testing.assert_allclose(lk.d2link(MUS), d2_oracle, rtol=1e-12, atol=0,
+                               err_msg=f"{lk.name}.d2link")
+    np.testing.assert_allclose(lk.d3link(MUS), d3_oracle, rtol=1e-12, atol=0,
+                               err_msg=f"{lk.name}.d3link")
+    np.testing.assert_allclose(lk.d4link(MUS), d4_oracle, rtol=1e-12, atol=0,
+                               err_msg=f"{lk.name}.d4link")
+    # InverseSquare's linkinv/mu_eta are only defined for η>0; mask the rest.
+    linkinv_oracle = np.asarray(linkinv_oracle, dtype=float)
+    mu_eta_oracle = np.asarray(mu_eta_oracle, dtype=float)
+    mask = ~np.isnan(linkinv_oracle)
+    np.testing.assert_allclose(lk.linkinv(ETAS[mask]), linkinv_oracle[mask],
+                               rtol=1e-12, atol=0, err_msg=f"{lk.name}.linkinv")
+    np.testing.assert_allclose(lk.mu_eta(ETAS[mask]), mu_eta_oracle[mask],
+                               rtol=1e-12, atol=0, err_msg=f"{lk.name}.mu_eta")
+
+
+@pytest.mark.parametrize("cls", [LogitLink, ProbitLink, CauchitLink, CloglogLink, SqrtLink])
+def test_link_round_trip(cls):
+    """linkinv(link(μ)) ≈ μ on the link's natural domain."""
+    lk = cls()
+    mu = MUS if cls is not SqrtLink else np.array([0.1, 0.4, 1.0, 2.5, 9.0])
+    np.testing.assert_allclose(lk.linkinv(lk.link(mu)), mu, rtol=1e-12, atol=0)
+
+
+def test_inverse_square_round_trip():
+    lk = InverseSquareLink()
+    mu = np.array([0.1, 0.5, 1.0, 2.5, 9.0])
+    np.testing.assert_allclose(lk.linkinv(lk.link(mu)), mu, rtol=1e-12, atol=0)
+
+
+def test_link_valideta():
+    # sqrt and 1/μ²  reject η ≤ 0 (matches R make.link).
+    assert SqrtLink().valideta(np.array([0.1, 1.0])) is True
+    assert SqrtLink().valideta(np.array([0.1, 0.0])) is False
+    assert InverseSquareLink().valideta(np.array([0.1, 1.0])) is True
+    assert InverseSquareLink().valideta(np.array([0.1, -1.0])) is False
+    # Bernoulli-type links accept any finite η.
+    assert LogitLink().valideta(np.array([-1e3, 0.0, 1e3])) is True
+
+
+# ---------------------------------------------------------------------------
+# Poisson family — pinned against R::stats::poisson + mgcv::fix.family.{var,ls}.
+# ---------------------------------------------------------------------------
+
+
+def test_poisson_static_fields():
+    f = Poisson()
+    assert f.name == "poisson"
+    assert f.canonical_link_name == "log"
+    assert f.scale_known is True
+    assert f.is_canonical
+    # variance/dvar/d2var
+    mu = np.array([0.5, 1.2, 2.1])
+    np.testing.assert_array_equal(f.variance(mu), mu)
+    np.testing.assert_array_equal(f.dvar(mu), np.ones_like(mu))
+    np.testing.assert_array_equal(f.d2var(mu), np.zeros_like(mu))
+
+
+def test_poisson_oracle():
+    f = Poisson()
+    y = np.array([0.0, 1.0, 2.0, 3.0, 5.0])
+    mu = np.array([0.5, 1.2, 2.1, 2.8, 4.5])
+    wt = np.array([1.0, 2.0, 1.0, 1.0, 3.0])
+    np.testing.assert_allclose(
+        f.dev_resids(y, mu, wt),
+        [1.0, 0.07071377282418145, 0.00483934332227196,
+         0.01395722892170814, 0.16081546973479077],
+        rtol=1e-12, atol=0,
+    )
+    np.testing.assert_allclose(f.aic(y, mu, None, wt, len(y)),
+                               21.297689743799772, rtol=1e-12, atol=0)
+    np.testing.assert_allclose(f.ls(y, wt, 1.0),
+                               [-10.0236819644984, 0.0, 0.0],
+                               rtol=1e-12, atol=0)
+
+
+def test_poisson_initialize():
+    f = Poisson()
+    y = np.array([0.0, 1.0, 5.0])
+    np.testing.assert_allclose(f.initialize(y, np.ones(3)), y + 0.1)
+    with pytest.raises(ValueError, match="negative values"):
+        f.initialize(np.array([-1.0, 0.0]), np.ones(2))
+
+
+def test_poisson_validmu():
+    assert Poisson().validmu(np.array([0.1, 1.0, 100.0]))
+    assert not Poisson().validmu(np.array([0.0, 1.0]))
+    assert not Poisson().validmu(np.array([np.inf, 1.0]))
+
+
+# ---------------------------------------------------------------------------
+# Binomial family — pinned against R::stats::binomial + mgcv.
+# ---------------------------------------------------------------------------
+
+
+def test_binomial_static_fields():
+    f = Binomial()
+    assert f.name == "binomial"
+    assert f.canonical_link_name == "logit"
+    assert f.scale_known is True
+    mu = np.array([0.2, 0.5, 0.8])
+    np.testing.assert_allclose(f.variance(mu), mu * (1 - mu), rtol=1e-12)
+    np.testing.assert_allclose(f.dvar(mu), 1 - 2 * mu, rtol=1e-12)
+    np.testing.assert_array_equal(f.d2var(mu), -2.0 * np.ones_like(mu))
+
+
+def test_binomial_bernoulli_oracle():
+    f = Binomial()
+    y = np.array([0.0, 1.0, 1.0, 0.0, 1.0])
+    mu = np.array([0.3, 0.7, 0.6, 0.4, 0.85])
+    wt = np.ones(5)
+    np.testing.assert_allclose(
+        f.dev_resids(y, mu, wt),
+        [0.713349887877465, 0.713349887877465, 1.021651247531981,
+         1.021651247531981, 0.325037858995550],
+        rtol=1e-12, atol=0,
+    )
+    np.testing.assert_allclose(f.aic(y, mu, None, wt, len(y)),
+                               3.79504012981444, rtol=1e-12, atol=0)
+    # mgcv ls is identically zero in the Bernoulli case (saturated dbinom = 1).
+    np.testing.assert_array_equal(f.ls(y, wt, 1.0), np.zeros(3))
+
+
+def test_binomial_proportion_oracle():
+    """y is the success proportion in [0,1]; wt is the binomial size m."""
+    f = Binomial()
+    y = np.array([0.2, 0.5, 0.7, 0.0])
+    mu = np.array([0.3, 0.4, 0.6, 0.1])
+    wt = np.array([5.0, 4.0, 10.0, 3.0])
+    np.testing.assert_allclose(
+        f.dev_resids(y, mu, wt),
+        [0.257320924779854, 0.163287978081021,
+         0.432017082870932, 0.632163093946958],
+        rtol=1e-12, atol=0,
+    )
+    np.testing.assert_allclose(f.aic(y, mu, None, wt, len(y)),
+                               7.87389855174967, rtol=1e-12, atol=0)
+    np.testing.assert_allclose(f.ls(y, wt, 1.0),
+                               [-3.19455473603545, 0.0, 0.0],
+                               rtol=1e-11, atol=0)
+
+
+def test_binomial_initialize_and_validmu():
+    f = Binomial()
+    y = np.array([0.0, 0.5, 1.0])
+    wt = np.array([1.0, 3.0, 1.0])
+    expected = (wt * y + 0.5) / (wt + 1.0)
+    np.testing.assert_allclose(f.initialize(y, wt), expected, rtol=1e-12)
+    with pytest.raises(ValueError, match="0 <= y <= 1"):
+        f.initialize(np.array([-0.1, 0.5]), np.ones(2))
+    assert f.validmu(np.array([0.01, 0.5, 0.99]))
+    assert not f.validmu(np.array([0.0, 0.5]))
+    assert not f.validmu(np.array([0.5, 1.0]))
+
+
+def test_binomial_dev_resids_no_warning_on_boundary():
+    """y=0,μ=0 and y=1,μ=1 must yield 0 contribution without numpy warnings."""
+    f = Binomial()
+    with np.errstate(divide="raise", invalid="raise"):
+        d = f.dev_resids(
+            np.array([0.0, 1.0, 0.5]),
+            np.array([1e-15, 1.0 - 1e-15, 0.5]),
+            np.ones(3),
+        )
+    assert np.all(np.isfinite(d))
+
+
+# ---------------------------------------------------------------------------
+# InverseGaussian family — pinned against R::stats::inverse.gaussian + mgcv.
+# ---------------------------------------------------------------------------
+
+
+def test_inverse_gaussian_static_fields():
+    f = InverseGaussian()
+    assert f.name == "inverse.gaussian"
+    assert f.canonical_link_name == "1/mu^2"
+    assert f.scale_known is False
+    mu = np.array([0.5, 1.0, 2.0])
+    np.testing.assert_allclose(f.variance(mu), mu ** 3, rtol=1e-12)
+    np.testing.assert_allclose(f.dvar(mu), 3 * mu ** 2, rtol=1e-12)
+    np.testing.assert_allclose(f.d2var(mu), 6 * mu, rtol=1e-12)
+
+
+def test_inverse_gaussian_oracle():
+    f = InverseGaussian()
+    y = np.array([1.0, 2.0, 0.5, 3.0])
+    mu = np.array([0.9, 2.1, 0.6, 2.5])
+    wt = np.array([1.0, 1.0, 2.0, 1.0])
+    dev_v = f.dev_resids(y, mu, wt)
+    np.testing.assert_allclose(
+        dev_v,
+        [0.01234567901234567, 0.00113378684807256,
+         0.11111111111111106, 0.01333333333333333],
+        rtol=1e-12, atol=0,
+    )
+    dev = float(dev_v.sum())
+    np.testing.assert_allclose(f.aic(y, mu, dev, wt, len(y)),
+                               -0.546674508250539, rtol=1e-12, atol=0)
+    # log-scale derivatives: d1 = -nobs/2 = -2; d2 = 0 (algebraic
+    # cancellation since the log(2π φ y³) term is linear in log φ).
+    np.testing.assert_allclose(f.ls(y, wt, 0.5),
+                               [-3.59080461442099, -2.0, 0.0],
+                               rtol=1e-12, atol=0)
+    np.testing.assert_allclose(f.ls(y, wt, 2.0),
+                               [-6.36339333666077, -2.0, 0.0],
+                               rtol=1e-12, atol=0)
+
+
+def test_inverse_gaussian_initialize():
+    f = InverseGaussian()
+    y = np.array([0.5, 1.0, 2.5])
+    np.testing.assert_array_equal(f.initialize(y, np.ones(3)), y)
+    with pytest.raises(ValueError, match="positive values"):
+        f.initialize(np.array([0.0, 1.0]), np.ones(2))
+
+
+# ---------------------------------------------------------------------------
+# Existing families should not regress.  Gamma.ls is now log-scale; pin the
+# converted values so a future refactor doesn't silently drift back.
+# ---------------------------------------------------------------------------
+
+
+def test_gaussian_unchanged_oracle():
+    # ls(y=μ=[1..4], wt=1, scale): log-scale convention (d1 = -n/2, d2 = 0).
+    f = Gaussian()
+    y = np.array([1.0, 2.0, 3.0, 4.0])
+    out = f.ls(y, np.ones(4), 1.0)
+    np.testing.assert_allclose(out, [-0.5 * 4 * np.log(2 * np.pi), -2.0, 0.0],
+                               rtol=1e-12, atol=0)
+
+
+def test_gaussian_ls_with_weights_oracle():
+    """Pins mgcv's gaussian()$ls form: ls0 = -nobs/2·log(2πφ) + ½·Σ log w[w>0],
+    d/d log φ = -nobs/2, d²/d log φ² = 0.  ``nobs`` is the count of w>0
+    observations, NOT Σw — weights act as precision multipliers, not as
+    sample-size multipliers."""
+    f = Gaussian()
+    y = np.array([1.0, 2.0, 3.0, 4.0])
+    wt = np.array([0.0, 1.5, 2.0, 0.5])              # one zero-weight row
+    nobs = 3
+    log_w_sum = float(np.sum(np.log(wt[wt > 0])))    # log(1.5)+log(2)+log(0.5)
+    # scale=0.5
+    expected_ls0 = -0.5 * nobs * np.log(2.0 * np.pi * 0.5) + 0.5 * log_w_sum
+    np.testing.assert_allclose(
+        f.ls(y, wt, 0.5),
+        [expected_ls0, -0.5 * nobs, 0.0],
+        rtol=1e-12, atol=0,
+    )
+    # scale=2.0
+    expected_ls0 = -0.5 * nobs * np.log(2.0 * np.pi * 2.0) + 0.5 * log_w_sum
+    np.testing.assert_allclose(
+        f.ls(y, wt, 2.0),
+        [expected_ls0, -0.5 * nobs, 0.0],
+        rtol=1e-12, atol=0,
+    )
+
+
+def test_gamma_ls_log_scale_conversion():
+    """mgcv returns d/dφ; we apply the chain rule to log φ. Pin both scales."""
+    f = Gamma()
+    y = np.array([1.0, 2.0, 3.0, 4.0])
+    wt = np.ones(4)
+    # mgcv raw form at scale=0.5: [-5.63287638586838, -4.32580552738365, 8.02744183124810]
+    # convert: d1_log = 0.5·(-4.32580552738365) = -2.162902763691825
+    #          d2_log = 0.5·(-4.32580552738365) + 0.25·(8.02744183124810)
+    #                 = -0.156042305879800
+    np.testing.assert_allclose(
+        f.ls(y, wt, 0.5),
+        [-5.63287638586838, -2.162902763691825, -0.156042305879800],
+        rtol=1e-10, atol=0,
+    )
+    # mgcv raw at scale=2: [-8.853807963166636, -1.270362845461478, 0.536662295325308]
+    # d1_log = 2·(-1.270362845461478) = -2.540725690922956
+    # d2_log = 2·(-1.270362845461478) + 4·(0.536662295325308) = -0.394076509621724
+    np.testing.assert_allclose(
+        f.ls(y, wt, 2.0),
+        [-8.853807963166636, -2.540725690922956, -0.394076509621724],
+        rtol=1e-10, atol=0,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Family/link composition behaviour
+# ---------------------------------------------------------------------------
+
+
+def test_family_link_resolution():
+    # default link = canonical
+    assert Poisson().link.name == "log"
+    assert Binomial().link.name == "logit"
+    assert InverseGaussian().link.name == "1/mu^2"
+    # explicit string
+    assert Poisson(link="sqrt").link.name == "sqrt"
+    assert Binomial(link="probit").link.name == "probit"
+    # is_canonical reports correctly
+    assert Poisson().is_canonical
+    assert not Poisson(link="sqrt").is_canonical
+    assert Binomial().is_canonical
+    assert not Binomial(link="cloglog").is_canonical
+
+
+def test_family_link_unknown_raises():
+    with pytest.raises(ValueError, match="unknown link"):
+        Poisson(link="banana")

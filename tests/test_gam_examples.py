@@ -405,3 +405,37 @@ def test_predict_inSample_matches_fitted():
     d = load_dataset("MASS", "mcycle")
     m = gam("accel ~ s(times)", d, method="REML")
     np.testing.assert_array_equal(m.predict(), m.fitted)
+
+
+# ---------------------------------------------------------------------------
+# Regression: PIRLS init must produce a valid (β_null, η_null, μ_null) for
+# canonical inverse-Gaussian (link = 1/μ²). The previous baseline β=0 ⇒ η=0
+# is invalid for this link (valideta requires η>0 finite), and step-halving
+# toward η_old=0 cannot escape the invalid region — the fit raised
+# `FloatingPointError: PIRLS step halving failed (validity)`. The fix is
+# mgcv's null.coef pattern: project a constant valid η onto colspan(X).
+# ---------------------------------------------------------------------------
+
+
+def test_pirls_init_canonical_inverse_gaussian():
+    """IG canonical fit on Wald-distributed data must converge."""
+    from lmpy import inverse_gaussian
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.uniform(0.0, 1.0, n)
+    mu = 1.5 + 0.5 * np.sin(2 * np.pi * x)               # ∈ [1.0, 2.0], strictly positive
+    y = rng.wald(mean=mu, scale=1.0)
+    df = pl.DataFrame({"x": x, "y": y})
+    m = gam("y ~ s(x)", df, family=inverse_gaussian(), method="REML")
+    assert m.n == n
+    assert np.all(np.isfinite(m._beta))
+    assert np.all(np.isfinite(m.fitted))
+    # m.fitted is the linear predictor η = X β; for IG canonical link
+    # valideta requires η>0 finite.
+    assert np.all(m.fitted > 0)
+    assert m.sigma_squared > 0
+    # Intercept ≈ link(mean(y)) = 1/mean(y)² for an intercept-only fit;
+    # with a smooth that captures most of the signal it lands near
+    # link(mean(mu_true)) = 1/1.5² ≈ 0.444.
+    intercept = m.bhat["(Intercept)"][0]
+    assert 0.30 < intercept < 0.60

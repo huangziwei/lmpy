@@ -235,8 +235,17 @@ class InverseSquareLink(Link):
     """``g(μ) = 1/μ²`` — canonical inverse-Gaussian link."""
     name = "1/mu^2"
     def link(self, mu): return 1.0 / np.asarray(mu, dtype=float) ** 2
-    def linkinv(self, eta): return 1.0 / np.sqrt(np.asarray(eta, dtype=float))
-    def mu_eta(self, eta): return -0.5 * np.asarray(eta, dtype=float) ** -1.5
+    def linkinv(self, eta):
+        # PIRLS step-halving may transiently call us with eta<0 entries;
+        # the caller checks valideta() and rejects them. Silence the
+        # sqrt-of-negative warning so strict warning modes (pytest's
+        # `np.errstate(invalid="raise")`) don't trip over a recoverable
+        # halving step.
+        with np.errstate(invalid="ignore"):
+            return 1.0 / np.sqrt(np.asarray(eta, dtype=float))
+    def mu_eta(self, eta):
+        with np.errstate(invalid="ignore"):
+            return -0.5 * np.asarray(eta, dtype=float) ** -1.5
     def d2link(self, mu): return 6.0 * np.asarray(mu, dtype=float) ** -4
     def d3link(self, mu): return -24.0 * np.asarray(mu, dtype=float) ** -5
     def d4link(self, mu): return 120.0 * np.asarray(mu, dtype=float) ** -6
@@ -354,15 +363,17 @@ class Gaussian(Family):
         return n_eff * (np.log(2.0 * np.pi * sigma2) + 1.0) + 2.0
 
     def ls(self, y, wt, scale):
-        # Saturated Gaussian log-lik at μ=y is -½·Σ_i wt_i·log(2π·scale/wt_i).
-        # With wt=1: ls0 = -n/2 · log(2π·scale). d/d(log φ) = -n/2.
+        # mgcv: ls = -½·nobs·log(2π·φ) + ½·Σ log w[w>0]
+        # so d/d(log φ) = -nobs/2, d²/d(log φ²) = 0. (Same algebraic shape
+        # as InverseGaussian — neither family has a y-term involving φ.)
+        # `nobs` here is the *count* of w>0 obs, not Σw — mgcv weights act
+        # as a precision multiplier on σ², not as a sample-size multiplier.
         wt = np.asarray(wt, dtype=float)
         good = wt > 0
-        n_eff = float(wt[good].sum())
-        ls0 = -0.5 * n_eff * np.log(2.0 * np.pi * scale)
-        d1 = -0.5 * n_eff
-        d2 = 0.0
-        return np.array([ls0, d1, d2], dtype=float)
+        nobs = int(np.sum(good))
+        ls0 = (-0.5 * nobs * np.log(2.0 * np.pi * scale)
+               + 0.5 * float(np.sum(np.log(wt[good]))))
+        return np.array([ls0, -0.5 * nobs, 0.0], dtype=float)
 
 
 class Gamma(Family):

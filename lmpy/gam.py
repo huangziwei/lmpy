@@ -40,6 +40,7 @@ from scipy.linalg import cho_factor, cho_solve, solve_triangular
 from scipy.optimize import minimize
 from scipy.stats import f as f_dist, norm, t as t_dist
 
+from .family import Family, Gaussian
 from .formula import SmoothBlock, materialize_smooths
 from .utils import format_df, prepare_design, significance_code
 
@@ -133,12 +134,33 @@ class gam:
         *,
         method: str = "REML",
         sp: np.ndarray | None = None,
+        family: Family | None = None,
     ):
         if method not in ("REML", "GCV.Cp"):
             raise ValueError(f"method must be 'REML' or 'GCV.Cp', got {method!r}")
 
         self.formula = formula
         self.method = method
+        self.family = Gaussian() if family is None else family
+        # GCV is only meaningful when scale is known (Poisson, binomial). For
+        # unknown-scale non-Gaussian families (Gamma, gaussian-non-identity,
+        # etc.), scale enters the criterion non-analytically and mgcv requires
+        # REML/ML — we follow.
+        if (method == "GCV.Cp"
+                and not (self.family.name == "gaussian"
+                         and self.family.link.name == "identity")):
+            raise NotImplementedError(
+                "GCV.Cp is currently only supported for Gaussian-identity; "
+                "use method='REML' for non-Gaussian families."
+            )
+        # `_is_strictly_additive` flags the Gaussian-identity fast path: a
+        # single closed-form solve gives β̂(λ); PIRLS would converge in one
+        # iteration anyway. We keep the closed-form path so the existing
+        # Gaussian regression suite stays bit-identical.
+        self._is_strictly_additive = (
+            self.family.name == "gaussian"
+            and self.family.link.name == "identity"
+        )
 
         d = prepare_design(formula, data)
         self._expanded = d.expanded
@@ -490,6 +512,14 @@ class gam:
         return Sλ
 
     def _fit_given_rho(self, rho: np.ndarray) -> "_FitState":
+        """Dispatch to the Gaussian-identity closed form or PIRLS depending
+        on the family. The Gaussian-identity path is preserved verbatim so
+        the existing test suite stays bit-identical."""
+        if self._is_strictly_additive:
+            return self._fit_given_rho_gaussian(rho)
+        return self._fit_given_rho_pirls(rho)
+
+    def _fit_given_rho_gaussian(self, rho: np.ndarray) -> "_FitState":
         """Solve β̂(λ) = (XᵀX + Sλ)⁻¹ Xᵀy by Cholesky at one ρ.
 
         Also returns the Cholesky factor and log|A| for downstream use
@@ -512,10 +542,216 @@ class gam:
         pen = float(beta @ Sλ @ beta)
         # log|A| = 2 Σ log diag(L)
         log_det_A = 2.0 * float(np.log(np.abs(np.diag(A_chol))).sum())
+        # Pad GLM-state fields with the Gaussian-identity values so the
+        # downstream generic code works either way.
+        eta = self._X_full @ beta
+        mu = eta.copy()
+        w = np.ones(self.n)
+        z = self._y_arr.copy()
+        alpha = np.ones(self.n)
         return _FitState(
-            beta=beta, rss=max(rss, 0.0), pen=pen,
+            beta=beta, dev=max(rss, 0.0), pen=pen,
             A_chol=A_chol, A_chol_lower=lower,
             S_full=Sλ, log_det_A=log_det_A,
+            eta=eta, mu=mu, w=w, z=z, alpha=alpha,
+        )
+
+    def _fit_given_rho_pirls(self, rho: np.ndarray) -> "_FitState":
+        """Penalized IRLS at log-smoothing-params ρ.
+
+        Iterate Newton-form working weights/responses
+
+            αᵢ = 1 + (yᵢ − μᵢ)·(V'(μᵢ)/V(μᵢ) + g''(μᵢ)·dμᵢ/dηᵢ)
+            wᵢ = αᵢ · (dμᵢ/dηᵢ)² / V(μᵢ)
+            zᵢ = ηᵢ + (yᵢ − μᵢ) / ((dμᵢ/dηᵢ)·αᵢ)
+
+        and solve ``(X'WX + Sλ)β = X'Wz`` by Cholesky each step. The Newton
+        form (vs. plain Fisher PIRLS, which uses ``α=1``) makes the converged
+        ``H = X'WX + Sλ`` the *observed* penalized Hessian, which is what
+        the implicit-function ``∂β̂/∂ρ = -exp(ρ_k) H⁻¹ S_k β̂`` derivation
+        assumes — and matches mgcv's gam.fit3 default for non-canonical
+        links. For canonical links (incl. Gaussian-identity, Poisson-log,
+        Gamma-inverse) ``α ≡ 1`` so Newton == Fisher.
+
+        Step-halving (mgcv's "inner loop 3") is applied if the penalized
+        deviance increases beyond a small threshold; convergence is on
+        |Δpdev|/(0.1+|pdev|) < ε.
+        """
+        family = self.family
+        link = family.link
+        X = self._X_full
+        y = self._y_arr
+        n, p = self.n, self.p
+        Sλ = self._build_S_lambda(rho)
+        Sλ = 0.5 * (Sλ + Sλ.T)
+        wt = np.ones(n)                 # prior weights = 1 (no offset/prior-w yet)
+
+        # Start μ̂ from the family's mustart (= y for Gamma/IG). The
+        # *baseline* for step-halving and divergence is mgcv's ``null.coef``
+        # pattern: project a constant valid η onto colspan(X) so that the
+        # triple (β_null, η_null, μ_null) lives inside the family's valid
+        # region for every canonical link. The plain β=0 ⇒ η=0 baseline
+        # fails for canonical IG (1/μ² requires η>0 finite) — halving an
+        # invalid η_new toward η_old=0 never escapes — and using the
+        # saturated η as baseline gives old_pdev=0, so any positive iter-1
+        # pdev would look like divergence.
+        mu = family.initialize(y, wt)
+        eta = link.link(mu)
+        beta = np.zeros(p)
+
+        mu_null_const = float(np.average(mu, weights=wt))
+        eta_null_const = link.link(np.full(n, mu_null_const))
+        null_coef, *_ = np.linalg.lstsq(X, eta_null_const, rcond=None)
+        eta_null = X @ null_coef
+        mu_null = link.linkinv(eta_null)
+        if not (link.valideta(eta_null) and family.validmu(mu_null)):
+            # Constant-η projection drifted out of valid region — only
+            # plausible for an X with no near-constant column. Fall back
+            # to zeros; if the canonical link rejects η=0 the user will
+            # still get a clear error from the validity step-halver below
+            # rather than silent divergence.
+            null_coef = np.zeros(p)
+            eta_null = np.zeros(n)
+            mu_null = link.linkinv(eta_null)
+        beta_old = null_coef.copy()
+        eta_old = eta_null.copy()
+        dev = float(np.sum(family.dev_resids(y, mu, wt)))
+        # mgcv: old.pdev = sum(dev.resids at null) + null.coef' St null.coef.
+        old_pdev = (float(np.sum(family.dev_resids(y, mu_null, wt)))
+                    + float(null_coef @ Sλ @ null_coef))
+
+        # mgcv startup loop: if family.initialize returns a boundary value
+        # (rare; e.g., Bernoulli at y=0/1 with linkinv-clamped initialize),
+        # nudge η toward the null baseline until valid. Typically a no-op.
+        ii = 0
+        while not (link.valideta(eta) and family.validmu(mu)):
+            ii += 1
+            if ii > 20:
+                raise FloatingPointError(
+                    "PIRLS init: cannot find valid starting μ̂"
+                )
+            eta = 0.9 * eta + 0.1 * eta_old
+            mu = link.linkinv(eta)
+
+        eps = 1e-8
+        max_it = 50
+        for it in range(max_it):
+            mu_eta_v = link.mu_eta(eta)
+            V = family.variance(mu)
+            if np.any(V == 0) or np.any(np.isnan(V)):
+                raise FloatingPointError("V(μ)=0 or NaN in PIRLS")
+            d2g = link.d2link(mu)
+            alpha = 1.0 + (y - mu) * (family.dvar(mu) / V + d2g * mu_eta_v)
+            # mgcv: clamp α=0 to ε to avoid division by zero in z-formula.
+            alpha = np.where(alpha == 0.0, np.finfo(float).eps, alpha)
+
+            z = eta + (y - mu) / (mu_eta_v * alpha)
+            w = alpha * mu_eta_v ** 2 / V
+
+            # Some non-Fisher Newton steps can produce w<0; mgcv's recovery
+            # is to fall back to Fisher (α=1, w=mu_eta²/V). Trees+Gamma+log
+            # has α=y/μ>0 always, but the fallback is cheap insurance.
+            if np.any(w < 0):
+                alpha = np.ones(n)
+                z = eta + (y - mu) / mu_eta_v
+                w = mu_eta_v ** 2 / V
+
+            XtWX = (X.T * w) @ X
+            XtWz = X.T @ (w * z)
+            A = XtWX + Sλ
+            A = 0.5 * (A + A.T)
+            try:
+                A_chol, lower = cho_factor(A, lower=True, overwrite_a=False)
+            except np.linalg.LinAlgError:
+                ridge = 1e-8 * np.trace(A) / p
+                A_chol, lower = cho_factor(
+                    A + ridge * np.eye(p), lower=True, overwrite_a=False,
+                )
+            start = cho_solve((A_chol, lower), XtWz)
+            eta_new = X @ start
+            if np.any(~np.isfinite(start)):
+                raise FloatingPointError("non-finite β in PIRLS")
+
+            mu_new = link.linkinv(eta_new)
+            # If μ leaves the family's valid region, halve the step toward
+            # the previous iterate (mgcv "inner loop 2").
+            ii = 0
+            while not (link.valideta(eta_new) and family.validmu(mu_new)):
+                ii += 1
+                if ii > max_it:
+                    raise FloatingPointError("PIRLS step halving failed (validity)")
+                start = 0.5 * (start + beta_old)
+                eta_new = 0.5 * (eta_new + eta_old)
+                mu_new = link.linkinv(eta_new)
+
+            dev_new = float(np.sum(family.dev_resids(y, mu_new, wt)))
+            pen_new = float(start @ Sλ @ start)
+            pdev_new = dev_new + pen_new
+
+            # mgcv "inner loop 3": step-halve toward old iterate while the
+            # penalized deviance is increasing meaningfully.
+            div_thresh = 10.0 * (0.1 + abs(old_pdev)) * (np.finfo(float).eps ** 0.5)
+            ii = 0
+            while pdev_new - old_pdev > div_thresh:
+                ii += 1
+                if ii > 100:
+                    break
+                start = 0.5 * (start + beta_old)
+                eta_new = 0.5 * (eta_new + eta_old)
+                mu_new = link.linkinv(eta_new)
+                if not (link.valideta(eta_new) and family.validmu(mu_new)):
+                    continue
+                dev_new = float(np.sum(family.dev_resids(y, mu_new, wt)))
+                pen_new = float(start @ Sλ @ start)
+                pdev_new = dev_new + pen_new
+
+            beta = start
+            eta = eta_new
+            mu = mu_new
+            dev = dev_new
+            pen = pen_new
+
+            # mgcv convergence: |Δpdev| < ε·(|scale|+|pdev|). Without scale
+            # available here (it's profiled outside or known), use 1 as the
+            # scale floor — the criterion is ratio-based and works on the
+            # trees example.
+            if abs(pdev_new - old_pdev) < eps * (1.0 + abs(pdev_new)):
+                break
+            old_pdev = pdev_new
+            beta_old = beta.copy()
+            eta_old = eta.copy()
+
+        # Final consistent state (recompute w, z, alpha at converged β̂ for
+        # downstream derivative routines — they expect these exact values).
+        mu_eta_v = link.mu_eta(eta)
+        V = family.variance(mu)
+        d2g = link.d2link(mu)
+        alpha = 1.0 + (y - mu) * (family.dvar(mu) / V + d2g * mu_eta_v)
+        alpha = np.where(alpha == 0.0, np.finfo(float).eps, alpha)
+        z = eta + (y - mu) / (mu_eta_v * alpha)
+        w = alpha * mu_eta_v ** 2 / V
+        if np.any(w < 0):
+            alpha = np.ones(n)
+            z = eta + (y - mu) / mu_eta_v
+            w = mu_eta_v ** 2 / V
+
+        XtWX = (X.T * w) @ X
+        A = XtWX + Sλ
+        A = 0.5 * (A + A.T)
+        try:
+            A_chol, lower = cho_factor(A, lower=True, overwrite_a=False)
+        except np.linalg.LinAlgError:
+            ridge = 1e-8 * np.trace(A) / p
+            A_chol, lower = cho_factor(
+                A + ridge * np.eye(p), lower=True, overwrite_a=False,
+            )
+        log_det_A = 2.0 * float(np.log(np.abs(np.diag(A_chol))).sum())
+
+        return _FitState(
+            beta=beta, dev=dev, pen=pen,
+            A_chol=A_chol, A_chol_lower=lower,
+            S_full=Sλ, log_det_A=log_det_A,
+            eta=eta, mu=mu, w=w, z=z, alpha=alpha,
         )
 
     def _log_det_S_pos(self, rho: np.ndarray) -> float:
@@ -1442,18 +1678,29 @@ class _PenaltySlot:
 
 
 class _FitState:
-    """Fit-at-one-ρ bundle passed from _fit_given_rho to post-fit code."""
+    """Fit-at-one-ρ bundle, populated by either the Gaussian closed-form
+    solver or the PIRLS loop. ``rss`` is kept as an alias for ``dev`` so
+    the Gaussian-only post-fit code reads cleanly; for non-Gaussian
+    families ``rss`` is the deviance (``rss == dev``)."""
     __slots__ = (
-        "beta", "rss", "pen",
+        "beta", "eta", "mu", "w", "z", "alpha",
+        "dev", "pen", "rss",
         "A_chol", "A_chol_lower",
         "S_full", "log_det_A",
     )
 
-    def __init__(self, *, beta, rss, pen, A_chol, A_chol_lower,
-                 S_full, log_det_A):
+    def __init__(self, *, beta, dev, pen, A_chol, A_chol_lower,
+                 S_full, log_det_A,
+                 eta=None, mu=None, w=None, z=None, alpha=None):
         self.beta = beta
-        self.rss = rss
+        self.dev = dev
+        self.rss = dev               # back-compat alias for Gaussian path
         self.pen = pen
+        self.eta = eta
+        self.mu = mu
+        self.w = w
+        self.z = z
+        self.alpha = alpha
         self.A_chol = A_chol
         self.A_chol_lower = A_chol_lower
         self.S_full = S_full
