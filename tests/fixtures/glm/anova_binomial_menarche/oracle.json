@@ -1,0 +1,1 @@
+{"id":"anova_binomial_menarche","test":"Chisq","formulas":["cbind(Menarche, Total - Menarche) ~ 1","cbind(Menarche, Total - Menarche) ~ Age"],"resid_df":[24,23],"resid_dev":[3693.8835747941544,26.703451635764928],"df":[null,1],"deviance":[null,3667.1801231583895],"stat":[null,3667.1801231583895],"pvalue":[null,0]}

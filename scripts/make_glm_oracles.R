@@ -231,4 +231,87 @@ for (case in cases) {
     NULL
   })
 }
+
+# --------------------------------------------------------------------------
+# anova(glm1, glm2, ...) oracles for Phase 5. Each entry pins the columns
+# of `anova(..., test=<auto>)` for nested glm fits; the auto rule mirrors
+# anova.glm()'s own default = "F" for unknown-scale families, "Chisq" for
+# scale-known. Three-model entries verify the incremental walk.
+# --------------------------------------------------------------------------
+anova_cases <- list(
+  # Poisson (scale-known) → Chisq LRT.
+  list(id      = "anova_poisson_quine",
+       data    = prep_quine(),
+       fits    = list(Days ~ Sex + Age,
+                      Days ~ Sex + Age + Eth + Lrn),
+       family  = poisson(link = "log"),
+       test    = "Chisq"),
+
+  # Gamma (unknown-scale) → F-test, denom = full-model dispersion.
+  list(id      = "anova_gamma_trees",
+       data    = prep_trees(),
+       fits    = list(Volume ~ log(Girth),
+                      Volume ~ log(Height) + log(Girth)),
+       family  = Gamma(link = "inverse"),
+       test    = "F"),
+
+  # Gaussian (unknown-scale) 3-model incremental — mirrors lm's anova
+  # idiom but goes through anova.glm so we lock the F denom rule.
+  list(id      = "anova_gaussian_iris",
+       data    = prep_iris(),
+       fits    = list(Sepal.Length ~ 1,
+                      Sepal.Length ~ Petal.Length,
+                      Sepal.Length ~ Petal.Length + Species),
+       family  = gaussian(link = "identity"),
+       test    = "F"),
+
+  # Binomial (scale-known) → Chisq LRT, exercises the cbind-form via
+  # the same proportion-with-weights rewrite tests use.
+  list(id      = "anova_binomial_menarche",
+       data    = prep_menarche(),
+       fits    = list(cbind(Menarche, Total - Menarche) ~ 1,
+                      cbind(Menarche, Total - Menarche) ~ Age),
+       family  = binomial(link = "logit"),
+       test    = "Chisq")
+)
+
+dump_anova <- function(case) {
+  fits <- lapply(case$fits, function(f) glm(f, data = case$data, family = case$family))
+  a <- do.call(anova, c(fits, list(test = case$test)))
+  # `a` is a data.frame; the named columns depend on the test. Pin the
+  # subset our _anova_glm reproduces.
+  out <- list(
+    id          = case$id,
+    test        = case$test,
+    formulas    = vapply(case$fits, deparse1, character(1)),
+    resid_df    = unname(as.integer(a[, "Resid. Df"])),
+    resid_dev   = unname(as.numeric(a[, "Resid. Dev"])),
+    df          = lapply(a[, "Df"], function(x) if (is.na(x)) NULL else as.integer(x)),
+    deviance    = lapply(a[, "Deviance"], function(x) if (is.na(x)) NULL else as.numeric(x))
+  )
+  if (case$test == "F") {
+    fcol <- a[, "F"]; pcol <- a[, "Pr(>F)"]
+    out$stat   <- lapply(fcol, function(x) if (is.na(x)) NULL else as.numeric(x))
+    out$pvalue <- lapply(pcol, function(x) if (is.na(x)) NULL else as.numeric(x))
+  } else {
+    pcol <- a[, "Pr(>Chi)"]
+    out$stat   <- out$deviance  # for Chisq, the test stat IS Δdev
+    out$pvalue <- lapply(pcol, function(x) if (is.na(x)) NULL else as.numeric(x))
+  }
+  out_dir <- file.path(OUT_ROOT, case$id)
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+  write_json(out, file.path(out_dir, "oracle.json"),
+             auto_unbox = TRUE, digits = 17, na = "null", null = "null",
+             pretty = FALSE)
+  cat(sprintf("  wrote %s (%d models, test=%s)\n",
+              case$id, length(case$fits), case$test))
+}
+
+cat(sprintf("Generating %d anova(glm) oracles...\n", length(anova_cases)))
+for (case in anova_cases) {
+  res <- tryCatch(dump_anova(case), error = function(e) {
+    cat(sprintf("  FAILED %s: %s\n", case$id, conditionMessage(e)))
+    NULL
+  })
+}
 cat("done.\n")

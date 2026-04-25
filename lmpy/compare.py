@@ -12,6 +12,7 @@ import inspect
 import polars as pl
 from scipy.stats import chi2, f
 
+from .glm import glm
 from .lm import lm
 from .lme import lme
 from .utils import format_df, significance_code
@@ -89,9 +90,13 @@ def anova(*models):
     labels = _caller_names(models, inspect.currentframe().f_back)
     if all(isinstance(m, lme) for m in models):
         return _anova_lme(*models, labels=labels)
+    # glm before lm: glm is not an lm subclass, but the isinstance order
+    # would still matter if it ever became one. Keep the explicit branch.
+    if all(isinstance(m, glm) for m in models):
+        return _anova_glm(*models, labels=labels)
     if all(isinstance(m, lm) for m in models):
         return _anova_lm(*models, labels=labels)
-    raise TypeError("anova(): all models must be the same type (lm or lme)")
+    raise TypeError("anova(): all models must be the same type (lm, glm, or lme)")
 
 
 def _anova_lm(*models, labels: list[str]):
@@ -144,6 +149,84 @@ def _anova_lm(*models, labels: list[str]):
     print(format_df(df_))
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
+
+
+def _anova_glm(*models, labels: list[str]):
+    """``anova.glm``-style deviance table for nested ``glm`` fits.
+
+    Test selection mirrors R's ``anova.glm`` defaults:
+    - scale-known families (Poisson, Binomial) → ``Chisq`` LRT on Δdev,
+      with df = Δrank.
+    - unknown-scale families (Gaussian, Gamma, IG) → ``F`` test, where
+      ``F = (Δdev / Δdf) / dispersion_full`` and ``dispersion_full`` is the
+      Pearson estimator of the largest fitted model. Denominator df is
+      ``df_residual_full``.
+
+    Three-or-more models are walked incrementally (row k vs row k-1 after
+    sorting by ``df_residuals`` descending, matching ``_anova_lm``).
+    """
+    fam0 = models[0].family
+    if not all(type(m.family) is type(fam0) and
+               m.family.link.name == fam0.link.name for m in models):
+        raise ValueError("anova(): all glm fits must share family and link")
+    test = "Chisq" if fam0.scale_known else "F"
+
+    # Sort ascending by npar (= descending by df_residuals), matching R.
+    order = sorted(range(len(models)), key=lambda i: models[i].df_residuals,
+                   reverse=True)
+    dfs = [models[i].df_residual for i in order]
+    devs = [models[i].deviance for i in order]
+    full = models[order[-1]]
+    disp_full = float(full.dispersion)
+    df_full = int(full.df_residual)
+
+    df_col: list[int | None] = [None]
+    dev_col: list[float | None] = [None]
+    stat_col: list[float | None] = [None]
+    p_col: list[float | None] = [None]
+    sig_col: list[str] = [""]
+    for k in range(1, len(order)):
+        d_df = dfs[k - 1] - dfs[k]
+        d_dev = devs[k - 1] - devs[k]
+        if d_df <= 0:
+            df_col.append(d_df); dev_col.append(round(d_dev, 4))
+            stat_col.append(None); p_col.append(None); sig_col.append("")
+            continue
+        if test == "Chisq":
+            stat = d_dev
+            p = float(chi2.sf(stat, d_df))
+        else:
+            stat = (d_dev / d_df) / disp_full
+            p = float(f.sf(stat, d_df, df_full))
+        df_col.append(d_df)
+        dev_col.append(round(d_dev, 4))
+        stat_col.append(round(stat, 4))
+        p_col.append(float(f"{p:.4g}"))
+        sig_col.append(significance_code([p])[0])
+
+    docstring = "Analysis of Deviance Table\n\n"
+    for i, m in enumerate(models):
+        docstring += f"{labels[i]}: {m.formula}\n"
+
+    stat_lbl = "F" if test == "F" else "Deviance"
+    p_lbl = "Pr(>F)" if test == "F" else "Pr(>Chi)"
+
+    df_ = pl.DataFrame({
+        "":           [labels[i] for i in order],
+        "Resid. Df":  dfs,
+        "Resid. Dev": [round(d, 4) for d in devs],
+        "Df":         df_col,
+        "Deviance":   dev_col,
+        stat_lbl:     stat_col,
+        p_lbl:        p_col,
+        " ":          sig_col,
+    })
+
+    print(docstring)
+    print(format_df(df_))
+    print("---")
+    print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
+    return df_
 
 
 def _anova_lme(*models, labels: list[str]):

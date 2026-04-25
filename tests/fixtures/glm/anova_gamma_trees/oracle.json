@@ -1,0 +1,1 @@
+{"id":"anova_gamma_trees","test":"F","formulas":["Volume ~ log(Girth)","Volume ~ log(Height) + log(Girth)"],"resid_df":[29,28],"resid_dev":[0.85919486838742598,0.80017027071309432],"df":[null,1],"deviance":[null,0.059024597674331658],"stat":[null,2.2188244657562901],"pvalue":[null,0.1475157339388567]}

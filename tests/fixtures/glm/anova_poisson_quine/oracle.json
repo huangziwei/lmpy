@@ -1,0 +1,1 @@
+{"id":"anova_poisson_quine","test":"Chisq","formulas":["Days ~ Sex + Age","Days ~ Sex + Age + Eth + Lrn"],"resid_df":[141,139],"resid_dev":[1908.275271591513,1696.7065524935949],"df":[null,2],"deviance":[null,211.56871909791812],"stat":[null,211.56871909791812],"pvalue":[null,1.1440272684909762e-46]}
