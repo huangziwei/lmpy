@@ -658,7 +658,19 @@ class gam:
 
         if method == "REML":
             if n_sp > 0:
-                self.REML_criterion = float(self._reml(rho_hat))
+                # Gaussian-identity uses the φ-profiled `_reml`; PIRLS paths
+                # (scale-known and scale-unknown) use the general formula at
+                # the converged (ρ̂, log φ̂). Both return -2·V_R, so the
+                # `/2` in `summary()` recovers mgcv's `-REML` display value.
+                if self._is_strictly_additive:
+                    self.REML_criterion = float(self._reml(rho_hat))
+                else:
+                    log_phi_hat = (
+                        self._log_phi_hat if self._log_phi_hat is not None else 0.0
+                    )
+                    self.REML_criterion = float(
+                        self._reml_general(rho_hat, log_phi_hat, fit=fit)
+                    )
             else:
                 self.REML_criterion = float("nan")
         else:
@@ -2276,44 +2288,53 @@ class gam:
             out.append("Approximate significance of smooth terms:")
             rows_label: list[str] = []
             rows_edf:   list[float] = []
-            rows_k:     list[int]   = []
+            rows_refdf: list[float] = []
             rows_F:     list[float] = []
             rows_p:     list[float] = []
             for b, (a, bcol) in zip(self._blocks, self._block_col_ranges):
                 beta_b = self._beta[a:bcol]
                 Vp_b   = self.Vp[a:bcol, a:bcol]
+                X_b    = self._X_full[:, a:bcol]
                 edf_b  = float(self.edf[a:bcol].sum())
-                # Wald chi²: β'Vp⁻¹β, converted to F = χ²/edf on (edf,
-                # df.resid). mgcv's test is a bit more involved (uses
-                # Bayesian variance + finite-sample adjustments), but for
-                # non-degenerate smooths this is close.
-                k = bcol - a
-                # pseudo-invert Vp_b via eigen-truncation at rank ≈ edf
-                w, U = np.linalg.eigh(Vp_b)
-                tol = max(1e-12, w.max() * 1e-8) if w.size and w.max() > 0 else 1e-12
-                mask = w > tol
-                if mask.any():
-                    w_inv = np.where(mask, 1.0 / np.where(mask, w, 1.0), 0.0)
-                    Vp_b_pinv = (U * w_inv) @ U.T
-                    chisq = float(beta_b @ Vp_b_pinv @ beta_b)
-                else:
-                    chisq = 0.0
-                edf_used = max(edf_b, 1e-8)
-                F = chisq / edf_used
+                # mgcv `testStat` (summary.r, default p.type=0): work in
+                # the smooth's design-orthonormal basis, then truncate
+                # the spectral pseudo-inverse at rank k1 ≈ ⌈edf1⌉.
+                # Without the X-rotation, low-edf smooths (≈line) get
+                # huge F because `Vp_b` has near-zero eigenvalues that
+                # the tolerance-based truncate keeps; the rank-truncate
+                # in the R-rotated basis is what makes Tr scale with
+                # signal-to-noise rather than basis size.
+                edf1_b = float(self.edf1[a:bcol].sum()) if hasattr(self, "edf1") else edf_b
+                ref_df = max(edf1_b, 1e-8)
+                _, R = np.linalg.qr(X_b, mode="reduced")
+                V_eff = R @ Vp_b @ R.T
+                V_eff = 0.5 * (V_eff + V_eff.T)
+                d, U = np.linalg.eigh(V_eff)
+                # eigh returns ascending; flip to descending.
+                d = d[::-1]
+                U = U[:, ::-1]
+                k = max(0, int(np.floor(edf1_b)))
+                if edf1_b > k + 0.05 or k == 0:
+                    k += 1
+                k1 = min(max(k, 1), d.size)
+                d_top = np.maximum(d[:k1], 1e-300)
+                vec = U[:, :k1].T @ (R @ beta_b)
+                Tr = float(np.sum(vec**2 / d_top))
+                F = Tr / ref_df
                 p_val = (
-                    float(f_dist.sf(F, edf_used, self.df_residuals))
+                    float(f_dist.sf(F, ref_df, self.df_residuals))
                     if self.df_residuals > 0 else float("nan")
                 )
                 rows_label.append(b.label)
                 rows_edf.append(edf_b)
-                rows_k.append(k)
+                rows_refdf.append(edf1_b)
                 rows_F.append(F)
                 rows_p.append(p_val)
             sig = significance_code(rows_p)
             sm_tbl = pl.DataFrame({
                 "":        rows_label,
                 "edf":     np.round(rows_edf, digits),
-                "Ref.df":  rows_k,
+                "Ref.df":  np.round(rows_refdf, digits),
                 "F":       np.round(rows_F, digits),
                 "p-value": np.round(rows_p, digits),
                 " ":       sig,
