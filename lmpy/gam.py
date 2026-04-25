@@ -160,15 +160,6 @@ class gam:
                 "GCV.Cp is currently only supported for Gaussian-identity; "
                 "use method='REML' for non-Gaussian families."
             )
-        # `_is_strictly_additive` flags the Gaussian-identity fast path: a
-        # single closed-form solve gives β̂(λ); PIRLS would converge in one
-        # iteration anyway. We keep the closed-form path so the existing
-        # Gaussian regression suite stays bit-identical.
-        self._is_strictly_additive = (
-            self.family.name == "gaussian"
-            and self.family.link.name == "identity"
-        )
-
         d = prepare_design(formula, data)
         self._expanded = d.expanded
         self.data = d.data
@@ -296,112 +287,67 @@ class gam:
             self.sp = sp_arr
             fit = self._fit_given_rho(rho_hat)
         else:
-            # Three outer-optimizer paths:
-            #   (i)  Gaussian-identity (strict-additive): profiled `_reml(ρ)`
-            #        + analytical Newton — bit-identical to the pre-Phase-2
-            #        Gaussian flow.
-            #   (ii) Scale-known PIRLS (Poisson, Binomial): general formula
-            #        with φ ≡ 1 frozen, outer-vector = ρ.
-            #   (iii) Unknown-scale PIRLS (Gamma, IG, …): general formula
-            #         with log φ as an extra outer dim, vector = (ρ, log φ).
-            # Paths (ii) and (iii) use L-BFGS-B with FD as an interim path
-            # — analytical (ρ, log φ) gradient/Hessian land in Phase 3.
+            # Unified outer optimization. PIRLS inner solve + general
+            # `_reml(ρ, log φ)` + analytical Newton, family-agnostic.
+            # ``include_log_phi`` is True for unknown-scale (Gaussian, Gamma,
+            # IG): θ = (ρ, log φ). False for known-scale (Poisson, Binomial):
+            # θ = ρ with log φ ≡ 0. mgcv's gam.outer behaves the same way.
             family = self.family
-            if self._is_strictly_additive:
-                obj = self._reml if method == "REML" else self._gcv
-                # Coarse coordinate-wise scan to seed Newton. Two passes:
-                # first pick the best uniform ρ across all dimensions, then
-                # walk one coordinate at a time fixing the others at the
-                # current best. Cheap (~ n_sp × |grid| extra evals) and fixes
-                # two failure modes that hit on real data:
-                #   - GCV's narrow valley (edf enters denom quadratically) —
-                #     line search from ρ=0 routinely overshoots it straight to
-                #     the lower bound.
-                #   - REML with tensor / overlap smooths where the optimum is
-                #     non-uniform (one λ tiny, another huge), so a uniform
-                #     starting point picks the wrong basin.
-                grid = np.array([-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0])
-                best_val, best_rho0 = np.inf, np.zeros(n_sp)
-                for g in grid:
-                    rho_try = np.full(n_sp, g)
-                    val = obj(rho_try)
-                    if np.isfinite(val) and val < best_val:
-                        best_val, best_rho0 = val, rho_try.copy()
-                cur_rho = best_rho0.copy()
-                cur_val = best_val
-                for j in range(n_sp):
-                    for g in grid:
-                        rho_try = cur_rho.copy()
-                        rho_try[j] = g
-                        val = obj(rho_try)
-                        if np.isfinite(val) and val < cur_val:
-                            cur_val, cur_rho = val, rho_try
-                if method == "REML":
-                    rho_hat = self._outer_newton(cur_rho)
-                else:
-                    bounds = [(-30.0, 30.0)] * n_sp
-                    res = minimize(
-                        obj, cur_rho, method="L-BFGS-B", bounds=bounds,
-                        options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
-                    )
-                    rho_hat = res.x
-                    self._optim = res
-                self._log_phi_hat = None    # φ profiled out
-            else:
-                # PIRLS-only paths (REML only — GCV.Cp errored out earlier).
-                # Outer-vector layout: (ρ_1, …, ρ_{n_sp}) for scale-known,
-                # (ρ_1, …, ρ_{n_sp}, log φ) for unknown-scale.
-                #
-                # Phase 3 wires analytical (ρ, log φ) gradient via
-                # `_reml_general_grad`. Refit at theta to share `fit` between
-                # value and gradient — saves a PIRLS solve per L-BFGS-B
-                # eval (it requests f and g together via fun_and_grad).
-                if family.scale_known:
-                    def obj_and_grad(theta):
-                        fit_t = self._fit_given_rho(theta)
-                        return (
-                            self._reml_general(theta, 0.0, fit=fit_t),
-                            self._reml_general_grad(theta, 0.0, fit=fit_t,
-                                                    include_log_phi=False),
-                        )
-                    theta_dim = n_sp
-                else:
-                    def obj_and_grad(theta):
-                        rho_t, log_phi_t = theta[:n_sp], float(theta[n_sp])
-                        fit_t = self._fit_given_rho(rho_t)
-                        return (
-                            self._reml_general(rho_t, log_phi_t, fit=fit_t),
-                            self._reml_general_grad(rho_t, log_phi_t, fit=fit_t,
-                                                    include_log_phi=True),
-                        )
-                    theta_dim = n_sp + 1
-                obj = lambda t: obj_and_grad(t)[0]
-                # ρ-grid scan with log φ seeded from a Pearson estimate at
-                # each grid point. φ floats over decades for Gamma/IG data
-                # (V(μ) varies as μ² or μ³), so a fixed log φ=0 seed makes
-                # the scan converge to the wrong ρ basin (saturated upper
-                # bound) — it's the ratio Dp/φ that drives the score.
-                grid = np.array([-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0])
+            include_log_phi = (not family.scale_known) and method == "REML"
+            n_lp = 1 if include_log_phi else 0
+            theta_dim = n_sp + n_lp
 
-                def _pearson_log_phi(rho_eval) -> float:
-                    if family.scale_known:
-                        return 0.0
-                    try:
-                        fit_seed = self._fit_given_rho(rho_eval)
-                    except Exception:
-                        return 0.0
-                    df_resid_seed = max(self.n - self._Mp, 1.0)
-                    V_seed = family.variance(fit_seed.mu)
-                    pearson = float(np.sum(
-                        (self._y_arr - fit_seed.mu) ** 2 / np.maximum(V_seed, 1e-300)
-                    ))
-                    return float(np.log(max(pearson / df_resid_seed, 1e-12)))
+            if method == "REML":
+                def obj(theta):
+                    rho_v = theta[:n_sp]
+                    lp_v = float(theta[n_sp]) if include_log_phi else 0.0
+                    fit_t = self._fit_given_rho(rho_v)
+                    return float(self._reml(rho_v, lp_v, fit=fit_t))
+            else:
+                # GCV.Cp — Stage 2 generalizes to any family. Today still
+                # Gaussian-identity by the entry-point gate.
+                def obj(theta):
+                    return float(self._gcv(theta[:n_sp]))
+
+            # Initial seed.
+            #
+            # REML (analytical Newton): start at ρ = 0 (sp = 1). Newton's
+            # eigen-clamped quadratic model handles the global descent;
+            # a coordinate-wise grid scan over ρ ∈ {−12,…,12} would walk
+            # one coordinate at a time and can settle in the saturation
+            # basin (sp_k → 0) when that axis descends monotonically away
+            # from the joint interior optimum. Verified for the Machines
+            # re-smooths against mgcv.
+            #
+            # GCV (L-BFGS-B): no Hessian, so L-BFGS-B from ρ=0 walks to
+            # the saturation tail on smooths where GCV decreases as
+            # sp → 0 (verified to fail mcycle's tp smooth). The two-pass
+            # coordinate grid scan finds a much better warm start.
+            def _pearson_log_phi(rho_eval) -> float:
+                if not include_log_phi:
+                    return 0.0
+                try:
+                    fit_seed = self._fit_given_rho(rho_eval)
+                except Exception:
+                    return 0.0
+                df_resid_seed = max(self.n - self._Mp, 1.0)
+                V_seed = family.variance(fit_seed.mu)
+                pearson = float(np.sum(
+                    (self._y_arr - fit_seed.mu) ** 2
+                    / np.maximum(V_seed, 1e-300)
+                ))
+                return float(np.log(max(pearson / df_resid_seed, 1e-12)))
+
+            if method == "REML":
+                cur_rho = np.zeros(n_sp)
+                cur_logphi = _pearson_log_phi(cur_rho)
+            else:
+                grid = np.array([-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0])
 
                 def _eval_with_seed(rho_eval):
-                    log_phi = _pearson_log_phi(rho_eval)
-                    if theta_dim == n_sp + 1:
-                        return obj(np.r_[rho_eval, log_phi]), log_phi
-                    return obj(rho_eval), 0.0
+                    lp = _pearson_log_phi(rho_eval)
+                    theta_try = np.r_[rho_eval, lp] if include_log_phi else rho_eval
+                    return float(obj(theta_try)), lp
 
                 best_val, best_rho0, best_logphi = np.inf, np.zeros(n_sp), 0.0
                 for g in grid:
@@ -419,23 +365,30 @@ class gam:
                         val, lp = _eval_with_seed(rho_try)
                         if np.isfinite(val) and val < cur_val:
                             cur_val, cur_rho, cur_logphi = val, rho_try, lp
-                if theta_dim == n_sp + 1:
-                    theta0 = np.r_[cur_rho, cur_logphi]
-                else:
-                    theta0 = cur_rho
+
+            theta0 = np.r_[cur_rho, cur_logphi] if include_log_phi else cur_rho
+
+            if method == "REML":
+                theta_hat = self._outer_newton(
+                    theta0, include_log_phi=include_log_phi
+                )
+            else:
+                # GCV stays on L-BFGS-B until Stage 2 lands analytical
+                # GCV/UBRE derivatives.
                 bounds = [(-30.0, 30.0)] * theta_dim
                 res = minimize(
-                    obj_and_grad, theta0, jac=True,
-                    method="L-BFGS-B", bounds=bounds,
+                    obj, theta0, method="L-BFGS-B", bounds=bounds,
                     options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
                 )
-                if theta_dim == n_sp + 1:
-                    rho_hat = res.x[:n_sp]
-                    self._log_phi_hat = float(res.x[n_sp])
-                else:
-                    rho_hat = res.x
-                    self._log_phi_hat = None
+                theta_hat = res.x
                 self._optim = res
+
+            if include_log_phi:
+                rho_hat = theta_hat[:n_sp]
+                self._log_phi_hat = float(theta_hat[n_sp])
+            else:
+                rho_hat = theta_hat
+                self._log_phi_hat = None
             self.sp = np.exp(rho_hat)
             fit = self._fit_given_rho(rho_hat)
 
@@ -607,8 +560,14 @@ class gam:
             and np.isfinite(sigma_squared)
             and sigma_squared > 0
         ):
-            log_sigma2_hat = float(np.log(sigma_squared))
-            H_aug = self._reml_hessian_augmented(rho_hat, log_sigma2_hat)
+            log_phi_hat_for_aug = (
+                self._log_phi_hat
+                if self._log_phi_hat is not None
+                else float(np.log(sigma_squared))
+            )
+            H_aug = 0.5 * self._reml_hessian(
+                rho_hat, log_phi_hat_for_aug, fit=fit, include_log_phi=True,
+            )
             H_aug = 0.5 * (H_aug + H_aug.T)
         else:
             H_aug = None
@@ -658,19 +617,16 @@ class gam:
 
         if method == "REML":
             if n_sp > 0:
-                # Gaussian-identity uses the φ-profiled `_reml`; PIRLS paths
-                # (scale-known and scale-unknown) use the general formula at
-                # the converged (ρ̂, log φ̂). Both return -2·V_R, so the
-                # `/2` in `summary()` recovers mgcv's `-REML` display value.
-                if self._is_strictly_additive:
-                    self.REML_criterion = float(self._reml(rho_hat))
-                else:
-                    log_phi_hat = (
-                        self._log_phi_hat if self._log_phi_hat is not None else 0.0
-                    )
-                    self.REML_criterion = float(
-                        self._reml_general(rho_hat, log_phi_hat, fit=fit)
-                    )
+                # `_reml` returns -2·V_R; `summary()`'s `/2` recovers
+                # mgcv's `-REML` display value. Scale-known families (Poisson,
+                # Binomial) substitute log φ = 0; scale-unknown read the
+                # outer-optimizer's converged log φ̂.
+                log_phi_hat = (
+                    self._log_phi_hat if self._log_phi_hat is not None else 0.0
+                )
+                self.REML_criterion = float(
+                    self._reml(rho_hat, log_phi_hat, fit=fit)
+                )
             else:
                 self.REML_criterion = float("nan")
         else:
@@ -705,51 +661,6 @@ class gam:
         return Sλ
 
     def _fit_given_rho(self, rho: np.ndarray) -> "_FitState":
-        """Dispatch to the Gaussian-identity closed form or PIRLS depending
-        on the family. The Gaussian-identity path is preserved verbatim so
-        the existing test suite stays bit-identical."""
-        if self._is_strictly_additive:
-            return self._fit_given_rho_gaussian(rho)
-        return self._fit_given_rho_pirls(rho)
-
-    def _fit_given_rho_gaussian(self, rho: np.ndarray) -> "_FitState":
-        """Solve β̂(λ) = (XᵀX + Sλ)⁻¹ Xᵀy by Cholesky at one ρ.
-
-        Also returns the Cholesky factor and log|A| for downstream use
-        (REML uses log|A|; post-fit uses the factor for A⁻¹). Adds a tiny
-        ridge if A is singular — rare, only at pathological ρ extrema.
-        """
-        Sλ = self._build_S_lambda(rho)
-        A = self._XtX + Sλ
-        # Symmetrize defensively against FP drift from the outer products.
-        A = 0.5 * (A + A.T)
-        try:
-            A_chol, lower = cho_factor(A, lower=True, overwrite_a=False)
-        except np.linalg.LinAlgError:
-            ridge = 1e-8 * np.trace(A) / self.p
-            A_chol, lower = cho_factor(
-                A + ridge * np.eye(self.p), lower=True, overwrite_a=False,
-            )
-        beta = cho_solve((A_chol, lower), self._Xty)
-        rss = self._yty - 2.0 * float(self._Xty @ beta) + float(beta @ self._XtX @ beta)
-        pen = float(beta @ Sλ @ beta)
-        # log|A| = 2 Σ log diag(L)
-        log_det_A = 2.0 * float(np.log(np.abs(np.diag(A_chol))).sum())
-        # Pad GLM-state fields with the Gaussian-identity values so the
-        # downstream generic code works either way.
-        eta = self._X_full @ beta
-        mu = eta.copy()
-        w = np.ones(self.n)
-        z = self._y_arr.copy()
-        alpha = np.ones(self.n)
-        return _FitState(
-            beta=beta, dev=max(rss, 0.0), pen=pen,
-            A_chol=A_chol, A_chol_lower=lower,
-            S_full=Sλ, log_det_A=log_det_A,
-            eta=eta, mu=mu, w=w, z=z, alpha=alpha,
-        )
-
-    def _fit_given_rho_pirls(self, rho: np.ndarray) -> "_FitState":
         """Penalized IRLS at log-smoothing-params ρ.
 
         Iterate Newton-form working weights/responses
@@ -976,30 +887,7 @@ class gam:
         top = np.clip(top, 1e-300, None)
         return float(np.sum(np.log(top)))
 
-    def _reml(self, rho: np.ndarray) -> float:
-        """Laplace-approximate REML criterion (-2·V_R). Wood 2017 §6.6."""
-        fit = self._fit_given_rho(rho)
-        penalized_ss = fit.rss + fit.pen
-        if penalized_ss <= 0:
-            return 1e15
-        n_minus_Mp = self.n - self._Mp
-        if n_minus_Mp <= 0:
-            return 1e15
-        log_det_S = self._log_det_S_pos(rho)
-        # Constants dropped since ρ is the only argument; what remains is
-        #   (n - Mp) log(rss + pen) + log|A| - log|Sλ|_+
-        # plus a σ² contribution from profiling: (n - Mp) log((rss+pen)/
-        # (n - Mp)) which is the same up to an additive constant. Adding
-        # (n - Mp) log(2π) + (n - Mp) keeps the scale comparable with R's
-        # `-2·gam_fit$gcv.ubre`.
-        return (
-            n_minus_Mp * np.log(penalized_ss / n_minus_Mp)
-            + fit.log_det_A
-            - log_det_S
-            + n_minus_Mp * (1.0 + float(np.log(2 * np.pi)))
-        )
-
-    def _reml_general(self, rho: np.ndarray, log_phi: float = 0.0,
+    def _reml(self, rho: np.ndarray, log_phi: float = 0.0,
                       fit: "_FitState | None" = None) -> float:
         """Laplace-approximate REML in 2·V_R units, family/link-agnostic.
 
@@ -1021,7 +909,7 @@ class gam:
                        + log|A| − log|S|_+
 
         which equals ``_reml(rho)`` exactly. Verified numerically by
-        ``test_reml_general_reduces_to_profiled_gaussian``.
+        ``test_reml_reduces_to_profiled_gaussian``.
 
         For scale-known families (Poisson, Binomial) φ ≡ 1 ⇒ log_phi=0
         ⇒ ``Mp·log(2π·φ)`` = Mp·log(2π); ls0 then carries the entire
@@ -1052,10 +940,10 @@ class gam:
             - Mp * float(np.log(2.0 * np.pi * phi))
         )
 
-    def _reml_general_grad(self, rho: np.ndarray, log_phi: float = 0.0,
+    def _reml_grad(self, rho: np.ndarray, log_phi: float = 0.0,
                            fit: "_FitState | None" = None,
                            include_log_phi: bool = False) -> np.ndarray:
-        """Analytical gradient of `_reml_general` (2·V_R units).
+        """Analytical gradient of `_reml` (2·V_R units).
 
         Length n_sp if `include_log_phi=False`, else n_sp+1 with log_phi
         appended. Wood 2011 §4 + mgcv gam.fit3.r:622, 630:
@@ -1093,10 +981,10 @@ class gam:
         d_logphi = -Dp / phi - 2.0 * ls1 - Mp
         return np.concatenate([grad_rho, [d_logphi]])
 
-    def _reml_general_hessian(self, rho: np.ndarray, log_phi: float = 0.0,
+    def _reml_hessian(self, rho: np.ndarray, log_phi: float = 0.0,
                               fit: "_FitState | None" = None,
                               include_log_phi: bool = False) -> np.ndarray:
-        """Analytical Hessian of `_reml_general` (2·V_R units).
+        """Analytical Hessian of `_reml` (2·V_R units).
 
         Returns ((n_sp+1) × (n_sp+1)) when ``include_log_phi=True``, else
         (n_sp × n_sp). Wood 2011 §4 for non-Gaussian, with Newton-form W:
@@ -1271,6 +1159,94 @@ class gam:
         ls = np.asarray(self.family.ls(self._y_arr, np.ones(self.n), phi))
         H_aug[n_sp, n_sp] = Dp / phi - 2.0 * float(ls[2])
         return H_aug
+
+    def _outer_newton(
+        self, theta0: np.ndarray, *, include_log_phi: bool,
+        max_iter: int = 200, conv_tol: float = 1e-9,
+        max_step: float = 5.0, max_half: int = 30,
+    ) -> np.ndarray:
+        """Unified analytical Newton on V_R(ρ, log φ) — mgcv's gam.outer.
+
+        Damped Newton with eigen-clamp on H, step cap, backtracking line
+        search, and the relative-gradient stopping criterion
+
+            max(|g| / (0.1 + |V_R|)) < conv_tol      (after ≥ 4 iterations)
+
+        which matches mgcv's outer convergence test. Works for any family
+        — PIRLS inner solve degenerates to one Cholesky for Gaussian-
+        identity (W=I, z=y).
+
+        ``theta`` layout: ρ first, then a single log φ column when
+        ``include_log_phi`` is set (unknown-scale families). For known-
+        scale (Poisson, Binomial) log φ is fixed at 0.
+        """
+        n_sp = len(self._slots)
+        theta = np.asarray(theta0, dtype=float).copy()
+
+        def _split(t):
+            if include_log_phi:
+                return t[:n_sp], float(t[n_sp])
+            return t, 0.0
+
+        def _eval(t):
+            rho_t, lp_t = _split(t)
+            try:
+                fit_t = self._fit_given_rho(rho_t)
+            except Exception:
+                return float("inf"), None
+            val_2VR = float(self._reml(rho_t, lp_t, fit=fit_t))
+            return val_2VR / 2.0, fit_t
+
+        f_prev, fit = _eval(theta)
+        if fit is None:
+            return theta
+
+        for it in range(max_iter):
+            rho, log_phi = _split(theta)
+            grad = 0.5 * self._reml_grad(
+                rho, log_phi, fit=fit, include_log_phi=include_log_phi
+            )
+            H = 0.5 * self._reml_hessian(
+                rho, log_phi, fit=fit, include_log_phi=include_log_phi
+            )
+            H = 0.5 * (H + H.T)
+
+            rel_g = float(np.abs(grad).max() / (0.1 + abs(f_prev)))
+            if it >= 4 and rel_g < conv_tol:
+                break
+
+            # Eigen-clamp to PD: |w| with a tiny floor so the quadratic
+            # model is positive-definite even on saddle/flat regions.
+            w_eig, V_eig = np.linalg.eigh(H)
+            w_max = float(np.abs(w_eig).max()) if w_eig.size > 0 else 1.0
+            eps = max(w_max * 1e-7, 1e-12)
+            w_pd = np.where(np.abs(w_eig) > eps, np.abs(w_eig), eps)
+            d = -V_eig @ ((V_eig.T @ grad) / w_pd)
+
+            d_norm = float(np.abs(d).max())
+            if d_norm > max_step:
+                d *= max_step / d_norm
+
+            alpha = 1.0
+            descent = False
+            for _ in range(max_half):
+                theta_try = theta + alpha * d
+                f_try, fit_try = _eval(theta_try)
+                if np.isfinite(f_try) and f_try < f_prev - 1e-14 * abs(f_prev):
+                    descent = True
+                    break
+                alpha *= 0.5
+
+            if not descent:
+                break
+            theta = theta_try
+            df = abs(f_try - f_prev)
+            f_prev = f_try
+            fit = fit_try
+            if df < 1e-12 * (1.0 + abs(f_prev)):
+                break
+
+        return theta
 
     def _S_pinv(self, S_full: np.ndarray) -> np.ndarray:
         """Pseudo-inverse of Sλ on its fixed range space.
@@ -1604,241 +1580,6 @@ class gam:
             out[k] = sp[k] * float(beta_k @ slot.S @ beta_k)
         return out
 
-    def _reml_grad(self, rho: np.ndarray,
-                   fit: "_FitState | None" = None) -> np.ndarray:
-        """Analytical gradient ∂(2·V_R^prof)/∂ρ — matches ∂(_reml)/∂ρ.
-
-        For Gaussian + identity REML, profiling σ² out gives
-
-            2·V_R^prof = (n-Mp)·log(rss+pen) + log|A| − log|S|+ + const
-
-        Term-by-term derivatives (Wood 2011 §4):
-
-            ∂(rss+pen)/∂ρ_k = λ_k · β̂' S_k β̂          (pen contribution g_k)
-            ∂log|A|/∂ρ_k    = λ_k · tr(A⁻¹ S_k)
-            ∂log|S|+/∂ρ_k   = λ_k · tr(S⁺ S_k)         (rank-stable case)
-
-        Combining:
-
-            ∂(2·V_R)/∂ρ_k = (n−Mp)·g_k/(rss+pen)
-                          + λ_k·tr(A⁻¹ S_k) − λ_k·tr(S⁺ S_k)
-
-        Replaces FD jacobian for the ρ-optimization (and feeds into the
-        analytical Hessian later).
-        """
-        if fit is None:
-            fit = self._fit_given_rho(rho)
-        n_sp = len(self._slots)
-        if n_sp == 0:
-            return np.zeros(0)
-        n_minus_Mp = self.n - self._Mp
-        rs = fit.rss + fit.pen
-        if rs <= 0 or n_minus_Mp <= 0:
-            return np.zeros(n_sp)
-
-        A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(self.p))
-        S_pinv = self._S_pinv(fit.S_full)
-
-        grad = np.zeros(n_sp)
-        for k, slot in enumerate(self._slots):
-            a, b = slot.col_start, slot.col_end
-            sp_k = float(np.exp(rho[k]))
-            beta_k = fit.beta[a:b]
-            g_k = sp_k * float(beta_k @ slot.S @ beta_k)
-            # S_k has support only on the slot's column range, so
-            # tr(A⁻¹ S_k) reduces to a contraction with the (a:b, a:b)
-            # block of A⁻¹. Same for S⁺.
-            tr_AinvSk = float(np.einsum("ij,ji->", A_inv[a:b, a:b], slot.S))
-            tr_SpinvSk = float(np.einsum("ij,ji->", S_pinv[a:b, a:b], slot.S))
-            grad[k] = (
-                n_minus_Mp * g_k / rs
-                + sp_k * tr_AinvSk
-                - sp_k * tr_SpinvSk
-            )
-        return grad
-
-    def _reml_hessian(self, rho: np.ndarray,
-                      fit: "_FitState | None" = None) -> np.ndarray:
-        """Analytical Hessian ∂²V_R/∂ρ_i ∂ρ_j — Wood 2011 §4.
-
-        Differentiating ``2·V_R^prof = (n−Mp)·log(rs) + log|A| − log|S|+
-        + const`` (with rs = rss + pen) twice in ρ. Pieces:
-
-            ∂rs/∂ρ_k       = g_k = λ_k β̂' S_k β̂
-            ∂²rs/∂ρ_i∂ρ_j  = δ_ij g_i − 2 λ_i λ_j β̂' S_i A⁻¹ S_j β̂
-            ∂log|A|/∂ρ_k   = λ_k tr(A⁻¹ S_k)
-            ∂²log|A|/∂ρ_i∂ρ_j = δ_ij λ_i tr(A⁻¹ S_i)
-                              − λ_i λ_j tr(A⁻¹ S_i A⁻¹ S_j)
-            ∂log|S|+/∂ρ_k  = λ_k tr(S⁺ S_k)
-            ∂²log|S|+/∂ρ_i∂ρ_j = δ_ij λ_i tr(S⁺ S_i)
-                                − λ_i λ_j tr(S⁺ S_i S⁺ S_j)
-
-        Combining and using ∂(log f)/∂ρ_k = ∂f/∂ρ_k / f for the rs term,
-
-            H[i,j] of 2·V_R = (n−Mp)/rs · [δ_ij g_i
-                              − 2 λ_i λ_j β̂' S_i A⁻¹ S_j β̂
-                              − g_i g_j / rs]
-                            + δ_ij λ_i tr(A⁻¹ S_i)
-                            − λ_i λ_j tr(A⁻¹ S_i A⁻¹ S_j)
-                            − δ_ij λ_i tr(S⁺ S_i)
-                            + λ_i λ_j tr(S⁺ S_i S⁺ S_j)
-
-        Notice the δ_ij terms are exactly the gradient — the diagonal of
-        the Hessian is grad[i] plus the "off-diagonal" terms evaluated at
-        i=j. We exploit that to avoid duplicating code.
-
-        Returned in V_R scale (halved) — the convention ``_compute_Vr`` /
-        vcomp expect (mgcv's gam.fit3.post.proc inverts V_R Hessian to
-        get the asymptotic covariance of ρ̂).
-        """
-        if fit is None:
-            fit = self._fit_given_rho(rho)
-        n_sp = len(self._slots)
-        if n_sp == 0:
-            return np.zeros((0, 0))
-        n_minus_Mp = self.n - self._Mp
-        rs = fit.rss + fit.pen
-        if rs <= 0 or n_minus_Mp <= 0:
-            return np.zeros((n_sp, n_sp))
-
-        p = self.p
-        sp = np.exp(rho)
-        A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(p))
-        S_pinv = self._S_pinv(fit.S_full)
-
-        # Per-slot precomputation. AinvS_block[k] = (A⁻¹ S_k) restricted
-        # to the columns where it's nonzero (slot k's range), shape
-        # (p, m_k); SpinvS_block analogous. Sbeta_full[k] = embedded
-        # p-vector S_k β̂. AinvSbeta[k] = A⁻¹ (S_k β̂) full p-vector for
-        # the β̂' S_i A⁻¹ S_j β̂ term.
-        AinvS_block: list[np.ndarray] = []
-        SpinvS_block: list[np.ndarray] = []
-        Sbeta_full = np.zeros((n_sp, p))
-        AinvSbeta = np.empty((n_sp, p))
-        g = np.zeros(n_sp)
-        tr_AinvS = np.zeros(n_sp)
-        tr_SpinvS = np.zeros(n_sp)
-        for k, slot in enumerate(self._slots):
-            a, b = slot.col_start, slot.col_end
-            beta_k = fit.beta[a:b]
-            Sb = slot.S @ beta_k
-            Sbeta_full[k, a:b] = Sb
-            AinvSbeta[k] = cho_solve(
-                (fit.A_chol, fit.A_chol_lower), Sbeta_full[k]
-            )
-            g[k] = sp[k] * float(beta_k @ Sb)
-            AinvS_block.append(A_inv[:, a:b] @ slot.S)
-            SpinvS_block.append(S_pinv[:, a:b] @ slot.S)
-            tr_AinvS[k] = float(np.einsum("ij,ji->", A_inv[a:b, a:b], slot.S))
-            tr_SpinvS[k] = float(np.einsum("ij,ji->", S_pinv[a:b, a:b], slot.S))
-
-        # 2·V_R gradient — same as ``_reml_grad``; the diagonal of the
-        # 2·V_R Hessian is grad2[i] plus the i=j evaluation of the
-        # quadratic-in-(i,j) terms below.
-        grad2 = (n_minus_Mp / rs) * g + sp * tr_AinvS - sp * tr_SpinvS
-
-        H2 = np.zeros((n_sp, n_sp))
-        for i in range(n_sp):
-            a_i, b_i = self._slots[i].col_start, self._slots[i].col_end
-            for j in range(i, n_sp):
-                a_j, b_j = self._slots[j].col_start, self._slots[j].col_end
-                # β̂' S_i A⁻¹ S_j β̂ = (S_i β̂)' (A⁻¹ S_j β̂).
-                bSiAinvSj_b = float(Sbeta_full[i] @ AinvSbeta[j])
-                # tr(A⁻¹ S_i A⁻¹ S_j) via the embedded-block trick: rows
-                # of AinvS_block[i] at j's column range × rows of
-                # AinvS_block[j] at i's column range, contracted on both
-                # axes (the standard tr(MN) = einsum('ij,ji->',M,N) but
-                # restricted to the nonzero stripes).
-                tr_AA = float(np.einsum(
-                    "ab,ba->",
-                    AinvS_block[i][a_j:b_j, :],
-                    AinvS_block[j][a_i:b_i, :],
-                ))
-                tr_SS = float(np.einsum(
-                    "ab,ba->",
-                    SpinvS_block[i][a_j:b_j, :],
-                    SpinvS_block[j][a_i:b_i, :],
-                ))
-                cross = (
-                    (n_minus_Mp / rs) * (
-                        -2.0 * sp[i] * sp[j] * bSiAinvSj_b
-                        - g[i] * g[j] / rs
-                    )
-                    - sp[i] * sp[j] * tr_AA
-                    + sp[i] * sp[j] * tr_SS
-                )
-                if i == j:
-                    H2[i, i] = cross + grad2[i]
-                else:
-                    H2[i, j] = H2[j, i] = cross
-
-        return 0.5 * H2
-
-    def _outer_newton(self, rho0: np.ndarray, max_iter: int = 200,
-                      tol_grad: float = 1e-8, tol_step: float = 1e-12,
-                      max_step: float = 5.0) -> np.ndarray:
-        """mgcv-style damped Newton on V_R wrt ρ — gam.outer's `newton()`.
-
-        Per iteration:
-          1. Compute analytical g = ∂V_R/∂ρ and H = ∂²V_R/∂ρ∂ρ
-             (``_reml_grad`` returns the 2·V_R gradient — halve it; the
-             analytical ``_reml_hessian`` already lives in V_R scale).
-          2. Eigen-clamp H to PD: replace negative eigenvalues with their
-             absolute value, and clamp small/zero eigenvalues to a tiny
-             positive floor. This guarantees the Newton direction is a
-             descent direction even when H is indefinite (regions of the
-             surface that are ridge-shaped between λ-modes).
-          3. Step d = -H_pd^{-1} g, capped at max_step in ∞-norm.
-          4. Step-halving line search until V_R decreases.
-          5. Stop on |g|_∞ < tol_grad or |Δf| / (1 + |f|) < tol_step.
-
-        L-BFGS-B's BFGS approximation drifts off the true Hessian by
-        enough that ρ̂ lands ~1e-4 from the analytical stationary point
-        — that's the residual gap to mgcv on Machines b2's vcomp. Damped
-        Newton on the analytical pieces converges to the same ρ̂ as
-        mgcv to FP precision.
-        """
-        rho = rho0.copy()
-        f_prev = self._reml(rho)
-        for _ in range(max_iter):
-            fit = self._fit_given_rho(rho)
-            grad = 0.5 * self._reml_grad(rho, fit)         # V_R gradient
-            if np.abs(grad).max() < tol_grad:
-                break
-            H = self._reml_hessian(rho, fit)               # V_R Hessian
-            H = 0.5 * (H + H.T)
-            w, V = np.linalg.eigh(H)
-            w_max = float(np.abs(w).max()) if w.size > 0 else 1.0
-            eps = max(w_max * 1e-7, 1e-12)
-            # Negative eigvals → flip sign; small ones → clamp up. This
-            # gives a positive-definite quadratic model whose minimizer
-            # is a proper Newton step.
-            w_pd = np.where(np.abs(w) > eps, np.abs(w), eps)
-            d = -V @ ((V.T @ grad) / w_pd)
-            d_norm = float(np.abs(d).max())
-            if d_norm > max_step:
-                d *= max_step / d_norm
-            # Backtracking step-halving on V_R = _reml/2 (or just 2·V_R
-            # since the comparison only cares about descent).
-            alpha = 1.0
-            f_new = f_prev
-            descent = False
-            for _ in range(40):
-                rho_new = rho + alpha * d
-                f_new = self._reml(rho_new)
-                if np.isfinite(f_new) and f_new < f_prev - 1e-14 * abs(f_prev):
-                    descent = True
-                    break
-                alpha *= 0.5
-            if not descent:
-                break
-            rho = rho_new
-            df = abs(f_new - f_prev)
-            f_prev = f_new
-            if df < tol_step * (1.0 + abs(f_prev)):
-                break
-        return rho
-
     def _gcv(self, rho: np.ndarray) -> float:
         """Generalized cross-validation score. Wood 2017 §4.4."""
         fit = self._fit_given_rho(rho)
@@ -1960,8 +1701,14 @@ class gam:
             Vk = V[:, keep]
             H_inv = (Vk / w[keep]) @ Vk.T
             return H_inv[:n_sp, :n_sp]
-        H = self._reml_hessian(rho)
-        H = 0.5 * (H + H.T)
+        # GCV / no-H_aug fallback: ρρ block of the (ρ, log φ) joint Hessian
+        # at log φ = 0. For Gaussian-identity REML this used to call the
+        # Gaussian-profiled `_reml_hessian`; the joint Hessian's ρρ block
+        # equals 2× that profiled Hessian up to the rank-1 Schur term, which
+        # is fine for the GCV path (mgcv defines edf2 differently for GCV
+        # anyway — this is a best-effort sp-uncertainty correction).
+        H_full = 0.5 * self._reml_hessian(rho, 0.0, include_log_phi=False)
+        H = 0.5 * (H_full + H_full.T)
         w, V = np.linalg.eigh(H)
         if prior_var is not None:
             d_reg = np.where(w > 0, w, 0.0) + float(prior_var)
@@ -2032,66 +1779,6 @@ class gam:
         # the trailing axis of both M operands.
         Vc2 = np.einsum("ij,iac,jbc->ab", Vr, M, M)
         return sigma_squared * Vc2
-
-    def _reml_hessian_augmented(
-        self, rho: np.ndarray, log_sigma2: float,
-        fit: "_FitState | None" = None,
-    ) -> np.ndarray:
-        """Analytical Hessian of V_R wrt (ρ, log σ²) — Wood 2011 §4.
-
-        Differentiating the unprofiled criterion
-
-           2·V_R = (n−Mp)·ζ + rs·exp(−ζ) + log|A| − log|S|+ + const
-
-        (rs = rss + pen, ζ = log σ²) and halving:
-
-           ∂²V_R/∂ζ²    = rs·exp(−ζ) / 2   (= (n−Mp)/2 at ζ̂)
-           ∂²V_R/∂ρ_k∂ζ = −g_k·exp(−ζ) / 2 = −g_k/(2σ²)
-           ∂²V_R/∂ρ_i∂ρ_j  — same Wood §4 structure as the profiled
-                              Hessian, but the rs-term has no chain-rule
-                              −g_i g_j/rs piece (we're differentiating
-                              rs·exp(−ζ), not log rs).
-
-        At ζ̂ the un-profiling reduces to a rank-1 Schur correction on
-        the ρρ block, so we reuse ``_reml_hessian`` (analytical V_R
-        Hessian wrt ρ, profiled at ζ̂) and add ``outer(c, c)/d`` where
-        c = H_aug[ρ, ζ] and d = H_aug[ζ, ζ]. Off ζ̂ this identity no
-        longer holds; the only consumers (vcomp, edf12) always pass
-        ``log_sigma2 = log(self.sigma_squared)``, i.e., evaluate at ζ̂,
-        so the rank-1 path is exact for them.
-
-        Returned in V_R scale (mgcv's gam.vcomp inverts this).
-        """
-        if fit is None:
-            fit = self._fit_given_rho(rho)
-        n_sp = len(self._slots)
-        n_minus_Mp = self.n - self._Mp
-        sigma2 = float(np.exp(log_sigma2))
-        m = n_sp + 1
-        H = np.zeros((m, m))
-        if n_sp == 0 or sigma2 <= 0 or n_minus_Mp <= 0:
-            H[n_sp, n_sp] = 0.5 * n_minus_Mp
-            return H
-
-        sp = np.exp(rho)
-        g = np.zeros(n_sp)
-        for k, slot in enumerate(self._slots):
-            a, b = slot.col_start, slot.col_end
-            beta_k = fit.beta[a:b]
-            g[k] = sp[k] * float(beta_k @ slot.S @ beta_k)
-
-        H_rho_zeta = -0.5 * g / sigma2                       # shape (n_sp,)
-        rs = fit.rss + fit.pen
-        H_zeta_zeta = 0.5 * rs / sigma2                      # = (n−Mp)/2 at ζ̂
-
-        H_profiled = self._reml_hessian(rho, fit)            # V_R, ρρ-only
-        H_rho_rho = H_profiled + np.outer(H_rho_zeta, H_rho_zeta) / H_zeta_zeta
-
-        H[:n_sp, :n_sp] = H_rho_rho
-        H[:n_sp, n_sp] = H_rho_zeta
-        H[n_sp, :n_sp] = H_rho_zeta
-        H[n_sp, n_sp] = H_zeta_zeta
-        return H
 
     def _compute_vcomp(self) -> pl.DataFrame:
         """Build the variance-component table mgcv calls ``gam.vcomp``.

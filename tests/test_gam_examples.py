@@ -576,43 +576,8 @@ def test_gaussian_residual_identities_and_aic_self_consistency():
         m.residuals_of("partial")
 
 
-# ---------------------------------------------------------------------------
-# Phase 2.1 — `_reml_general(rho, log_phi)` reduces to the existing profiled
-# Gaussian `_reml(rho)` when φ is profiled out via φ̂(ρ) = (rss+pen)/(n-Mp).
-# This is the algebraic identity that lets the strictly-additive Gaussian
-# fast path stay bit-identical even after the general formula lands.
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("pkg, name, formula", [
-    ("MASS", "mcycle",     "accel ~ s(times)"),
-    ("mgcv", "gamSim_eg1", "y ~ s(x0) + s(x1) + s(x2) + s(x3)"),
-    ("mgcv", "gamSim_eg1", "y ~ x1 + s(x0) + s(x2)"),
-])
-def test_reml_general_reduces_to_profiled_gaussian(pkg, name, formula):
-    from lmpy import gam
-    d = load_dataset(pkg, name)
-    m = gam(formula, d, method="REML")
-    n_minus_Mp = m.n - m._Mp
-
-    def _profile_phi(rho):
-        fit = m._fit_given_rho(rho)
-        return (fit.rss + fit.pen) / n_minus_Mp
-
-    # At converged ρ̂ and at an off-optimum point — equivalence is purely
-    # algebraic (not optimum-dependent).
-    for rho in (m._rho_hat, m._rho_hat - 1.0, m._rho_hat + 0.5):
-        phi_hat = _profile_phi(rho)
-        v_profiled = m._reml(rho)
-        v_general = m._reml_general(rho, float(np.log(phi_hat)))
-        np.testing.assert_allclose(
-            v_general, v_profiled, atol=1e-9,
-            err_msg=f"{formula!r} at rho={rho.tolist()}",
-        )
-
-
-def test_reml_general_finite_for_trees_gamma_log():
-    """Sanity: for the converged Gamma(log) fit, `_reml_general` returns a
+def test_reml_finite_for_trees_gamma_log():
+    """Sanity: for the converged Gamma(log) fit, `_reml` returns a
     finite value at the lmpy-current sp. (Phase 2.2 makes φ̂ a joint outer
     variable; this just ensures the formula is wired up correctly.)"""
     from lmpy import Gamma, gam
@@ -620,5 +585,5 @@ def test_reml_general_finite_for_trees_gamma_log():
     m = gam("Volume ~ s(Height) + s(Girth)", d,
             family=Gamma(link="log"), method="REML")
     log_phi = float(np.log(m.scale))
-    v = m._reml_general(m._rho_hat, log_phi)
+    v = m._reml(m._rho_hat, log_phi)
     assert np.isfinite(v)
