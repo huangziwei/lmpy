@@ -442,6 +442,12 @@ class gam:
             else:
                 self.GCV_score = float("nan")
 
+        # Variance components: σ² and the implied per-slot std.dev's
+        # σ_k = σ/√sp_k, with delta-method CIs (REML only). Mirrors mgcv's
+        # gam.vcomp(rescale=FALSE). Cheap to compute eagerly for typical
+        # n_sp; users can ignore the attribute if they don't need it.
+        self.vcomp = self._compute_vcomp()
+
     # -----------------------------------------------------------------------
     # Internals
     # -----------------------------------------------------------------------
@@ -647,6 +653,132 @@ class gam:
         if edf2.sum() > edf1.sum():
             edf2 = edf1.copy()
         return edf2, edf1
+
+    def _reml_unprofiled(self, rho: np.ndarray, log_sigma2: float) -> float:
+        """Joint un-profiled 2·V_R as a function of (ρ, log σ²).
+
+        ``self._reml`` profiles σ² out at the MLE (rss+pen)/(n−Mp); this
+        version keeps it explicit so we can take a Hessian wrt log σ²
+        for variance-component CIs. At ζ̂ = log((rss+pen)/(n−Mp)) it
+        collapses to ``self._reml(ρ)`` exactly.
+
+           2·V_R = (n−Mp)·ζ + (rss + pen)·exp(−ζ) + log|A| − log|S|+
+                                                    + (n−Mp)·log(2π)
+        """
+        fit = self._fit_given_rho(rho)
+        penalized_ss = fit.rss + fit.pen
+        n_minus_Mp = self.n - self._Mp
+        if penalized_ss <= 0 or n_minus_Mp <= 0:
+            return 1e15
+        log_det_S = self._log_det_S_pos(rho)
+        sigma2 = float(np.exp(log_sigma2))
+        return (
+            n_minus_Mp * log_sigma2
+            + penalized_ss / sigma2
+            + fit.log_det_A
+            - log_det_S
+            + n_minus_Mp * float(np.log(2 * np.pi))
+        )
+
+    def _reml_hessian_augmented(
+        self, rho: np.ndarray, log_sigma2: float, h: float = 1e-4,
+    ) -> np.ndarray:
+        """Hessian of mgcv's V_R wrt (ρ, log σ²) by central differences.
+
+        ``_reml_unprofiled`` returns 2·V_R, so divide by 2 at the end —
+        matches the convention mgcv inverts in `gam.vcomp` to get the
+        asymptotic covariance of (log sp, log scale).
+        """
+        n_sp = len(rho)
+        m = n_sp + 1
+        theta0 = np.concatenate([rho, [log_sigma2]])
+
+        def f(theta: np.ndarray) -> float:
+            return self._reml_unprofiled(theta[:n_sp], float(theta[n_sp]))
+
+        f0 = f(theta0)
+        H2 = np.zeros((m, m))
+        for i in range(m):
+            tp = theta0.copy(); tp[i] += h
+            tm = theta0.copy(); tm[i] -= h
+            H2[i, i] = (f(tp) - 2.0 * f0 + f(tm)) / (h * h)
+            for j in range(i + 1, m):
+                tpp = theta0.copy(); tpp[i] += h; tpp[j] += h
+                tpm = theta0.copy(); tpm[i] += h; tpm[j] -= h
+                tmp = theta0.copy(); tmp[i] -= h; tmp[j] += h
+                tmm = theta0.copy(); tmm[i] -= h; tmm[j] -= h
+                val = (f(tpp) - f(tpm) - f(tmp) + f(tmm)) / (4.0 * h * h)
+                H2[i, j] = H2[j, i] = val
+        return 0.5 * H2
+
+    def _compute_vcomp(self) -> pl.DataFrame:
+        """Build the variance-component table mgcv calls ``gam.vcomp``.
+
+        For each smoothing-param slot k, σ_k = σ/√sp_k is the implied
+        random-effect std.dev (literal for ``bs='re'``; a parametrization
+        for other smooths). CIs come from the delta method on
+        log(σ_k) = ½(log σ² − ρ_k) using the joint REML Hessian wrt
+        (ρ, log σ²) — only meaningful under REML, so for GCV we return
+        point estimates with NaN bounds.
+        """
+        n_sp = len(self._slots)
+        scale_sd = float(self.sigma) if np.isfinite(self.sigma) else float("nan")
+
+        if n_sp == 0:
+            return pl.DataFrame({
+                "name": ["scale"],
+                "std_dev": [scale_sd],
+                "lower": [float("nan")],
+                "upper": [float("nan")],
+            })
+
+        names = [slot.block.label for slot in self._slots] + ["scale"]
+        sd2 = np.concatenate([
+            np.array([self.sigma_squared / max(s, 1e-300) for s in self.sp]),
+            [self.sigma_squared],
+        ])
+        log_sd = 0.5 * np.log(np.clip(sd2, 1e-300, None))
+        sd = np.exp(log_sd)
+
+        # GCV / point-estimate-only path: no Hessian-derived CIs.
+        if self.method != "REML" or not np.isfinite(self.sigma_squared):
+            nan_col = [float("nan")] * len(sd)
+            return pl.DataFrame({
+                "name": names, "std_dev": sd.tolist(),
+                "lower": nan_col, "upper": nan_col,
+            })
+
+        log_sigma2_hat = float(np.log(self.sigma_squared))
+        H = self._reml_hessian_augmented(self._rho_hat, log_sigma2_hat)
+        H = 0.5 * (H + H.T)
+
+        # Pseudo-invert on the positive eigenspace, same threshold as edf2.
+        w, V = np.linalg.eigh(H)
+        w_max = float(w.max()) if w.size > 0 else 0.0
+        keep = (w > w_max * 1e-7) if w_max > 0 else np.zeros_like(w, dtype=bool)
+        Hinv = np.zeros_like(H)
+        if keep.any():
+            Vk = V[:, keep]
+            Hinv = (Vk / w[keep]) @ Vk.T
+
+        # J: log(σ_k) = -0.5·ρ_k + 0.5·log σ² for k < last; log(σ_scale) =
+        # 0.5·log σ². Last column is the log σ² coefficient throughout.
+        m = n_sp + 1
+        J = np.zeros((m, m))
+        J[np.arange(n_sp), np.arange(n_sp)] = -0.5
+        J[:, -1] = 0.5
+
+        Vc = J @ Hinv @ J.T
+        se = np.sqrt(np.maximum(np.diag(Vc), 0.0))
+        z = float(norm.ppf(0.975))
+        lower = np.exp(log_sd - z * se)
+        upper = np.exp(log_sd + z * se)
+        return pl.DataFrame({
+            "name": names,
+            "std_dev": sd.tolist(),
+            "lower": lower.tolist(),
+            "upper": upper.tolist(),
+        })
 
     # -----------------------------------------------------------------------
     # Public post-fit API

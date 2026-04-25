@@ -286,6 +286,23 @@ def test_machines_re_smooths_REML():
     assert b1.edf_by_smooth["s(Worker)"] > 3.0
     assert b1.edf_by_smooth["s(Machine,Worker)"] > 8.0
 
+    # vcomp: scale matches mgcv tightly; smooth std.devs are off by the
+    # same sp-difference noted above. CIs are present (REML path).
+    vc = b1.vcomp
+    assert vc.shape == (3, 4)
+    assert vc["name"].to_list() == ["s(Worker)", "s(Machine,Worker)", "scale"]
+    scale_row = vc.filter(pl.col("name") == "scale").row(0, named=True)
+    _allclose(scale_row["std_dev"], 0.9615, atol=1e-3, name="vcomp scale.std")
+    _allclose(scale_row["lower"],   0.7632, atol=5e-3, name="vcomp scale.lo")
+    _allclose(scale_row["upper"],   1.2114, atol=5e-3, name="vcomp scale.hi")
+    # smooth point estimates: σ/√sp_k, both > 1 (random-effects are
+    # meaningful — degraded fit would give std ≪ scale).
+    for nm in ["s(Worker)", "s(Machine,Worker)"]:
+        row = vc.filter(pl.col("name") == nm).row(0, named=True)
+        assert row["std_dev"] > 1.0, f"{nm} std too small"
+        assert row["lower"] < row["std_dev"] < row["upper"]
+        assert row["lower"] > 0.0
+
     b2 = gam("score ~ Machine + s(Worker, bs='re') + s(Worker, bs='re', by=Machine)",
              data=d, method="REML")
     assert b2.n == 54
