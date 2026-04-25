@@ -719,21 +719,16 @@ class gam:
             V = family.variance(mu)
             if np.any(V == 0) or np.any(np.isnan(V)):
                 raise FloatingPointError("V(μ)=0 or NaN in PIRLS")
-            d2g = link.d2link(mu)
-            alpha = 1.0 + (y - mu) * (family.dvar(mu) / V + d2g * mu_eta_v)
-            # mgcv: clamp α=0 to ε to avoid division by zero in z-formula.
-            alpha = np.where(alpha == 0.0, np.finfo(float).eps, alpha)
-
-            z = eta + (y - mu) / (mu_eta_v * alpha)
-            w = alpha * mu_eta_v ** 2 / V
-
-            # Some non-Fisher Newton steps can produce w<0; mgcv's recovery
-            # is to fall back to Fisher (α=1, w=mu_eta²/V). Trees+Gamma+log
-            # has α=y/μ>0 always, but the fallback is cheap insurance.
-            if np.any(w < 0):
-                alpha = np.ones(n)
-                z = eta + (y - mu) / mu_eta_v
-                w = mu_eta_v ** 2 / V
+            # mgcv's gam.fit3 IRLS uses Fisher weights w = μ_η²/V (gam.fit3.r
+            # line ~270). For canonical links the Newton-form full-Hessian
+            # weight α·μ_η²/V coincides (α≡1 by canonical identity); for
+            # non-canonical (Gamma+log, Gaussian+log, ...) Fisher and Newton
+            # give different β̂ — and mgcv ships Fisher. Wood 2011 derives
+            # exact ∂/∂ρ derivatives starting from the Fisher-converged β̂,
+            # which is what we replicate.
+            alpha = np.ones(n)
+            z = eta + (y - mu) / mu_eta_v
+            w = mu_eta_v ** 2 / V
 
             XtWX = (X.T * w) @ X
             XtWz = X.T @ (w * z)
@@ -802,6 +797,14 @@ class gam:
 
         # Final consistent state (recompute w, z, alpha at converged β̂ for
         # downstream derivative routines — they expect these exact values).
+        # PIRLS inner loop above used Fisher W (matches mgcv gam.fit3.r:270).
+        # For the analytical score (REML / GCV) and its ρ-derivatives we use
+        # the Newton-form "exact" W = α · μ_η² / V (Wood 2011). At the
+        # PIRLS-converged β̂ both Fisher and Newton solve the same penalized-
+        # score equation (so β̂ is invariant), but the log|X'WX + Sλ| term
+        # and the chain-rule ingredients (dw/dη, d²w/dη²) depend on which
+        # W enters. mgcv's score computation uses Newton W; we evaluate α
+        # at the Fisher-converged β̂ here so downstream code sees Newton W.
         mu_eta_v = link.mu_eta(eta)
         V = family.variance(mu)
         d2g = link.d2link(mu)
@@ -811,6 +814,8 @@ class gam:
         w = alpha * mu_eta_v ** 2 / V
         is_fisher_fallback = False
         if np.any(w < 0):
+            # Newton W has negative entries → fall back to Fisher in the
+            # score too (drop α'/α terms accordingly).
             alpha = np.ones(n)
             z = eta + (y - mu) / mu_eta_v
             w = mu_eta_v ** 2 / V
