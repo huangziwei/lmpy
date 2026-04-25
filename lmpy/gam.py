@@ -2033,6 +2033,89 @@ class gam:
             db[:, k] = cho_solve((A_chol, A_chol_lower), v)
         return db
 
+    def _test_stat_type0(
+        self,
+        X_b: np.ndarray,
+        V_b: np.ndarray,
+        beta_b: np.ndarray,
+        rank: float,
+    ) -> tuple[float, float]:
+        """mgcv ``testStat`` with ``type = 0`` (summary.r default).
+
+        Returns ``(stat, rank_out)`` where ``stat`` is the d-statistic and
+        ``rank_out`` is the (possibly truncated) rank used as the F numerator
+        d.f. The "fractional rank" correction blends the k-th and (k+1)-th
+        whitened eigenvectors via a 2×2 symmetric square root so the test
+        respects a non-integer reference d.f. Equivalent type=1 (rounded
+        rank) gives a discontinuous F as edf1 crosses an integer; type=0
+        is what mgcv summary actually calls.
+        """
+        # QR on the smooth's design block, then rotate Vp into that basis.
+        _, R = np.linalg.qr(X_b, mode="reduced")
+        V_rot = R @ V_b @ R.T
+        V_rot = 0.5 * (V_rot + V_rot.T)
+        d_eig, U = np.linalg.eigh(V_rot)
+        # Descending order, mgcv sign convention (first row >= 0).
+        d_eig = d_eig[::-1]
+        U = U[:, ::-1]
+        siv = np.sign(U[0, :])
+        siv = np.where(siv == 0, 1.0, siv)
+        U = U * siv
+
+        k = max(0, int(np.floor(rank)))
+        nu = abs(rank - k)
+        k1 = k + 1 if nu > 0 else k
+
+        # mgcv's effective-rank guard: if eigenvalue tail is below
+        # max·eps^0.9, drop them and shrink k1.
+        if d_eig.size > 0 and d_eig[0] > 0:
+            r_est = int(np.sum(d_eig > d_eig[0] * np.finfo(float).eps ** 0.9))
+        else:
+            r_est = 0
+        if r_est < k1:
+            k1 = k = r_est
+            nu = 0.0
+            rank = float(r_est)
+
+        if k1 == 0 or U.shape[1] == 0:
+            return 0.0, float(rank)
+
+        vec = U[:, :k1].copy()
+
+        if nu > 0 and k > 0:
+            # Whiten cols 0 .. k-2 (R: cols 1..k-1) by 1/sqrt(eigenvalue).
+            if k > 1:
+                scales = 1.0 / np.sqrt(d_eig[:k - 1])
+                vec[:, :k - 1] = vec[:, :k - 1] * scales[np.newaxis, :]
+            b12 = 0.5 * nu * (1.0 - nu)
+            b12 = float(np.sqrt(max(b12, 0.0)))
+            B = np.array([[1.0, b12], [b12, nu]], dtype=float)
+            ev = np.diag(d_eig[k - 1:k + 1] ** -0.5)
+            B = ev @ B @ ev
+            eb_d, eb_v = np.linalg.eigh(B)
+            rB = eb_v @ np.diag(np.sqrt(np.maximum(eb_d, 0.0))) @ eb_v.T
+            cols_orig = vec[:, k - 1:k + 1].copy()
+            # vec1 negates the first of the two cols before rB.
+            cols_neg = cols_orig.copy()
+            cols_neg[:, 0] = -cols_neg[:, 0]
+            vec[:, k - 1:k + 1] = cols_orig @ rB.T
+            vec1 = vec.copy()
+            vec1[:, k - 1:k + 1] = cols_neg @ rB.T
+        else:
+            if k == 0:
+                # Degenerate: scale all of vec by 1/sqrt(d_eig[0]).
+                if d_eig[0] > 0:
+                    vec = vec * (1.0 / np.sqrt(d_eig[0]))
+            else:
+                scales = 1.0 / np.sqrt(d_eig[:k])
+                vec = vec * scales[np.newaxis, :]
+            vec1 = vec
+
+        Rp = R @ beta_b
+        proj = vec.T @ Rp
+        stat = float(np.sum(proj ** 2))
+        return stat, float(rank)
+
     def _compute_edf12(self, rho: np.ndarray, fit: "_FitState",
                        sigma_squared: float, A_inv: np.ndarray,
                        A_inv_XtWX: np.ndarray, edf: np.ndarray,
@@ -2418,31 +2501,11 @@ class gam:
                 Vp_b   = self.Vp[a:bcol, a:bcol]
                 X_b    = self._X_full[:, a:bcol]
                 edf_b  = float(self.edf[a:bcol].sum())
-                # mgcv `testStat` (summary.r, default p.type=0): work in
-                # the smooth's design-orthonormal basis, then truncate
-                # the spectral pseudo-inverse at rank k1 ≈ ⌈edf1⌉.
-                # Without the X-rotation, low-edf smooths (≈line) get
-                # huge F because `Vp_b` has near-zero eigenvalues that
-                # the tolerance-based truncate keeps; the rank-truncate
-                # in the R-rotated basis is what makes Tr scale with
-                # signal-to-noise rather than basis size.
                 edf1_b = float(self.edf1[a:bcol].sum()) if hasattr(self, "edf1") else edf_b
-                ref_df = max(edf1_b, 1e-8)
-                _, R = np.linalg.qr(X_b, mode="reduced")
-                V_eff = R @ Vp_b @ R.T
-                V_eff = 0.5 * (V_eff + V_eff.T)
-                d, U = np.linalg.eigh(V_eff)
-                # eigh returns ascending; flip to descending.
-                d = d[::-1]
-                U = U[:, ::-1]
-                k = max(0, int(np.floor(edf1_b)))
-                if edf1_b > k + 0.05 or k == 0:
-                    k += 1
-                k1 = min(max(k, 1), d.size)
-                d_top = np.maximum(d[:k1], 1e-300)
-                vec = U[:, :k1].T @ (R @ beta_b)
-                Tr = float(np.sum(vec**2 / d_top))
-                F = Tr / ref_df
+                p_b = bcol - a
+                rank = float(min(p_b, edf1_b))
+                Tr, ref_df = self._test_stat_type0(X_b, Vp_b, beta_b, rank)
+                F = Tr / max(ref_df, 1e-8)
                 p_val = (
                     float(f_dist.sf(F, ref_df, self.df_residuals))
                     if self.df_residuals > 0 else float("nan")
