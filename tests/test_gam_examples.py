@@ -258,11 +258,14 @@ def test_machines_re_smooths_REML():
     CSV dtypes (Int64/Utf8) they silently degrade to single-column random
     *slopes*, blowing edf to ~5 and AIC by ~170.
 
-    AIC is pinned at lmpy's output (regression). It differs from mgcv's
-    by ~0.3-0.7 because mgcv's AIC.gam uses df = sum(edf2)+1 where edf2
-    adds a smoothing-parameter-uncertainty correction (Wood 2017 §6.11.3);
-    lmpy currently reports df = sum(edf)+1. logLik itself matches mgcv
-    closely (it uses the MLE σ² = rss/n, matching logLik.gam).
+    AIC uses mgcv's df = sum(edf2)+1 rule (Wood 2017 §6.11.3 / logLik.gam),
+    where edf2 corrects edf for smoothing-parameter uncertainty via
+    Vc1 = (∂β/∂ρ) Hλ⁻¹ (∂β/∂ρ)ᵀ, capped at edf1 = tr(2F − F²). Without
+    this correction (df = sum(edf)+1), AIC was ~0.3 below mgcv. The
+    remaining ~0.1 gap to mgcv comes from a different REML optimum:
+    lmpy drops `s(Machine,Worker)` columns dependent on `s(Worker)` via
+    gam.side, while mgcv keeps all 27 columns (the identity penalty
+    handles ID), so the two REML surfaces are slightly different shapes.
     """
     d = load_dataset("nlme", "Machines")
 
@@ -270,9 +273,14 @@ def test_machines_re_smooths_REML():
              data=d, method="REML")
     assert b1.n == 54
     _allclose(b1.edf_total, 17.7646, atol=1e-1, name="b1.edf")
+    # edf < edf2 < edf1 — sp uncertainty inflates df, capped by tr(2F-F²).
+    _allclose(b1.edf1_total, 17.9952, atol=5e-2, name="b1.edf1")
+    _allclose(b1.edf2_total, 17.8600, atol=1e-1, name="b1.edf2")
+    assert b1.edf_total < b1.edf2_total <= b1.edf1_total
     _allclose(b1.sigma_squared, 0.9246, atol=5e-3, name="b1.sigma2")
     _allclose(b1.loglike, -63.7353, atol=1e-1, name="b1.loglike")
-    _allclose(b1.AIC, 164.92, atol=5e-2, name="b1.AIC")  # lmpy regression
+    # mgcv: 165.19 (df=18.86). lmpy: 165.10 (df=18.77) — within 0.1.
+    _allclose(b1.AIC, 165.19, atol=2e-1, name="b1.AIC")
     _assert_param(b1, "(Intercept)", 52.9558, atol=5e-3)
     # both blocks should have meaningful edf — degraded path would give ~1
     assert b1.edf_by_smooth["s(Worker)"] > 3.0
@@ -286,7 +294,8 @@ def test_machines_re_smooths_REML():
     _allclose(b2.edf_total, 17.6445, atol=5e-2, name="b2.edf")
     _allclose(b2.sigma_squared, 0.9246, atol=5e-3, name="b2.sigma2")
     _allclose(b2.loglike, -63.8246, atol=5e-2, name="b2.loglike")
-    _allclose(b2.AIC, 164.94, atol=5e-2, name="b2.AIC")  # lmpy regression
+    # mgcv: 165.19 (df=18.86). lmpy: 165.38 — within 0.2.
+    _allclose(b2.AIC, 165.19, atol=3e-1, name="b2.AIC")
 
 
 def test_data_helper_applies_schema_sidecar():

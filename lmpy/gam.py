@@ -404,9 +404,30 @@ class gam:
         else:
             loglike = float("nan")
         self.loglike = float(loglike)
-        # npar = edf_total + 1 (residual variance). Matches R's
-        # AIC.gam (which is logLik with df = edf + 1 + 1 for phi).
-        self.npar = edf_total + 1.0
+        # mgcv's df rule (`logLik.gam`): use sum(edf2) when available, where
+        # edf2 is the sp-uncertainty-corrected df from Wood 2017 §6.11.3.
+        # edf alone systematically under-counts because it conditions on the
+        # estimated λ; edf2 = diag((σ²A⁻¹ + Vc) X'X)/σ² absorbs the extra
+        # variance from λ̂ via Vc = (∂β/∂ρ) Hλ⁻¹ (∂β/∂ρ)ᵀ. edf1 = tr(2F-F²)
+        # is the upper bound; cap edf2 at edf1 element-wise then in total.
+        # +1 is for the residual scale (sc.p in mgcv).
+        if n_sp > 0:
+            edf2_per_coef, edf1_per_coef = self._compute_edf12(
+                rho_hat, fit, sigma_squared, A_inv, A_inv_XtX, edf,
+            )
+            self.edf1 = edf1_per_coef
+            self.edf2 = edf2_per_coef
+            self.edf1_total = float(edf1_per_coef.sum())
+            self.edf2_total = float(edf2_per_coef.sum())
+        else:
+            self.edf1 = edf.copy()
+            self.edf2 = edf.copy()
+            self.edf1_total = edf_total
+            self.edf2_total = edf_total
+        # logLik.gam additionally caps df at length(coef) — relevant only at
+        # the totally-unpenalized end where edf2 ≈ p; keep it for parity.
+        df_for_aic = min(self.edf2_total, float(p))
+        self.npar = df_for_aic + 1.0
         self.AIC = -2.0 * loglike + 2.0 * self.npar
         self.BIC = -2.0 * loglike + float(np.log(n)) * self.npar
 
@@ -528,6 +549,104 @@ class gam:
         if denom <= 0:
             return 1e15
         return self.n * fit.rss / (denom * denom)
+
+    def _db_drho(self, rho: np.ndarray, beta: np.ndarray,
+                 A_chol, A_chol_lower) -> np.ndarray:
+        """Analytical ∂β/∂ρ_k = -exp(ρ_k)·A⁻¹ S_k β, returned as (p, n_sp).
+
+        Differentiate A(ρ) β = X'y wrt ρ_k: ∂A/∂ρ_k = exp(ρ_k) S_k since
+        A = X'X + Σ_k exp(ρ_k) S_k. The k-th slot's S is k×k embedded at
+        its block's column range, so the RHS is non-zero only there.
+        """
+        p = self.p
+        n_sp = len(self._slots)
+        db = np.zeros((p, n_sp))
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            sp_k = float(np.exp(rho[k]))
+            v = np.zeros(p)
+            v[a:b] = -sp_k * (slot.S @ beta[a:b])
+            db[:, k] = cho_solve((A_chol, A_chol_lower), v)
+        return db
+
+    def _reml_hessian(self, rho: np.ndarray, h: float = 1e-4) -> np.ndarray:
+        """Hessian of mgcv's V_R wrt log-sp ρ via central differences.
+
+        ``self._reml`` returns 2·V_R (we add `(n−Mp)·log(rss+pen)` plus
+        `log|A| − log|S|+`, then a constant), so divide the resulting
+        Hessian by 2 to express it in mgcv's V_R scale — that's what
+        gam.fit3.post.proc inverts to get the asymptotic covariance of ρ̂.
+        """
+        n_sp = len(rho)
+        f0 = self._reml(rho)
+        H2 = np.zeros((n_sp, n_sp))
+        for i in range(n_sp):
+            rp = rho.copy(); rp[i] += h
+            rm = rho.copy(); rm[i] -= h
+            H2[i, i] = (self._reml(rp) - 2.0 * f0 + self._reml(rm)) / (h * h)
+            for j in range(i + 1, n_sp):
+                rpp = rho.copy(); rpp[i] += h; rpp[j] += h
+                rpm = rho.copy(); rpm[i] += h; rpm[j] -= h
+                rmp = rho.copy(); rmp[i] -= h; rmp[j] += h
+                rmm = rho.copy(); rmm[i] -= h; rmm[j] -= h
+                val = (
+                    self._reml(rpp) - self._reml(rpm)
+                    - self._reml(rmp) + self._reml(rmm)
+                ) / (4.0 * h * h)
+                H2[i, j] = H2[j, i] = val
+        return 0.5 * H2
+
+    def _compute_edf12(self, rho: np.ndarray, fit: "_FitState",
+                       sigma_squared: float, A_inv: np.ndarray,
+                       A_inv_XtX: np.ndarray, edf: np.ndarray):
+        """mgcv's edf1 (frequentist tr(2F−F²) bound) and edf2 (sp-uncertainty
+        corrected). Wood 2017 §6.11.3. Returns ``(edf2_per_coef, edf1_per_coef)``.
+
+        For Gaussian + identity, the dw/dρ term in mgcv's Vc2 vanishes
+        (constant weights), so only Vc1 = (∂β/∂ρ) Hλ⁻¹ (∂β/∂ρ)ᵀ
+        contributes — matches gam.fit3.post.proc's special path.
+        """
+        F = A_inv_XtX
+        edf1 = 2.0 * np.diag(F) - np.einsum("ij,ji->i", F, F)
+
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return edf.copy(), edf1
+
+        db = self._db_drho(rho, fit.beta, fit.A_chol, fit.A_chol_lower)
+        H = self._reml_hessian(rho)
+        H = 0.5 * (H + H.T)
+
+        # Project onto Hλ's positive eigenspace before inverting. At sp's
+        # near a bound the function is locally flat, producing near-zero
+        # eigenvalues that would otherwise blow up after inversion. mgcv
+        # uses a similar threshold in gam.fit3.post.proc.
+        w, V = np.linalg.eigh(H)
+        w_max = float(w.max()) if w.size > 0 else 0.0
+        keep = (w > w_max * 1e-7) if w_max > 0 else np.zeros_like(w, dtype=bool)
+        if keep.any():
+            Vk = V[:, keep]
+            Hinv = (Vk / w[keep]) @ Vk.T
+            Vc1 = db @ Hinv @ db.T
+        else:
+            Vc1 = np.zeros_like(A_inv)
+
+        # diag((σ²A⁻¹ + Vc1)·X'X)/σ² = edf + diag(Vc1·X'X)/σ². Both Vc1 and
+        # X'X are symmetric → einsum('ij,ij->i') gives diag(Vc1·X'X).
+        XtX = self._XtX
+        if sigma_squared > 0 and np.isfinite(sigma_squared):
+            edf2 = edf + np.einsum("ij,ij->i", Vc1, XtX) / sigma_squared
+        else:
+            edf2 = edf.copy()
+
+        # Total-sum cap only. mgcv's gam.fit3.post.proc deliberately does
+        # not cap element-wise — individual edf2[i] can exceed edf1[i] as
+        # long as the sum stays ≤ sum(edf1). Element-wise capping was a
+        # bug in an earlier version here that pushed sum(edf2) below
+        # sum(edf), the wrong direction for an sp-uncertainty correction.
+        if edf2.sum() > edf1.sum():
+            edf2 = edf1.copy()
+        return edf2, edf1
 
     # -----------------------------------------------------------------------
     # Public post-fit API
