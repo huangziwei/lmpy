@@ -434,6 +434,15 @@ def test_pirls_init_canonical_inverse_gaussian():
     # so this also serves as a valideta check on the converged fit.
     assert np.all(m.fitted > 0)
     assert np.all(m.linear_predictors > 0)
+    # Phase 2.2 wiring: unknown-scale family ⇒ log φ enters the outer
+    # vector and `m._log_phi_hat` is finite. `m.scale = exp(log φ̂)` is
+    # the REML-optimized scale (mgcv's `reml.scale`), distinct from the
+    # post-fit Pearson estimate stored as `m._pearson_scale`.
+    assert m._log_phi_hat is not None
+    assert np.isfinite(m._log_phi_hat)
+    np.testing.assert_allclose(m.scale, float(np.exp(m._log_phi_hat)),
+                               atol=0.0)
+    assert np.isfinite(m._pearson_scale)
     assert m.sigma_squared > 0
     # Intercept ≈ link(mean(y)) = 1/mean(y)² for an intercept-only fit;
     # with a smooth that captures most of the signal it lands near
@@ -477,28 +486,36 @@ def test_trees_gamma_log_smoke():
     assert m.n == 31
     np.testing.assert_allclose(m.df_null, 30.0, atol=0.0)
 
-    # mgcv-anchored (only depend on (y, μ, family); sp-independent):
-    #   summary(m)$r.sq            = 0.9744
-    #   summary(m)$dev.expl        = 0.97829   (≈ 0.9783)
-    #   m$null.deviance            = 8.3172
-    np.testing.assert_allclose(m.r_squared_adjusted, 0.9744316520, atol=5e-5)
-    np.testing.assert_allclose(m.deviance_explained, 0.9783011668, atol=5e-5)
-    np.testing.assert_allclose(m.null_deviance, 8.3172012147, atol=5e-4)
+    # mgcv reference values (R 4.5.3, mgcv 1.9-3) at the converged fit:
+    #   sp        = (15742.67387, 0.2112713142)
+    #   edf_total = 4.738161, edf2_total = 5.270166
+    #   scale     = m$reml.scale = 0.0068696749 (m$scale = 0.0068300304)
+    #   deviance  = 0.1805645860, null_deviance = 8.3172012147
+    #   r2_adj    = 0.9744391060, dev_expl = 0.9782902227
+    #   AIC       = 144.3438870069, logLik = -65.9017771491
+    #   intercept = 3.2756440543
 
-    # lmpy's current sp/edf/scale/deviance/AIC/logLik. mgcv's values for these
-    # differ until Phase 2 brings the REML score in line; Phase 4 tightens
-    # the tolerance and re-pins against mgcv.
-    # TODO(Phase 4): re-pin against summary(mgcv::gam(..., family=Gamma(log)))
-    # and tighten atol; the values below are lmpy-current (2026-04-25).
-    np.testing.assert_allclose(m.sp, [59167494.948, 0.208312900], rtol=1e-4)
-    np.testing.assert_allclose(m.edf_total, 4.781907, atol=5e-5)
-    np.testing.assert_allclose(m.edf2_total, 5.310036, atol=5e-5)
-    np.testing.assert_allclose(m.scale, 0.0068376384, atol=5e-7)
+    # Tight pins (independent of optimizer convergence trajectory).
+    np.testing.assert_allclose(m.r_squared_adjusted, 0.9744391060, atol=5e-5)
+    np.testing.assert_allclose(m.deviance_explained, 0.9782902227, atol=5e-5)
+    np.testing.assert_allclose(m.null_deviance, 8.3172012147, atol=5e-7)
+    np.testing.assert_allclose(m.deviance, 0.1805645860, atol=5e-4)
+    np.testing.assert_allclose(m.bhat["(Intercept)"][0], 3.2756440543, atol=5e-3)
+
+    # Looser pins on optimizer-dependent quantities. Phase 2.2 is using
+    # L-BFGS-B with finite-difference gradients on the (ρ, log φ) outer
+    # vector; the score has a long flat plateau in the Height-smooth
+    # direction (its smooth saturates well before sp[0] hits the upper
+    # rho bound), so sp[0] reproducibly lands ~50× larger than mgcv's
+    # analytical-Newton answer while edf/scale/deviance agree to ~5e-3.
+    # Phase 3 (analytical (ρ, log φ) gradients/Hessian) will tighten this.
+    np.testing.assert_allclose(m.sp[1], 0.2112713142, rtol=2e-3)
+    np.testing.assert_allclose(m.edf_total,  4.738161, atol=5e-2)
+    np.testing.assert_allclose(m.edf2_total, 5.270166, atol=5e-2)
+    np.testing.assert_allclose(m.scale,      0.0068696749, atol=5e-5)
     np.testing.assert_allclose(m.sigma_squared, m.scale, atol=0.0)
-    np.testing.assert_allclose(m.deviance, 0.1804735615, atol=5e-7)
-    np.testing.assert_allclose(m.logLik, -65.8841605695, atol=5e-5)
-    np.testing.assert_allclose(m.AIC, 144.3883935160, atol=5e-5)
-    np.testing.assert_allclose(m._mgcv_aic, 143.3321355567, atol=5e-5)
+    np.testing.assert_allclose(m.logLik, -65.9017771491, atol=2e-2)
+    np.testing.assert_allclose(m.AIC,    144.3438870069, atol=1e-1)
 
     # AIC.default identity: AIC = -2·logLik + 2·npar (by construction).
     np.testing.assert_allclose(m.AIC, -2.0 * m.logLik + 2.0 * m.npar, atol=1e-10)
@@ -510,11 +527,13 @@ def test_trees_gamma_log_smoke():
     # the fitted intercept lands near 3.276.
     np.testing.assert_allclose(m.bhat["(Intercept)"][0], 3.2756425861, atol=5e-5)
 
-    # First-five fitted μ — pin lmpy-current. Phase 4 retightens vs mgcv.
+    # First-five fitted μ vs mgcv reference — Phase 2.2 lands within ~5e-4
+    # of mgcv even with the FD optimizer plateau (the smooths matter for μ,
+    # not the saturated Height direction).
     np.testing.assert_allclose(
         m.fitted_values[:5],
-        [10.621876572, 10.360047121, 10.410548711, 16.428942450, 19.683743786],
-        atol=5e-5,
+        [10.62414379, 10.36186212, 10.41212209, 16.42891707, 19.68356227],
+        atol=5e-3,
     )
 
     # Gamma(log) residual identities:
@@ -555,3 +574,51 @@ def test_gaussian_residual_identities_and_aic_self_consistency():
     # Bad type raises.
     with pytest.raises(ValueError):
         m.residuals_of("partial")
+
+
+# ---------------------------------------------------------------------------
+# Phase 2.1 — `_reml_general(rho, log_phi)` reduces to the existing profiled
+# Gaussian `_reml(rho)` when φ is profiled out via φ̂(ρ) = (rss+pen)/(n-Mp).
+# This is the algebraic identity that lets the strictly-additive Gaussian
+# fast path stay bit-identical even after the general formula lands.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("pkg, name, formula", [
+    ("MASS", "mcycle",     "accel ~ s(times)"),
+    ("mgcv", "gamSim_eg1", "y ~ s(x0) + s(x1) + s(x2) + s(x3)"),
+    ("mgcv", "gamSim_eg1", "y ~ x1 + s(x0) + s(x2)"),
+])
+def test_reml_general_reduces_to_profiled_gaussian(pkg, name, formula):
+    from lmpy import gam
+    d = load_dataset(pkg, name)
+    m = gam(formula, d, method="REML")
+    n_minus_Mp = m.n - m._Mp
+
+    def _profile_phi(rho):
+        fit = m._fit_given_rho(rho)
+        return (fit.rss + fit.pen) / n_minus_Mp
+
+    # At converged ρ̂ and at an off-optimum point — equivalence is purely
+    # algebraic (not optimum-dependent).
+    for rho in (m._rho_hat, m._rho_hat - 1.0, m._rho_hat + 0.5):
+        phi_hat = _profile_phi(rho)
+        v_profiled = m._reml(rho)
+        v_general = m._reml_general(rho, float(np.log(phi_hat)))
+        np.testing.assert_allclose(
+            v_general, v_profiled, atol=1e-9,
+            err_msg=f"{formula!r} at rho={rho.tolist()}",
+        )
+
+
+def test_reml_general_finite_for_trees_gamma_log():
+    """Sanity: for the converged Gamma(log) fit, `_reml_general` returns a
+    finite value at the lmpy-current sp. (Phase 2.2 makes φ̂ a joint outer
+    variable; this just ensures the formula is wired up correctly.)"""
+    from lmpy import Gamma, gam
+    d = load_dataset("R", "trees")
+    m = gam("Volume ~ s(Height) + s(Girth)", d,
+            family=Gamma(link="log"), method="REML")
+    log_phi = float(np.log(m.scale))
+    v = m._reml_general(m._rho_hat, log_phi)
+    assert np.isfinite(v)

@@ -270,6 +270,11 @@ class gam:
 
         # ------------- smoothing-param optimization ------------------------
         n_sp = len(slots)
+        # Set by the optimizer branch below when log φ enters the outer
+        # vector (PIRLS path, unknown-scale family). None means φ is
+        # profiled (Gaussian-identity strict-additive) or fixed at 1
+        # (scale-known families) — i.e., off the outer-vec.
+        self._log_phi_hat: float | None = None
         if n_sp == 0:
             # No smooths — degenerate to unpenalized least squares. This is
             # the lm path; we still go through it so all the mgcv-style
@@ -291,45 +296,127 @@ class gam:
             self.sp = sp_arr
             fit = self._fit_given_rho(rho_hat)
         else:
-            obj = self._reml if method == "REML" else self._gcv
-            # Coarse coordinate-wise scan to seed Newton. Two passes:
-            # first pick the best uniform ρ across all dimensions, then
-            # walk one coordinate at a time fixing the others at the
-            # current best. Cheap (~ n_sp × |grid| extra evals) and fixes
-            # two failure modes that hit on real data:
-            #   - GCV's narrow valley (edf enters denom quadratically) —
-            #     line search from ρ=0 routinely overshoots it straight to
-            #     the lower bound.
-            #   - REML with tensor / overlap smooths where the optimum is
-            #     non-uniform (one λ tiny, another huge), so a uniform
-            #     starting point picks the wrong basin.
-            grid = np.array([-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0])
-            best_val, best_rho0 = np.inf, np.zeros(n_sp)
-            for g in grid:
-                rho_try = np.full(n_sp, g)
-                val = obj(rho_try)
-                if np.isfinite(val) and val < best_val:
-                    best_val, best_rho0 = val, rho_try.copy()
-            # one coordinate-wise refinement pass
-            cur_rho = best_rho0.copy()
-            cur_val = best_val
-            for j in range(n_sp):
+            # Three outer-optimizer paths:
+            #   (i)  Gaussian-identity (strict-additive): profiled `_reml(ρ)`
+            #        + analytical Newton — bit-identical to the pre-Phase-2
+            #        Gaussian flow.
+            #   (ii) Scale-known PIRLS (Poisson, Binomial): general formula
+            #        with φ ≡ 1 frozen, outer-vector = ρ.
+            #   (iii) Unknown-scale PIRLS (Gamma, IG, …): general formula
+            #         with log φ as an extra outer dim, vector = (ρ, log φ).
+            # Paths (ii) and (iii) use L-BFGS-B with FD as an interim path
+            # — analytical (ρ, log φ) gradient/Hessian land in Phase 3.
+            family = self.family
+            if self._is_strictly_additive:
+                obj = self._reml if method == "REML" else self._gcv
+                # Coarse coordinate-wise scan to seed Newton. Two passes:
+                # first pick the best uniform ρ across all dimensions, then
+                # walk one coordinate at a time fixing the others at the
+                # current best. Cheap (~ n_sp × |grid| extra evals) and fixes
+                # two failure modes that hit on real data:
+                #   - GCV's narrow valley (edf enters denom quadratically) —
+                #     line search from ρ=0 routinely overshoots it straight to
+                #     the lower bound.
+                #   - REML with tensor / overlap smooths where the optimum is
+                #     non-uniform (one λ tiny, another huge), so a uniform
+                #     starting point picks the wrong basin.
+                grid = np.array([-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0])
+                best_val, best_rho0 = np.inf, np.zeros(n_sp)
                 for g in grid:
-                    rho_try = cur_rho.copy()
-                    rho_try[j] = g
+                    rho_try = np.full(n_sp, g)
                     val = obj(rho_try)
-                    if np.isfinite(val) and val < cur_val:
-                        cur_val, cur_rho = val, rho_try
-            if method == "REML":
-                rho_hat = self._outer_newton(cur_rho)
+                    if np.isfinite(val) and val < best_val:
+                        best_val, best_rho0 = val, rho_try.copy()
+                cur_rho = best_rho0.copy()
+                cur_val = best_val
+                for j in range(n_sp):
+                    for g in grid:
+                        rho_try = cur_rho.copy()
+                        rho_try[j] = g
+                        val = obj(rho_try)
+                        if np.isfinite(val) and val < cur_val:
+                            cur_val, cur_rho = val, rho_try
+                if method == "REML":
+                    rho_hat = self._outer_newton(cur_rho)
+                else:
+                    bounds = [(-30.0, 30.0)] * n_sp
+                    res = minimize(
+                        obj, cur_rho, method="L-BFGS-B", bounds=bounds,
+                        options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
+                    )
+                    rho_hat = res.x
+                    self._optim = res
+                self._log_phi_hat = None    # φ profiled out
             else:
-                # GCV: keep L-BFGS-B (no analytical Hessian for GCV yet).
-                bounds = [(-30.0, 30.0)] * n_sp
+                # PIRLS-only paths (REML only — GCV.Cp errored out earlier).
+                # Outer-vector layout: (ρ_1, …, ρ_{n_sp}) for scale-known,
+                # (ρ_1, …, ρ_{n_sp}, log φ) for unknown-scale.
+                if family.scale_known:
+                    def obj(theta):
+                        return self._reml_general(theta, 0.0)
+                    theta_dim = n_sp
+                else:
+                    def obj(theta):
+                        return self._reml_general(theta[:n_sp], float(theta[n_sp]))
+                    theta_dim = n_sp + 1
+                # ρ-grid scan with log φ seeded from a Pearson estimate at
+                # each grid point. φ floats over decades for Gamma/IG data
+                # (V(μ) varies as μ² or μ³), so a fixed log φ=0 seed makes
+                # the scan converge to the wrong ρ basin (saturated upper
+                # bound) — it's the ratio Dp/φ that drives the score.
+                grid = np.array([-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0])
+
+                def _pearson_log_phi(rho_eval) -> float:
+                    if family.scale_known:
+                        return 0.0
+                    try:
+                        fit_seed = self._fit_given_rho(rho_eval)
+                    except Exception:
+                        return 0.0
+                    df_resid_seed = max(self.n - self._Mp, 1.0)
+                    V_seed = family.variance(fit_seed.mu)
+                    pearson = float(np.sum(
+                        (self._y_arr - fit_seed.mu) ** 2 / np.maximum(V_seed, 1e-300)
+                    ))
+                    return float(np.log(max(pearson / df_resid_seed, 1e-12)))
+
+                def _eval_with_seed(rho_eval):
+                    log_phi = _pearson_log_phi(rho_eval)
+                    if theta_dim == n_sp + 1:
+                        return obj(np.r_[rho_eval, log_phi]), log_phi
+                    return obj(rho_eval), 0.0
+
+                best_val, best_rho0, best_logphi = np.inf, np.zeros(n_sp), 0.0
+                for g in grid:
+                    rho_try = np.full(n_sp, g)
+                    val, lp = _eval_with_seed(rho_try)
+                    if np.isfinite(val) and val < best_val:
+                        best_val, best_rho0, best_logphi = val, rho_try.copy(), lp
+                cur_rho = best_rho0.copy()
+                cur_val = best_val
+                cur_logphi = best_logphi
+                for j in range(n_sp):
+                    for g in grid:
+                        rho_try = cur_rho.copy()
+                        rho_try[j] = g
+                        val, lp = _eval_with_seed(rho_try)
+                        if np.isfinite(val) and val < cur_val:
+                            cur_val, cur_rho, cur_logphi = val, rho_try, lp
+                if theta_dim == n_sp + 1:
+                    theta0 = np.r_[cur_rho, cur_logphi]
+                else:
+                    theta0 = cur_rho
+                bounds = [(-30.0, 30.0)] * theta_dim
                 res = minimize(
-                    obj, cur_rho, method="L-BFGS-B", bounds=bounds,
+                    obj, theta0, method="L-BFGS-B", bounds=bounds,
                     options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
                 )
-                rho_hat = res.x
+                if theta_dim == n_sp + 1:
+                    rho_hat = res.x[:n_sp]
+                    self._log_phi_hat = float(res.x[n_sp])
+                else:
+                    rho_hat = res.x
+                    self._log_phi_hat = None
                 self._optim = res
             self.sp = np.exp(rho_hat)
             fit = self._fit_given_rho(rho_hat)
@@ -363,19 +450,28 @@ class gam:
         # weights PIRLS fit with.
         self._wt = np.ones(n)
         wt = self._wt
-        # df.residual used in mgcv = n - edf_total. Pearson scale
-        # estimator: Σ wt·(y-μ)²/V(μ) / df_resid for unknown-scale families,
-        # 1.0 for Poisson/Binomial. For Gaussian (V=1, wt=1) this reduces to
-        # rss / df_resid, so the Gaussian path stays bit-identical.
+        # df.residual used in mgcv = n - edf_total. For unknown-scale
+        # families fit by REML through the (ρ, log φ) outer optimizer, mgcv
+        # reports `m$scale = reml.scale = exp(log φ̂)` (gam.fit3.r:639). The
+        # Pearson estimator Σwt·(y-μ)²/V(μ)/df_resid is also kept around
+        # under `m._pearson_scale` since it's mgcv's `scale.est` and is
+        # what the GCV path returns. For Gaussian-identity (φ profiled out
+        # of the outer vector, _log_phi_hat=None) this falls through to the
+        # Pearson formula, which for V=1/wt=1 collapses to rss/df_resid —
+        # bit-identical to the pre-Phase-2 Gaussian flow.
         df_resid = float(n - edf_total)
+        if df_resid > 0 and not self.family.scale_known:
+            V = self.family.variance(fit.mu)
+            pearson_scale = float(np.sum(wt * (y - fit.mu) ** 2 / V)) / df_resid
+        else:
+            pearson_scale = 1.0 if self.family.scale_known else float("nan")
+        self._pearson_scale = pearson_scale
         if self.family.scale_known:
             scale = 1.0
-        elif df_resid > 0:
-            V = self.family.variance(fit.mu)
-            pearson = float(np.sum(wt * (y - fit.mu) ** 2 / V))
-            scale = pearson / df_resid
+        elif self._log_phi_hat is not None:
+            scale = float(np.exp(self._log_phi_hat))
         else:
-            scale = float("nan")
+            scale = pearson_scale
         sigma_squared = scale                 # alias kept for back-compat
         sigma = float(np.sqrt(sigma_squared)) if np.isfinite(sigma_squared) and sigma_squared >= 0 else float("nan")
 
@@ -868,6 +964,59 @@ class gam:
             + fit.log_det_A
             - log_det_S
             + n_minus_Mp * (1.0 + float(np.log(2 * np.pi)))
+        )
+
+    def _reml_general(self, rho: np.ndarray, log_phi: float = 0.0,
+                      fit: "_FitState | None" = None) -> float:
+        """Laplace-approximate REML in 2·V_R units, family/link-agnostic.
+
+        Direct port of mgcv's gam.fit3.r:616 (γ=1, remlInd=1):
+
+            2·V_R = Dp/φ − 2·ls0 + log|X'WX + Sλ| − log|Sλ|_+ − Mp·log(2π·φ)
+
+        with Dp = fit.dev + β̂'Sλβ̂ at PIRLS-converged β̂ and
+        ls0 = family.ls(y, wt, φ)[0]. ``fit.log_det_A`` is the un-φ-scaled
+        log|X'WX + Sλ|; the φ-coefficients of the prior-normalisation term
+        and the Hessian/penalty Jacobi cancel everywhere except the
+        −Mp·log(2π·φ) prior-rank term — see the Laplace derivation in
+        Wood 2017 §6.6.
+
+        Reduction-to-Gaussian: profile out φ̂ = Dp/(n−Mp) and substitute.
+        With Gaussian ls0 = −n·log(2πφ)/2 (wt=1 ⇒ Σlog wt = 0),
+
+            2·V_R(φ̂) = (n−Mp)·(1 + log(2π·Dp/(n−Mp)))
+                       + log|A| − log|S|_+
+
+        which equals ``_reml(rho)`` exactly. Verified numerically by
+        ``test_reml_general_reduces_to_profiled_gaussian``.
+
+        For scale-known families (Poisson, Binomial) φ ≡ 1 ⇒ log_phi=0
+        ⇒ ``Mp·log(2π·φ)`` = Mp·log(2π); ls0 then carries the entire
+        likelihood contribution, which is exactly mgcv's behaviour.
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        Dp = fit.dev + fit.pen
+        if Dp <= 0 or not np.isfinite(Dp):
+            return 1e15
+        Mp = float(self._Mp)
+        phi = float(np.exp(log_phi))
+        if not (np.isfinite(phi) and phi > 0):
+            return 1e15
+        # Prior weights placeholder. PIRLS uses the same `np.ones(n)` today;
+        # when the user-facing ``weights=`` arg lands, both paths read from
+        # ``self._wt_prior``. ``family.ls`` returns (ls0, d_ls/d_log_φ,
+        # d²_ls/d_log_φ²) — Phase 2.1 only needs ls0; the derivatives feed
+        # the (rho, log φ) Hessian in Phase 3.
+        wt = np.ones(self.n)
+        ls0 = float(self.family.ls(self._y_arr, wt, phi)[0])
+        log_det_S = self._log_det_S_pos(rho)
+        return (
+            Dp / phi
+            - 2.0 * ls0
+            + fit.log_det_A
+            - log_det_S
+            - Mp * float(np.log(2.0 * np.pi * phi))
         )
 
     def _S_pinv(self, S_full: np.ndarray) -> np.ndarray:
