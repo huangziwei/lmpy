@@ -547,10 +547,16 @@ class glm:
         if new is None:
             X_new = self.X.to_numpy().astype(float)
             n_new = self.n
+            # In-sample predict (predict.glm with no newdata): R reuses the
+            # offset from the model frame. Caller-supplied `offset` here would
+            # *replace* it, but the typical case is None and we fall back to
+            # the fit-time offset so η̂ matches what was actually fit.
+            default_off = self._offset
         else:
             X_new = materialize(self._expanded, new).to_numpy().astype(float)
             n_new = X_new.shape[0]
-        off_new = (np.zeros(n_new) if offset is None
+            default_off = np.zeros(n_new)
+        off_new = (default_off if offset is None
                    else np.asarray(offset, dtype=float).flatten())
         if off_new.shape != (n_new,):
             raise ValueError(f"offset must have length {n_new}")

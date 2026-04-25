@@ -202,3 +202,39 @@ def test_glm_aic_bic_loglik(oid: str):
     assert m.npar == o["loglik_df"], \
         f"npar (= logLik$df): lmpy={m.npar} R={o['loglik_df']}"
     _allclose(m.bic, o["bic"], atol=5e-3, name="bic")
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 — predict(type=link/response, se.fit=TRUE). The link-scale SE is
+# √diag(X·vcov·Xᵀ); the response-scale SE is |dμ/dη(η̂)|·se_link (delta
+# method). predict.glm with no newdata reuses the fit-time offset so η̂
+# matches `m$linear.predictors`.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("oid", ALL_ORACLES)
+def test_glm_predict(oid: str):
+    o = load_glm_oracle(oid)
+    m = CASES[oid]()
+
+    # Link scale.
+    fit_link, se_link = m.predict(type="link", se_fit=True)
+    _allclose(fit_link, np.asarray(o["pred_link_fit"]),
+              atol=5e-4, name="pred_link_fit")
+    _allclose(se_link, np.asarray(o["pred_link_se"]),
+              atol=5e-5, name="pred_link_se")
+
+    # Response scale (delta method on SE). Use rtol on the SE because the
+    # delta-method multiplier |dμ/dη| is huge for some links (IG canonical:
+    # ~μ³/2 ≈ 1.9e4 on Insurance), which amplifies tiny vcov differences
+    # (~1e-7) to ~5e-3 absolute even though relative error stays ~1e-4.
+    fit_resp, se_resp = m.predict(type="response", se_fit=True)
+    _allclose(fit_resp, np.asarray(o["pred_resp_fit"]),
+              atol=5e-4, name="pred_resp_fit")
+    _allclose(se_resp, np.asarray(o["pred_resp_se"]),
+              atol=5e-5, rtol=5e-4, name="pred_resp_se")
+
+    # Without se_fit, predict returns the bare fit only — same numbers.
+    _allclose(m.predict(type="link"), fit_link, atol=0.0, name="link no-se")
+    _allclose(m.predict(type="response"), fit_resp, atol=0.0,
+              name="response no-se")
