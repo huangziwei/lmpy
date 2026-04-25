@@ -563,6 +563,194 @@ class gam:
             + n_minus_Mp * (1.0 + float(np.log(2 * np.pi)))
         )
 
+    def _S_pinv(self, S_full: np.ndarray) -> np.ndarray:
+        """Pseudo-inverse of Sλ on its fixed range space.
+
+        Eigendecompose Sλ and take the top ``penalty_rank`` eigenpairs,
+        same convention as ``_log_det_S_pos`` so derivatives stay
+        consistent with the determinant. Used by ``_reml_grad`` to
+        compute ``∂log|S|+/∂ρ_k = λ_k tr(S^+ S_k)``.
+        """
+        r = self._penalty_rank
+        if r <= 0:
+            return np.zeros_like(S_full)
+        Sλ = 0.5 * (S_full + S_full.T)
+        w, V = np.linalg.eigh(Sλ)
+        order = np.argsort(w)[::-1]
+        w_top = np.clip(w[order[:r]], 1e-300, None)
+        V_top = V[:, order[:r]]
+        return (V_top / w_top) @ V_top.T
+
+    def _reml_grad(self, rho: np.ndarray,
+                   fit: "_FitState | None" = None) -> np.ndarray:
+        """Analytical gradient ∂(2·V_R^prof)/∂ρ — matches ∂(_reml)/∂ρ.
+
+        For Gaussian + identity REML, profiling σ² out gives
+
+            2·V_R^prof = (n-Mp)·log(rss+pen) + log|A| − log|S|+ + const
+
+        Term-by-term derivatives (Wood 2011 §4):
+
+            ∂(rss+pen)/∂ρ_k = λ_k · β̂' S_k β̂          (pen contribution g_k)
+            ∂log|A|/∂ρ_k    = λ_k · tr(A⁻¹ S_k)
+            ∂log|S|+/∂ρ_k   = λ_k · tr(S⁺ S_k)         (rank-stable case)
+
+        Combining:
+
+            ∂(2·V_R)/∂ρ_k = (n−Mp)·g_k/(rss+pen)
+                          + λ_k·tr(A⁻¹ S_k) − λ_k·tr(S⁺ S_k)
+
+        Replaces FD jacobian for the ρ-optimization (and feeds into the
+        analytical Hessian later).
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros(0)
+        n_minus_Mp = self.n - self._Mp
+        rs = fit.rss + fit.pen
+        if rs <= 0 or n_minus_Mp <= 0:
+            return np.zeros(n_sp)
+
+        A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(self.p))
+        S_pinv = self._S_pinv(fit.S_full)
+
+        grad = np.zeros(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            sp_k = float(np.exp(rho[k]))
+            beta_k = fit.beta[a:b]
+            g_k = sp_k * float(beta_k @ slot.S @ beta_k)
+            # S_k has support only on the slot's column range, so
+            # tr(A⁻¹ S_k) reduces to a contraction with the (a:b, a:b)
+            # block of A⁻¹. Same for S⁺.
+            tr_AinvSk = float(np.einsum("ij,ji->", A_inv[a:b, a:b], slot.S))
+            tr_SpinvSk = float(np.einsum("ij,ji->", S_pinv[a:b, a:b], slot.S))
+            grad[k] = (
+                n_minus_Mp * g_k / rs
+                + sp_k * tr_AinvSk
+                - sp_k * tr_SpinvSk
+            )
+        return grad
+
+    def _reml_hessian(self, rho: np.ndarray,
+                      fit: "_FitState | None" = None) -> np.ndarray:
+        """Analytical Hessian ∂²V_R/∂ρ_i ∂ρ_j — Wood 2011 §4.
+
+        Differentiating ``2·V_R^prof = (n−Mp)·log(rs) + log|A| − log|S|+
+        + const`` (with rs = rss + pen) twice in ρ. Pieces:
+
+            ∂rs/∂ρ_k       = g_k = λ_k β̂' S_k β̂
+            ∂²rs/∂ρ_i∂ρ_j  = δ_ij g_i − 2 λ_i λ_j β̂' S_i A⁻¹ S_j β̂
+            ∂log|A|/∂ρ_k   = λ_k tr(A⁻¹ S_k)
+            ∂²log|A|/∂ρ_i∂ρ_j = δ_ij λ_i tr(A⁻¹ S_i)
+                              − λ_i λ_j tr(A⁻¹ S_i A⁻¹ S_j)
+            ∂log|S|+/∂ρ_k  = λ_k tr(S⁺ S_k)
+            ∂²log|S|+/∂ρ_i∂ρ_j = δ_ij λ_i tr(S⁺ S_i)
+                                − λ_i λ_j tr(S⁺ S_i S⁺ S_j)
+
+        Combining and using ∂(log f)/∂ρ_k = ∂f/∂ρ_k / f for the rs term,
+
+            H[i,j] of 2·V_R = (n−Mp)/rs · [δ_ij g_i
+                              − 2 λ_i λ_j β̂' S_i A⁻¹ S_j β̂
+                              − g_i g_j / rs]
+                            + δ_ij λ_i tr(A⁻¹ S_i)
+                            − λ_i λ_j tr(A⁻¹ S_i A⁻¹ S_j)
+                            − δ_ij λ_i tr(S⁺ S_i)
+                            + λ_i λ_j tr(S⁺ S_i S⁺ S_j)
+
+        Notice the δ_ij terms are exactly the gradient — the diagonal of
+        the Hessian is grad[i] plus the "off-diagonal" terms evaluated at
+        i=j. We exploit that to avoid duplicating code.
+
+        Returned in V_R scale (halved) — the convention ``_compute_Vr`` /
+        vcomp expect (mgcv's gam.fit3.post.proc inverts V_R Hessian to
+        get the asymptotic covariance of ρ̂).
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros((0, 0))
+        n_minus_Mp = self.n - self._Mp
+        rs = fit.rss + fit.pen
+        if rs <= 0 or n_minus_Mp <= 0:
+            return np.zeros((n_sp, n_sp))
+
+        p = self.p
+        sp = np.exp(rho)
+        A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(p))
+        S_pinv = self._S_pinv(fit.S_full)
+
+        # Per-slot precomputation. AinvS_block[k] = (A⁻¹ S_k) restricted
+        # to the columns where it's nonzero (slot k's range), shape
+        # (p, m_k); SpinvS_block analogous. Sbeta_full[k] = embedded
+        # p-vector S_k β̂. AinvSbeta[k] = A⁻¹ (S_k β̂) full p-vector for
+        # the β̂' S_i A⁻¹ S_j β̂ term.
+        AinvS_block: list[np.ndarray] = []
+        SpinvS_block: list[np.ndarray] = []
+        Sbeta_full = np.zeros((n_sp, p))
+        AinvSbeta = np.empty((n_sp, p))
+        g = np.zeros(n_sp)
+        tr_AinvS = np.zeros(n_sp)
+        tr_SpinvS = np.zeros(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            beta_k = fit.beta[a:b]
+            Sb = slot.S @ beta_k
+            Sbeta_full[k, a:b] = Sb
+            AinvSbeta[k] = cho_solve(
+                (fit.A_chol, fit.A_chol_lower), Sbeta_full[k]
+            )
+            g[k] = sp[k] * float(beta_k @ Sb)
+            AinvS_block.append(A_inv[:, a:b] @ slot.S)
+            SpinvS_block.append(S_pinv[:, a:b] @ slot.S)
+            tr_AinvS[k] = float(np.einsum("ij,ji->", A_inv[a:b, a:b], slot.S))
+            tr_SpinvS[k] = float(np.einsum("ij,ji->", S_pinv[a:b, a:b], slot.S))
+
+        # 2·V_R gradient — same as ``_reml_grad``; the diagonal of the
+        # 2·V_R Hessian is grad2[i] plus the i=j evaluation of the
+        # quadratic-in-(i,j) terms below.
+        grad2 = (n_minus_Mp / rs) * g + sp * tr_AinvS - sp * tr_SpinvS
+
+        H2 = np.zeros((n_sp, n_sp))
+        for i in range(n_sp):
+            a_i, b_i = self._slots[i].col_start, self._slots[i].col_end
+            for j in range(i, n_sp):
+                a_j, b_j = self._slots[j].col_start, self._slots[j].col_end
+                # β̂' S_i A⁻¹ S_j β̂ = (S_i β̂)' (A⁻¹ S_j β̂).
+                bSiAinvSj_b = float(Sbeta_full[i] @ AinvSbeta[j])
+                # tr(A⁻¹ S_i A⁻¹ S_j) via the embedded-block trick: rows
+                # of AinvS_block[i] at j's column range × rows of
+                # AinvS_block[j] at i's column range, contracted on both
+                # axes (the standard tr(MN) = einsum('ij,ji->',M,N) but
+                # restricted to the nonzero stripes).
+                tr_AA = float(np.einsum(
+                    "ab,ba->",
+                    AinvS_block[i][a_j:b_j, :],
+                    AinvS_block[j][a_i:b_i, :],
+                ))
+                tr_SS = float(np.einsum(
+                    "ab,ba->",
+                    SpinvS_block[i][a_j:b_j, :],
+                    SpinvS_block[j][a_i:b_i, :],
+                ))
+                cross = (
+                    (n_minus_Mp / rs) * (
+                        -2.0 * sp[i] * sp[j] * bSiAinvSj_b
+                        - g[i] * g[j] / rs
+                    )
+                    - sp[i] * sp[j] * tr_AA
+                    + sp[i] * sp[j] * tr_SS
+                )
+                if i == j:
+                    H2[i, i] = cross + grad2[i]
+                else:
+                    H2[i, j] = H2[j, i] = cross
+
+        return 0.5 * H2
+
     def _gcv(self, rho: np.ndarray) -> float:
         """Generalized cross-validation score. Wood 2017 §4.4."""
         fit = self._fit_given_rho(rho)
@@ -592,33 +780,6 @@ class gam:
             v[a:b] = -sp_k * (slot.S @ beta[a:b])
             db[:, k] = cho_solve((A_chol, A_chol_lower), v)
         return db
-
-    def _reml_hessian(self, rho: np.ndarray, h: float = 1e-4) -> np.ndarray:
-        """Hessian of mgcv's V_R wrt log-sp ρ via central differences.
-
-        ``self._reml`` returns 2·V_R (we add `(n−Mp)·log(rss+pen)` plus
-        `log|A| − log|S|+`, then a constant), so divide the resulting
-        Hessian by 2 to express it in mgcv's V_R scale — that's what
-        gam.fit3.post.proc inverts to get the asymptotic covariance of ρ̂.
-        """
-        n_sp = len(rho)
-        f0 = self._reml(rho)
-        H2 = np.zeros((n_sp, n_sp))
-        for i in range(n_sp):
-            rp = rho.copy(); rp[i] += h
-            rm = rho.copy(); rm[i] -= h
-            H2[i, i] = (self._reml(rp) - 2.0 * f0 + self._reml(rm)) / (h * h)
-            for j in range(i + 1, n_sp):
-                rpp = rho.copy(); rpp[i] += h; rpp[j] += h
-                rpm = rho.copy(); rpm[i] += h; rpm[j] -= h
-                rmp = rho.copy(); rmp[i] -= h; rmp[j] += h
-                rmm = rho.copy(); rmm[i] -= h; rmm[j] -= h
-                val = (
-                    self._reml(rpp) - self._reml(rpm)
-                    - self._reml(rmp) + self._reml(rmm)
-                ) / (4.0 * h * h)
-                H2[i, j] = H2[j, i] = val
-        return 0.5 * H2
 
     def _compute_edf12(self, rho: np.ndarray, fit: "_FitState",
                        sigma_squared: float, A_inv: np.ndarray,
