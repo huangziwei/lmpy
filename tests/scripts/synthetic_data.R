@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Synthetic data generators referenced by corpus/feature_matrix.yaml
+# Synthetic data generators referenced by tests/corpus/feature_matrix.yaml
 # meta.synthetic_generators. Writes reproducible CSVs to datasets/synthetic/.
 #
 # Each generator is seeded; output is idempotent. Re-run to regenerate.

@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 # Classify + auto-tag harvested formulas.
 #
-# Reads:   corpus/harvested_raw.yaml, corpus/feature_matrix.yaml
-# Writes:  corpus/wr.yaml, corpus/lme4.yaml, corpus/mgcv.yaml
+# Reads:   tests/corpus/harvested_raw.yaml, tests/corpus/feature_matrix.yaml
+# Writes:  tests/corpus/wr.yaml, tests/corpus/lme4.yaml, tests/corpus/mgcv.yaml
 #
 # Classification (priority order):
 #   1. fn == lmer|glmer|nlmer|lFormula|glFormula    -> lme4
@@ -26,11 +26,11 @@ suppressPackageStartupMessages({
   })
 })
 
-HARVEST    <- "corpus/harvested_raw.yaml"
-FM         <- "corpus/feature_matrix.yaml"
-OUT_WR     <- "corpus/wr.yaml"
-OUT_LME4   <- "corpus/lme4.yaml"
-OUT_MGCV   <- "corpus/mgcv.yaml"
+HARVEST    <- "tests/corpus/harvested_raw.yaml"
+FM         <- "tests/corpus/feature_matrix.yaml"
+OUT_WR     <- "tests/corpus/wr.yaml"
+OUT_LME4   <- "tests/corpus/lme4.yaml"
+OUT_MGCV   <- "tests/corpus/mgcv.yaml"
 
 # -----------------------------------------------------------------------------
 # Feature matrix -> flat vector of valid feature ids
@@ -519,7 +519,7 @@ for (i in seq_along(all_entries)) {
 write_section <- function(path, entries, kind) {
   out <- list(
     meta = list(
-      generated_by = "scripts/tag_corpus.R",
+      generated_by = "tests/scripts/tag_corpus.R",
       generated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
       kind = kind,
       count = length(entries)

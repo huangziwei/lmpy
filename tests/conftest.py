@@ -125,7 +125,7 @@ def fixture_X_ref(fx_id: str) -> pl.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# glm() oracle loader — reads the JSON dumped by scripts/make_glm_oracles.R.
+# glm() oracle loader — reads the JSON dumped by tests/scripts/make_glm_oracles.R.
 # ---------------------------------------------------------------------------
 GLM_ORACLE_ROOT = FIXTURE_ROOT / "glm"
 
@@ -140,6 +140,6 @@ def load_glm_oracle(name: str) -> dict:
     if not path.exists():
         raise FileNotFoundError(
             f"glm oracle {name!r} not found at {path}; "
-            "regenerate via `Rscript scripts/make_glm_oracles.R`"
+            "regenerate via `Rscript tests/scripts/make_glm_oracles.R`"
         )
     return json.loads(path.read_text())

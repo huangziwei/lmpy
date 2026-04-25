@@ -1,6 +1,6 @@
 """Smoke check: every (family, link, dataset) triple in the glm-port plan
 (.claude/plans/glm-port.md, Phase 0.2) has an oracle JSON dumped by
-scripts/make_glm_oracles.R, and the oracle parses to the expected shape.
+tests/scripts/make_glm_oracles.R, and the oracle parses to the expected shape.
 
 This test catches a missing fixture before the family-level parity tests
 fail with a confusing FileNotFoundError. If you add a triple to Phase 0.2,

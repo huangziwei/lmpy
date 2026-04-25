@@ -20,7 +20,7 @@ DATA_ROOT <- "datasets"
 dir.create(OUT_ROOT, showWarnings = FALSE, recursive = TRUE)
 
 # --------------------------------------------------------------------------
-# Dataset loading — same CSV layout as scripts/make_fixtures.R reads.
+# Dataset loading — same CSV layout as tests/scripts/make_fixtures.R reads.
 # Factor columns: read as character then convert based on a small per-dataset
 # whitelist below (we don't need the full schema-json round-trip the GAM
 # fixture-maker uses; glm() only cares that columns are factors of the right

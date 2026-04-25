@@ -5,7 +5,7 @@
 #
 # Idempotent: skips any file that already exists, so re-running is cheap
 # and won't clobber manual edits. Synthetic seed_*.csv files come from
-# scripts/synthetic_data.R and live under datasets/synthetic/.
+# tests/scripts/synthetic_data.R and live under datasets/synthetic/.
 
 suppressPackageStartupMessages({
   library(tools)

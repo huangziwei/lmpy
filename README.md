@@ -1,12 +1,6 @@
 # Doing Linear Models with Python
 
-An exercise of implementing R's `lm` interface in Python .
-
-## Dependencies
-
-- Python >=3.10.0
-- numpy, scipy, matplotlib, pandas, polars
-- formulaic 
+An exercise of implementing R's `lm`, `lme`, `glm` and `gam` in Python .
 
 ## Usage
 

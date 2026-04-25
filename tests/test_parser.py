@@ -15,14 +15,14 @@ import yaml
 
 from lmpy.formula import ParseError, parse
 
-ROOT = Path(__file__).resolve().parent.parent
+CORPUS_DIR = Path(__file__).resolve().parent / "corpus"
 CORPORA = ("wr", "lme4", "mgcv", "curated")
 
 
 def _load_cases():
     cases = []
     for name in CORPORA:
-        doc = yaml.safe_load((ROOT / "corpus" / f"{name}.yaml").read_text())
+        doc = yaml.safe_load((CORPUS_DIR / f"{name}.yaml").read_text())
         for case in doc["cases"]:
             cases.append((name, case["id"], case["formula"]))
     return cases

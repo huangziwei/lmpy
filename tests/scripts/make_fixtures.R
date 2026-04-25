@@ -3,7 +3,7 @@
 # case and dumping the result.
 #
 # Reads:
-#   corpus/wr.yaml, corpus/lme4.yaml, corpus/mgcv.yaml  (tagged cases)
+#   tests/corpus/wr.yaml, tests/corpus/lme4.yaml, tests/corpus/mgcv.yaml  (tagged cases)
 #   datasets/<pkg>/<name>.csv                            (harvested/synthetic data)
 #
 # Writes:
@@ -58,10 +58,10 @@ load_curated <- function(path) {
   })
 }
 all_cases <- c(
-  load_cases("corpus/wr.yaml",   "wr"),
-  load_cases("corpus/lme4.yaml", "lme4"),
-  load_cases("corpus/mgcv.yaml", "mgcv"),
-  load_curated("corpus/curated.yaml")
+  load_cases("tests/corpus/wr.yaml",   "wr"),
+  load_cases("tests/corpus/lme4.yaml", "lme4"),
+  load_cases("tests/corpus/mgcv.yaml", "mgcv"),
+  load_curated("tests/corpus/curated.yaml")
 )
 exec_cases <- Filter(function(c) isTRUE(c$executable), all_cases)
 cat(sprintf("loaded %d cases (%d executable)\n",

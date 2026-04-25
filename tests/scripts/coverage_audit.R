@@ -2,13 +2,13 @@
 # Coverage audit for the tagged corpus.
 #
 # Reads:
-#   corpus/feature_matrix.yaml    (all axes and feature ids we aspire to cover)
-#   corpus/wr.yaml                (tagged WR cases)
-#   corpus/lme4.yaml              (tagged lme4 cases)
-#   corpus/mgcv.yaml              (tagged mgcv cases)
+#   tests/corpus/feature_matrix.yaml    (all axes and feature ids we aspire to cover)
+#   tests/corpus/wr.yaml                (tagged WR cases)
+#   tests/corpus/lme4.yaml              (tagged lme4 cases)
+#   tests/corpus/mgcv.yaml              (tagged mgcv cases)
 #
 # Writes:
-#   corpus/coverage.txt           (human-readable audit)
+#   tests/corpus/coverage.txt           (human-readable audit)
 #
 # Reports:
 #   (a) per-section per-axis feature coverage (count + list of uncovered values)
@@ -21,12 +21,12 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
-FM_PATH  <- "corpus/feature_matrix.yaml"
-WR       <- "corpus/wr.yaml"
-LME4     <- "corpus/lme4.yaml"
-MGCV     <- "corpus/mgcv.yaml"
-CURATED  <- "corpus/curated.yaml"
-OUT      <- "corpus/coverage.txt"
+FM_PATH  <- "tests/corpus/feature_matrix.yaml"
+WR       <- "tests/corpus/wr.yaml"
+LME4     <- "tests/corpus/lme4.yaml"
+MGCV     <- "tests/corpus/mgcv.yaml"
+CURATED  <- "tests/corpus/curated.yaml"
+OUT      <- "tests/corpus/coverage.txt"
 DATA     <- "datasets"
 MANIFEST <- "tests/fixtures/manifest.json"
 

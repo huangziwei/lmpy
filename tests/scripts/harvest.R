@@ -6,16 +6,16 @@
 # to an AST, and walk the AST for calls to model-fitting functions. The first
 # positional arg (or the named `formula` arg) is the formula; deparse it.
 #
-# Output: corpus/harvested_raw.yaml — raw, de-duplicated, grouped by source
+# Output: tests/corpus/harvested_raw.yaml — raw, de-duplicated, grouped by source
 # package. Intended for manual review and tagging with feature:value ids from
-# corpus/feature_matrix.yaml. Not consumed directly by the fixture generator.
+# tests/corpus/feature_matrix.yaml. Not consumed directly by the fixture generator.
 
 suppressPackageStartupMessages({
   library(tools)
   library(yaml)
 })
 
-OUT <- "corpus/harvested_raw.yaml"
+OUT <- "tests/corpus/harvested_raw.yaml"
 dir.create(dirname(OUT), showWarnings = FALSE, recursive = TRUE)
 
 # Which packages to scrape, and which function-calls within them carry a
@@ -189,7 +189,7 @@ for (pkg in names(by_pkg)) {
 yaml::write_yaml(
   list(
     meta = list(
-      generated_by = "scripts/harvest.R",
+      generated_by = "tests/scripts/harvest.R",
       generated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
       r_version = R.version.string,
       packages = lapply(names(TARGETS), function(p) {

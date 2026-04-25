@@ -21,7 +21,7 @@ OUT_ROOT <- "datasets"
 PKGS <- c("datasets", "MASS", "nlme", "lme4", "mgcv", "faraway", "gamair",
           "splines", "stats")
 
-# Mirrors scripts/export_data.R: custom-fetched data.frames keyed by (pkg, name).
+# Mirrors tests/scripts/export_data.R: custom-fetched data.frames keyed by (pkg, name).
 special <- list(
   list(pkg = "mgcv", name = "gamSim_eg1",
        fn = function() { set.seed(2); mgcv::gamSim(eg = 1, n = 400, verbose = FALSE) }),
