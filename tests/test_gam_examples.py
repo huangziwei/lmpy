@@ -272,43 +272,67 @@ def test_machines_re_smooths_REML():
              data=d, method="REML")
     assert b1.n == 54
     assert b1.p == 27  # full mgcv design, no gam.side surgery on re smooths
-    _allclose(b1.edf_total, 17.7646, atol=5e-3, name="b1.edf")
+    # mgcv reference (mgcv 1.9-4, REML, gam.vcomp). Tolerances are tighter
+    # than mgcv-printed-precision because lmpy's analytical Newton path
+    # converges to |grad|<1e-10 (vs mgcv's ~3e-5 stopping criterion);
+    # residual lmpy↔mgcv drift is dominated by mgcv's noise floor.
+    _allclose(b1.edf_total,  17.76461, atol=5e-5, name="b1.edf")
     # edf < edf2 < edf1 — sp uncertainty inflates df, capped by tr(2F-F²).
-    _allclose(b1.edf1_total, 17.9952, atol=5e-3, name="b1.edf1")
-    _allclose(b1.edf2_total, 17.8600, atol=5e-3, name="b1.edf2")
+    _allclose(b1.edf1_total, 17.99523, atol=5e-5, name="b1.edf1")
+    _allclose(b1.edf2_total, 17.85995, atol=5e-5, name="b1.edf2")
     assert b1.edf_total < b1.edf2_total <= b1.edf1_total
-    _allclose(b1.sigma_squared, 0.9246, atol=5e-4, name="b1.sigma2")
-    _allclose(b1.loglike, -63.7353, atol=5e-3, name="b1.loglike")
-    _allclose(b1.AIC, 165.19, atol=5e-3, name="b1.AIC")
+    _allclose(b1.sigma_squared, 0.92463,  atol=5e-5, name="b1.sigma2")
+    _allclose(b1.loglike,    -63.73532,   atol=5e-4, name="b1.loglike")
+    _allclose(b1.AIC,        165.19055,   atol=5e-4, name="b1.AIC")
     _assert_param(b1, "(Intercept)", 52.3556, atol=5e-3)
     # both blocks should have meaningful edf — degraded path would give ~1
     assert b1.edf_by_smooth["s(Worker)"] > 3.0
     assert b1.edf_by_smooth["s(Machine,Worker)"] > 8.0
 
-    # vcomp: matches mgcv to 3 decimals on points and CIs.
+    # vcomp: matches mgcv to 4-5 decimals on points and CIs.
     vc = b1.vcomp
     assert vc.shape == (3, 4)
     assert vc["name"].to_list() == ["s(Worker)", "s(Machine,Worker)", "scale"]
     expected = {
-        "s(Worker)":         (4.7811, 2.2499, 10.1600),
-        "s(Machine,Worker)": (3.7295, 2.3828,  5.8374),
-        "scale":             (0.9616, 0.7633,  1.2114),
+        "s(Worker)":         (4.78106, 2.24987, 10.15997),
+        "s(Machine,Worker)": (3.72952, 2.38281,  5.83737),
+        "scale":             (0.96158, 0.76325,  1.21143),
     }
     for nm, (sd, lo, hi) in expected.items():
         row = vc.filter(pl.col("name") == nm).row(0, named=True)
-        _allclose(row["std_dev"], sd, atol=5e-3, name=f"vcomp {nm}.std")
-        _allclose(row["lower"],   lo, atol=2e-2, name=f"vcomp {nm}.lo")
-        _allclose(row["upper"],   hi, atol=5e-2, name=f"vcomp {nm}.hi")
+        _allclose(row["std_dev"], sd, atol=5e-4, name=f"vcomp {nm}.std")
+        _allclose(row["lower"],   lo, atol=5e-4, name=f"vcomp {nm}.lo")
+        _allclose(row["upper"],   hi, atol=5e-4, name=f"vcomp {nm}.hi")
 
     b2 = gam("score ~ Machine + s(Worker, bs='re') + s(Worker, bs='re', by=Machine)",
              data=d, method="REML")
     assert b2.n == 54
     # by=Machine produces one block per level → 3 extra sp's, total 4
     assert b2.sp.shape == (4,)
-    _allclose(b2.edf_total, 17.6445, atol=5e-3, name="b2.edf")
-    _allclose(b2.sigma_squared, 0.9246, atol=5e-4, name="b2.sigma2")
-    _allclose(b2.loglike, -63.8246, atol=5e-3, name="b2.loglike")
-    _allclose(b2.AIC, 165.62, atol=5e-3, name="b2.AIC")
+    _allclose(b2.edf_total,  17.64453, atol=5e-5, name="b2.edf")
+    _allclose(b2.edf2_total, 17.98557, atol=5e-5, name="b2.edf2")
+    _allclose(b2.sigma_squared, 0.92463, atol=5e-5, name="b2.sigma2")
+    _allclose(b2.loglike,    -63.82464,  atol=5e-4, name="b2.loglike")
+    _allclose(b2.AIC,        165.62043,  atol=5e-4, name="b2.AIC")
+
+    vc2 = b2.vcomp
+    assert vc2.shape == (5, 4)
+    assert vc2["name"].to_list() == [
+        "s(Worker)", "s(Worker):MachineA", "s(Worker):MachineB",
+        "s(Worker):MachineC", "scale",
+    ]
+    expected_b2 = {
+        "s(Worker)":          (3.78595, 1.79873,  7.96861),
+        "s(Worker):MachineA": (1.94032, 0.25319, 14.86973),
+        "s(Worker):MachineB": (5.87402, 2.98833, 11.54628),
+        "s(Worker):MachineC": (2.84547, 0.82993,  9.75584),
+        "scale":              (0.96158, 0.76325,  1.21143),
+    }
+    for nm, (sd, lo, hi) in expected_b2.items():
+        row = vc2.filter(pl.col("name") == nm).row(0, named=True)
+        _allclose(row["std_dev"], sd, atol=5e-4, name=f"b2 vcomp {nm}.std")
+        _allclose(row["lower"],   lo, atol=5e-4, name=f"b2 vcomp {nm}.lo")
+        _allclose(row["upper"],   hi, atol=5e-4, name=f"b2 vcomp {nm}.hi")
 
 
 def test_data_helper_applies_schema_sidecar():

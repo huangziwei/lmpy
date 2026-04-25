@@ -263,7 +263,7 @@ class gam:
             fit = self._fit_given_rho(rho_hat)
         else:
             obj = self._reml if method == "REML" else self._gcv
-            # Coarse coordinate-wise scan to seed L-BFGS-B. Two passes:
+            # Coarse coordinate-wise scan to seed Newton. Two passes:
             # first pick the best uniform ρ across all dimensions, then
             # walk one coordinate at a time fixing the others at the
             # current best. Cheap (~ n_sp × |grid| extra evals) and fixes
@@ -291,13 +291,17 @@ class gam:
                     val = obj(rho_try)
                     if np.isfinite(val) and val < cur_val:
                         cur_val, cur_rho = val, rho_try
-            bounds = [(-30.0, 30.0)] * n_sp
-            res = minimize(
-                obj, cur_rho, method="L-BFGS-B", bounds=bounds,
-                options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
-            )
-            rho_hat = res.x
-            self._optim = res
+            if method == "REML":
+                rho_hat = self._outer_newton(cur_rho)
+            else:
+                # GCV: keep L-BFGS-B (no analytical Hessian for GCV yet).
+                bounds = [(-30.0, 30.0)] * n_sp
+                res = minimize(
+                    obj, cur_rho, method="L-BFGS-B", bounds=bounds,
+                    options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
+                )
+                rho_hat = res.x
+                self._optim = res
             self.sp = np.exp(rho_hat)
             fit = self._fit_given_rho(rho_hat)
 
@@ -751,6 +755,71 @@ class gam:
 
         return 0.5 * H2
 
+    def _outer_newton(self, rho0: np.ndarray, max_iter: int = 200,
+                      tol_grad: float = 1e-8, tol_step: float = 1e-12,
+                      max_step: float = 5.0) -> np.ndarray:
+        """mgcv-style damped Newton on V_R wrt ρ — gam.outer's `newton()`.
+
+        Per iteration:
+          1. Compute analytical g = ∂V_R/∂ρ and H = ∂²V_R/∂ρ∂ρ
+             (``_reml_grad`` returns the 2·V_R gradient — halve it; the
+             analytical ``_reml_hessian`` already lives in V_R scale).
+          2. Eigen-clamp H to PD: replace negative eigenvalues with their
+             absolute value, and clamp small/zero eigenvalues to a tiny
+             positive floor. This guarantees the Newton direction is a
+             descent direction even when H is indefinite (regions of the
+             surface that are ridge-shaped between λ-modes).
+          3. Step d = -H_pd^{-1} g, capped at max_step in ∞-norm.
+          4. Step-halving line search until V_R decreases.
+          5. Stop on |g|_∞ < tol_grad or |Δf| / (1 + |f|) < tol_step.
+
+        L-BFGS-B's BFGS approximation drifts off the true Hessian by
+        enough that ρ̂ lands ~1e-4 from the analytical stationary point
+        — that's the residual gap to mgcv on Machines b2's vcomp. Damped
+        Newton on the analytical pieces converges to the same ρ̂ as
+        mgcv to FP precision.
+        """
+        rho = rho0.copy()
+        f_prev = self._reml(rho)
+        for _ in range(max_iter):
+            fit = self._fit_given_rho(rho)
+            grad = 0.5 * self._reml_grad(rho, fit)         # V_R gradient
+            if np.abs(grad).max() < tol_grad:
+                break
+            H = self._reml_hessian(rho, fit)               # V_R Hessian
+            H = 0.5 * (H + H.T)
+            w, V = np.linalg.eigh(H)
+            w_max = float(np.abs(w).max()) if w.size > 0 else 1.0
+            eps = max(w_max * 1e-7, 1e-12)
+            # Negative eigvals → flip sign; small ones → clamp up. This
+            # gives a positive-definite quadratic model whose minimizer
+            # is a proper Newton step.
+            w_pd = np.where(np.abs(w) > eps, np.abs(w), eps)
+            d = -V @ ((V.T @ grad) / w_pd)
+            d_norm = float(np.abs(d).max())
+            if d_norm > max_step:
+                d *= max_step / d_norm
+            # Backtracking step-halving on V_R = _reml/2 (or just 2·V_R
+            # since the comparison only cares about descent).
+            alpha = 1.0
+            f_new = f_prev
+            descent = False
+            for _ in range(40):
+                rho_new = rho + alpha * d
+                f_new = self._reml(rho_new)
+                if np.isfinite(f_new) and f_new < f_prev - 1e-14 * abs(f_prev):
+                    descent = True
+                    break
+                alpha *= 0.5
+            if not descent:
+                break
+            rho = rho_new
+            df = abs(f_new - f_prev)
+            f_prev = f_new
+            if df < tol_step * (1.0 + abs(f_prev)):
+                break
+        return rho
+
     def _gcv(self, rho: np.ndarray) -> float:
         """Generalized cross-validation score. Wood 2017 §4.4."""
         fit = self._fit_given_rho(rho)
@@ -811,9 +880,14 @@ class gam:
 
         db = self._db_drho(rho, fit.beta, fit.A_chol, fit.A_chol_lower)
         Vr = self._compute_Vr(rho, H_aug)
+        # mgcv splits Vr by component: Vc1 uses pinv(H_aug) on positive
+        # eigenspace; Vc2 uses (H_aug + 0.1·I)^{-1} — a weak prior on log
+        # smoothing parameters (gam.fit3.post.proc line 1011). Without
+        # this prior on Vc2, edf2 drifts ~1e-3 above mgcv.
+        Vr_reg = self._compute_Vr(rho, H_aug, prior_var=0.1)
 
         Vc1 = db @ Vr @ db.T
-        Vc2 = self._compute_Vc2(rho, fit, Vr, sigma_squared)
+        Vc2 = self._compute_Vc2(rho, fit, Vr_reg, sigma_squared)
 
         # diag((σ²A⁻¹ + Vc1 + Vc2)·X'X)/σ² = edf + diag((Vc1 + Vc2)·X'X)/σ².
         # Each summand is symmetric so einsum('ij,ij->i', M, X'X) gives
@@ -835,21 +909,31 @@ class gam:
         return edf2, edf1
 
     def _compute_Vr(self, rho: np.ndarray,
-                    H_aug: np.ndarray | None) -> np.ndarray:
-        """Marginal covariance of ρ̂ — top-left ρρ block of pinv(H_aug).
+                    H_aug: np.ndarray | None,
+                    prior_var: float | None = None) -> np.ndarray:
+        """Marginal covariance of ρ̂ — top-left ρρ block of inverse of H_aug.
 
-        When H_aug is given (REML path), this is the Schur complement
-        of the augmented Hessian, which equals the inverse of the
-        profiled-σ² Hessian up to numerical noise. When it isn't (GCV /
-        no aug Hessian available), invert the ρ-only profiled Hessian
-        directly. In both cases project onto the positive eigenspace
-        before inverting — at sp's near a bound the surface is locally
-        flat and near-zero eigenvalues would blow up. mgcv uses the
-        same trick in ``gam.fit3.post.proc``.
+        ``prior_var=None`` (default): pseudo-inverse with positive-eigenvalue
+        projection — used for Vc1 and vcomp CIs. When H_aug is given, this
+        is the Schur complement of the augmented Hessian; without it, invert
+        the ρ-only profiled Hessian directly. Project onto the positive
+        eigenspace before inverting (near sp bounds the surface is locally
+        flat and tiny eigenvalues would blow up).
+
+        ``prior_var > 0``: regularized inverse where eigenvalues are
+        replaced by ``max(λ, 0) + prior_var`` before inverting — used for
+        Vc2 to mirror mgcv's ``1/(d+1/10)`` prior on log smoothing
+        parameters (gam.fit3.post.proc line 1011, "exp(4·var^.5) gives
+        approx multiplicative range"). Without this, edf2 on bs='re' /
+        nested-RE models drifts ~1e-3 above mgcv.
         """
         n_sp = len(self._slots)
         if H_aug is not None:
             w, V = np.linalg.eigh(H_aug)
+            if prior_var is not None:
+                d_reg = np.where(w > 0, w, 0.0) + float(prior_var)
+                H_inv = (V / d_reg) @ V.T
+                return H_inv[:n_sp, :n_sp]
             w_max = float(w.max()) if w.size > 0 else 0.0
             keep = (w > w_max * 1e-7) if w_max > 0 else np.zeros_like(w, dtype=bool)
             if not keep.any():
@@ -860,6 +944,9 @@ class gam:
         H = self._reml_hessian(rho)
         H = 0.5 * (H + H.T)
         w, V = np.linalg.eigh(H)
+        if prior_var is not None:
+            d_reg = np.where(w > 0, w, 0.0) + float(prior_var)
+            return (V / d_reg) @ V.T
         w_max = float(w.max()) if w.size > 0 else 0.0
         keep = (w > w_max * 1e-7) if w_max > 0 else np.zeros_like(w, dtype=bool)
         if not keep.any():
@@ -927,62 +1014,65 @@ class gam:
         Vc2 = np.einsum("ij,iac,jbc->ab", Vr, M, M)
         return sigma_squared * Vc2
 
-    def _reml_unprofiled(self, rho: np.ndarray, log_sigma2: float) -> float:
-        """Joint un-profiled 2·V_R as a function of (ρ, log σ²).
-
-        ``self._reml`` profiles σ² out at the MLE (rss+pen)/(n−Mp); this
-        version keeps it explicit so we can take a Hessian wrt log σ²
-        for variance-component CIs. At ζ̂ = log((rss+pen)/(n−Mp)) it
-        collapses to ``self._reml(ρ)`` exactly.
-
-           2·V_R = (n−Mp)·ζ + (rss + pen)·exp(−ζ) + log|A| − log|S|+
-                                                    + (n−Mp)·log(2π)
-        """
-        fit = self._fit_given_rho(rho)
-        penalized_ss = fit.rss + fit.pen
-        n_minus_Mp = self.n - self._Mp
-        if penalized_ss <= 0 or n_minus_Mp <= 0:
-            return 1e15
-        log_det_S = self._log_det_S_pos(rho)
-        sigma2 = float(np.exp(log_sigma2))
-        return (
-            n_minus_Mp * log_sigma2
-            + penalized_ss / sigma2
-            + fit.log_det_A
-            - log_det_S
-            + n_minus_Mp * float(np.log(2 * np.pi))
-        )
-
     def _reml_hessian_augmented(
-        self, rho: np.ndarray, log_sigma2: float, h: float = 1e-4,
+        self, rho: np.ndarray, log_sigma2: float,
+        fit: "_FitState | None" = None,
     ) -> np.ndarray:
-        """Hessian of mgcv's V_R wrt (ρ, log σ²) by central differences.
+        """Analytical Hessian of V_R wrt (ρ, log σ²) — Wood 2011 §4.
 
-        ``_reml_unprofiled`` returns 2·V_R, so divide by 2 at the end —
-        matches the convention mgcv inverts in `gam.vcomp` to get the
-        asymptotic covariance of (log sp, log scale).
+        Differentiating the unprofiled criterion
+
+           2·V_R = (n−Mp)·ζ + rs·exp(−ζ) + log|A| − log|S|+ + const
+
+        (rs = rss + pen, ζ = log σ²) and halving:
+
+           ∂²V_R/∂ζ²    = rs·exp(−ζ) / 2   (= (n−Mp)/2 at ζ̂)
+           ∂²V_R/∂ρ_k∂ζ = −g_k·exp(−ζ) / 2 = −g_k/(2σ²)
+           ∂²V_R/∂ρ_i∂ρ_j  — same Wood §4 structure as the profiled
+                              Hessian, but the rs-term has no chain-rule
+                              −g_i g_j/rs piece (we're differentiating
+                              rs·exp(−ζ), not log rs).
+
+        At ζ̂ the un-profiling reduces to a rank-1 Schur correction on
+        the ρρ block, so we reuse ``_reml_hessian`` (analytical V_R
+        Hessian wrt ρ, profiled at ζ̂) and add ``outer(c, c)/d`` where
+        c = H_aug[ρ, ζ] and d = H_aug[ζ, ζ]. Off ζ̂ this identity no
+        longer holds; the only consumers (vcomp, edf12) always pass
+        ``log_sigma2 = log(self.sigma_squared)``, i.e., evaluate at ζ̂,
+        so the rank-1 path is exact for them.
+
+        Returned in V_R scale (mgcv's gam.vcomp inverts this).
         """
-        n_sp = len(rho)
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n_sp = len(self._slots)
+        n_minus_Mp = self.n - self._Mp
+        sigma2 = float(np.exp(log_sigma2))
         m = n_sp + 1
-        theta0 = np.concatenate([rho, [log_sigma2]])
+        H = np.zeros((m, m))
+        if n_sp == 0 or sigma2 <= 0 or n_minus_Mp <= 0:
+            H[n_sp, n_sp] = 0.5 * n_minus_Mp
+            return H
 
-        def f(theta: np.ndarray) -> float:
-            return self._reml_unprofiled(theta[:n_sp], float(theta[n_sp]))
+        sp = np.exp(rho)
+        g = np.zeros(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            beta_k = fit.beta[a:b]
+            g[k] = sp[k] * float(beta_k @ slot.S @ beta_k)
 
-        f0 = f(theta0)
-        H2 = np.zeros((m, m))
-        for i in range(m):
-            tp = theta0.copy(); tp[i] += h
-            tm = theta0.copy(); tm[i] -= h
-            H2[i, i] = (f(tp) - 2.0 * f0 + f(tm)) / (h * h)
-            for j in range(i + 1, m):
-                tpp = theta0.copy(); tpp[i] += h; tpp[j] += h
-                tpm = theta0.copy(); tpm[i] += h; tpm[j] -= h
-                tmp = theta0.copy(); tmp[i] -= h; tmp[j] += h
-                tmm = theta0.copy(); tmm[i] -= h; tmm[j] -= h
-                val = (f(tpp) - f(tpm) - f(tmp) + f(tmm)) / (4.0 * h * h)
-                H2[i, j] = H2[j, i] = val
-        return 0.5 * H2
+        H_rho_zeta = -0.5 * g / sigma2                       # shape (n_sp,)
+        rs = fit.rss + fit.pen
+        H_zeta_zeta = 0.5 * rs / sigma2                      # = (n−Mp)/2 at ζ̂
+
+        H_profiled = self._reml_hessian(rho, fit)            # V_R, ρρ-only
+        H_rho_rho = H_profiled + np.outer(H_rho_zeta, H_rho_zeta) / H_zeta_zeta
+
+        H[:n_sp, :n_sp] = H_rho_rho
+        H[:n_sp, n_sp] = H_rho_zeta
+        H[n_sp, :n_sp] = H_rho_zeta
+        H[n_sp, n_sp] = H_zeta_zeta
+        return H
 
     def _compute_vcomp(self) -> pl.DataFrame:
         """Build the variance-component table mgcv calls ``gam.vcomp``.
