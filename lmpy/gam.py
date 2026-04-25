@@ -41,7 +41,15 @@ from scipy.stats import f as f_dist, norm, t as t_dist
 
 from .family import Family, Gaussian
 from .formula import SmoothBlock, materialize_smooths
-from .utils import format_df, prepare_design, significance_code
+from .utils import (
+    _dig_tst,
+    format_df,
+    format_pval,
+    format_signif,
+    format_signif_jointly,
+    prepare_design,
+    significance_code,
+)
 
 __all__ = ["gam"]
 
@@ -2473,15 +2481,20 @@ class gam:
             else:
                 pv = np.full_like(t_stats, np.nan)
             sig = significance_code(pv)
+            est_s, se_s = format_signif_jointly([est, se], digits=digits)
             tbl = pl.DataFrame({
                 "": self.parametric_columns,
-                "Estimate":   np.round(est, digits),
-                "Std. Error": np.round(se, digits),
-                "t value":    np.round(t_stats, digits),
-                "Pr(>|t|)":   np.round(pv, digits),
+                "Estimate":   est_s,
+                "Std. Error": se_s,
+                "t value":    format_signif(t_stats, digits=digits),
+                "Pr(>|t|)":   format_pval(pv, digits=_dig_tst(digits)),
                 " ":          sig,
             })
-            out.append(format_df(tbl))
+            out.append(format_df(
+                tbl,
+                align={c: "right" for c in
+                       ("Estimate", "Std. Error", "t value", "Pr(>|t|)")},
+            ))
             out.append("---")
             out.append(
                 "Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
@@ -2518,13 +2531,17 @@ class gam:
             sig = significance_code(rows_p)
             sm_tbl = pl.DataFrame({
                 "":        rows_label,
-                "edf":     np.round(rows_edf, digits),
-                "Ref.df":  np.round(rows_refdf, digits),
-                "F":       np.round(rows_F, digits),
-                "p-value": np.round(rows_p, digits),
+                "edf":     format_signif(rows_edf, digits=digits),
+                "Ref.df":  format_signif(rows_refdf, digits=digits),
+                "F":       format_signif(rows_F, digits=digits),
+                "p-value": format_pval(rows_p, digits=_dig_tst(digits)),
                 " ":       sig,
             })
-            out.append(format_df(sm_tbl))
+            out.append(format_df(
+                sm_tbl,
+                align={c: "right" for c in
+                       ("edf", "Ref.df", "F", "p-value")},
+            ))
             out.append("---")
             out.append(
                 "Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
@@ -2532,19 +2549,21 @@ class gam:
             out.append("")
 
         # -- fit stats ------------------------------------------------------
+        # mgcv: `formatC(r.sq, digits=3, width=5)`, `formatC(dev.expl*100,
+        # digits=3)`, `formatC(REML/GCV/scale, digits=5)`. Match that.
         out.append(
             f"R-sq.(adj) = {self.r_squared_adjusted:.3g}  "
-            f"Deviance explained = {self.deviance_explained * 100:.1f}%"
+            f"Deviance explained = {self.deviance_explained * 100:.3g}%"
         )
         if self.method == "REML":
             out.append(
-                f"-REML = {self.REML_criterion / 2:.4f}  "
-                f"Scale est. = {self.sigma_squared:.4g}  n = {self.n}"
+                f"-REML = {self.REML_criterion / 2:.5g}  "
+                f"Scale est. = {self.sigma_squared:.5g}  n = {self.n}"
             )
         else:
             out.append(
-                f"GCV = {self.GCV_score:.4g}  "
-                f"Scale est. = {self.sigma_squared:.4g}  n = {self.n}"
+                f"GCV = {self.GCV_score:.5g}  "
+                f"Scale est. = {self.sigma_squared:.5g}  n = {self.n}"
             )
         print("\n".join(out))
 

@@ -22,7 +22,15 @@ from scipy.stats import norm, t as student_t
 
 from .family import Binomial, Family, Gaussian, Link
 from .formula import _eval_atom, deparse, materialize, parse, Call, Name
-from .utils import format_df, prepare_design, significance_code
+from .utils import (
+    _dig_tst,
+    format_df,
+    format_pval,
+    format_signif,
+    format_signif_jointly,
+    prepare_design,
+    significance_code,
+)
 
 __all__ = ["glm"]
 
@@ -670,7 +678,7 @@ class glm:
     def __str__(self) -> str:
         return self.__repr__()
 
-    def summary(self, digits: int = 3) -> None:
+    def summary(self, digits: int = 4) -> None:
         """Print a ``summary.glm``-styled report."""
         stat_lbl = "z value" if self._test_kind == "z" else "t value"
         p_lbl = "Pr(>|z|)" if self._test_kind == "z" else "Pr(>|t|)"
@@ -678,21 +686,35 @@ class glm:
         p_arr = np.asarray(self.p_values.row(0), dtype=float)
         sig = significance_code(p_arr)
         ci_low_col, ci_hi_col = self.ci_bhat.columns[1], self.ci_bhat.columns[2]
+        ci_low_arr = self.ci_bhat[ci_low_col].to_numpy()
+        ci_hi_arr = self.ci_bhat[ci_hi_col].to_numpy()
+        # Estimate+SE share decimals (R's printCoefmat cs.ind block); CI
+        # columns join a separate group so the smaller-magnitude bounds
+        # don't force extra decimals on Estimate/SE.
+        est_s, se_s = format_signif_jointly(
+            [self._bhat_arr, self._se_bhat_arr], digits=digits,
+        )
+        cilo_s, cihi_s = format_signif_jointly(
+            [ci_low_arr, ci_hi_arr], digits=digits,
+        )
 
         coef_df = pl.DataFrame({
             "":            self.column_names,
-            "Estimate":    np.round(self._bhat_arr, digits),
-            "Std. Error":  np.round(self._se_bhat_arr, digits),
-            ci_low_col:    np.round(self.ci_bhat[ci_low_col].to_numpy(), digits),
-            ci_hi_col:     np.round(self.ci_bhat[ci_hi_col].to_numpy(), digits),
-            stat_lbl:      np.round(self._stat_arr, digits),
-            p_lbl:         np.round(p_arr, digits),
+            "Estimate":    est_s,
+            "Std. Error":  se_s,
+            ci_low_col:    cilo_s,
+            ci_hi_col:     cihi_s,
+            stat_lbl:      format_signif(self._stat_arr, digits=digits),
+            p_lbl:         format_pval(p_arr, digits=_dig_tst(digits)),
             " ":           sig,
         })
 
+        num_align = {c: "right" for c in
+                     ("Estimate", "Std. Error", ci_low_col, ci_hi_col,
+                      stat_lbl, p_lbl)}
         out = f"Call:\nglm(formula = {self.formula}, family = {self.family})\n\n"
         out += "Coefficients:\n"
-        out += format_df(coef_df)
+        out += format_df(coef_df, align=num_align)
         out += "\n---"
         out += "\nSignif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n"
 

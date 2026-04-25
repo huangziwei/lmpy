@@ -8,7 +8,15 @@ from scipy.optimize import minimize
 from scipy.stats import f, norm, t
 
 from .formula import materialize
-from .utils import format_df, prepare_design, significance_code
+from .utils import (
+    _dig_tst,
+    format_df,
+    format_pval,
+    format_signif,
+    format_signif_jointly,
+    prepare_design,
+    significance_code,
+)
 
 __all__ = ["lm"]
 
@@ -399,7 +407,7 @@ class lm:
     def predict(self, new=None, interval=None, alpha=0.05):
         return self.compute_yhat(Xnew=new, interval=interval, alpha=alpha)
 
-    def summary(self, digits=3, cor=False):
+    def summary(self, digits=4, cor=False):
 
         docstring = f"""Formula: {self.formula}\n\n"""
         docstring += "Coefficients:\n"
@@ -408,21 +416,36 @@ class lm:
         p_arr = np.asarray(self.p_values.row(0), dtype=float)
         sig = significance_code(p_arr)
         ci_low_col, ci_hi_col = self.ci_bhat.columns[1], self.ci_bhat.columns[2]
+        ci_low_arr = self.ci_bhat[ci_low_col].to_numpy()
+        ci_hi_arr = self.ci_bhat[ci_hi_col].to_numpy()
+        # Joint format Estimate+SE so the smaller-magnitude column drives
+        # decimals (mirrors R's `printCoefmat` cs.ind block). CI columns
+        # join their own group — they often have smaller magnitudes than
+        # Estimate/SE and would otherwise force extra decimals on those.
+        est_s, se_s = format_signif_jointly(
+            [self._bhat_arr, self._se_bhat_arr], digits=digits,
+        )
+        cilo_s, cihi_s = format_signif_jointly(
+            [ci_low_arr, ci_hi_arr], digits=digits,
+        )
         res = pl.DataFrame(
             {
                 "": self.column_names,
-                "Estimate": np.round(self._bhat_arr, digits),
-                "Std. Error": np.round(self._se_bhat_arr, digits),
-                ci_low_col: np.round(self.ci_bhat[ci_low_col].to_numpy(), digits),
-                ci_hi_col: np.round(self.ci_bhat[ci_hi_col].to_numpy(), digits),
-                "t values": np.round(t_arr, digits),
-                "Pr(>|t|)": np.round(p_arr, digits),
+                "Estimate": est_s,
+                "Std. Error": se_s,
+                ci_low_col: cilo_s,
+                ci_hi_col: cihi_s,
+                "t value": format_signif(t_arr, digits=digits),
+                "Pr(>|t|)": format_pval(p_arr, digits=_dig_tst(digits)),
                 " ": sig,
             }
         )
         self.results = res
 
-        docstring += format_df(res)
+        num_align = {c: "right" for c in
+                     ("Estimate", "Std. Error", ci_low_col, ci_hi_col,
+                      "t value", "Pr(>|t|)")}
+        docstring += format_df(res, align=num_align)
         docstring += "\n---"
         docstring += "\nSignif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
 

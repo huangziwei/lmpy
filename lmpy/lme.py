@@ -30,7 +30,7 @@ from sksparse.cholmod import (
 )
 
 from .formula import materialize_bars
-from .utils import format_df, prepare_design
+from .utils import format_df, format_signif, format_signif_jointly, prepare_design
 
 __all__ = ["lme", "Profile"]
 
@@ -769,11 +769,21 @@ class lme:
         out.append(self._n_obs_line())
         out.append("")
         out.append("Fixed effects:")
-        tbl = self._fixef_table().rename({"coef": ""})
-        tbl = tbl.with_columns(
-            [pl.col(c).round(digits) for c in tbl.columns if tbl[c].dtype.is_numeric()]
-        )
-        out.append(format_df(tbl))
+        raw = self._fixef_table().rename({"coef": ""})
+        est_arr = raw["Estimate"].to_numpy()
+        se_arr  = raw["Std. Error"].to_numpy()
+        tval    = raw["t value"].to_numpy()
+        est_s, se_s = format_signif_jointly([est_arr, se_arr], digits=digits)
+        tbl = pl.DataFrame({
+            "":           raw[""].to_list(),
+            "Estimate":   est_s,
+            "Std. Error": se_s,
+            "t value":    format_signif(tval, digits=digits),
+        })
+        out.append(format_df(
+            tbl,
+            align={c: "right" for c in ("Estimate", "Std. Error", "t value")},
+        ))
         corr_lines = self._fixef_corr_lines()
         if corr_lines:
             out.append("")
