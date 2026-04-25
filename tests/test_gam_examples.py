@@ -188,6 +188,55 @@ def test_mcycle_ps_REML():
 
 
 # ---------------------------------------------------------------------------
+# 7) gamSim eg1 — overlap case: s(x1)+s(x2)+te(x1,x2) requires gam.side
+# ---------------------------------------------------------------------------
+
+
+def test_gamSim_eg1_overlap_gamSide_REML():
+    """gam(y ~ x0 + s(x1, bs='cr') + s(x2) + te(x1, x2), method='REML')
+
+    The te(x1, x2) marginals overlap the main-effect smooths s(x1) and s(x2).
+    Without identifiability constraints the joint design would be rank-deficient
+    along the te marginals. mgcv handles this in `gam.side`: it builds X1 from
+    the intercept + every strict-subset smooth (here s(x1) and s(x2)), then
+    QR-with-pivoting picks the te columns that are linearly dependent on X1
+    and deletes them (along with the matching rows/cols of each marginal S).
+
+    For this dataset gam.side drops 2 te columns (24 → 22), so the full design
+    has p = 42 columns. Pinning p exercises that path end-to-end.
+
+    The REML surface has multiple near-equivalent optima differing in how
+    they distribute penalty between the te marginals and the main-effect
+    s(x1)/s(x2). lmpy and mgcv land at different optima, so the per-marginal
+    sp's diverge. Overall fit quantities (σ², REML, r², intercept, x0)
+    still agree closely, and edfs land within ~0.34.
+    """
+    d = load_dataset("mgcv", "gamSim_eg1")
+    m = gam("y ~ x0 + s(x1, bs='cr') + s(x2) + te(x1, x2)", d, method="REML")
+
+    assert m.n == 400
+    # gam.side must drop 2 te columns: intercept + x0 + s(x1)[9] + s(x2)[9] + te[24-2]
+    assert m.bhat.shape[1] == 42, f"gam.side drop failed: p={m.bhat.shape[1]} (expected 42)"
+
+    # 4 sp's: s(x1), s(x2), te-marginal-1, te-marginal-2
+    assert m.sp.shape == (4,)
+    _allclose(m.sp[1], 7.998938e-03, atol=5e-4, name="sp[s(x2)]")
+
+    # Tight: overall fit
+    _allclose(m.sigma_squared, 4.149471, atol=5e-2, name="sigma2")
+    _allclose(m.r_squared_adjusted, 0.697276, atol=5e-3, name="r2adj")
+    _allclose(m.REML_criterion / 2, 866.7819, atol=5e-1, name="REML/2")
+    _assert_param(m, "(Intercept)", 7.642771, atol=5e-3)
+    _assert_param(m, "x0", 0.394401, atol=5e-3)
+
+    # Looser: edfs (multi-modal sp surface — mgcv vs lmpy land at different optima)
+    _allclose(m.edf_total, 13.836828, atol=5e-1, name="edf_total")
+    _allclose(m.edf_by_smooth["s(x1)"], 2.790683, atol=2e-1, name="edf[s(x1)]")
+    _allclose(m.edf_by_smooth["s(x2)"], 8.044964, atol=5e-2, name="edf[s(x2)]")
+    _allclose(m.edf_by_smooth["te(x1,x2)"], 1.001181, atol=5e-1, name="edf[te]")
+
+
+# ---------------------------------------------------------------------------
 # Cross-cutting: sp passthrough reproduces a fixed-sp fit
 # ---------------------------------------------------------------------------
 

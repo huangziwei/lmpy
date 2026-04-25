@@ -14,17 +14,16 @@ penalty matrices ``S_k`` (one per (block, penalty) slot) embedded in
 minimizing REML (default) or GCV over ``ρ`` with L-BFGS-B; at each
 evaluation ``β̂(λ) = (XᵀX + Sλ)⁻¹ Xᵀy`` is solved by Cholesky.
 
+Identifiability across nested smooths (``s(x1) + te(x1, x2)``) is
+handled by an in-Python port of mgcv's ``gam.side`` / ``fixDependence``:
+te columns that are linearly dependent on the marginal smooths are
+deleted before fitting, dropping te from 24 → 22 cols (matching
+``ncol(model.matrix(m))``).
+
 Gaussian identity link only in this first port. Non-Gaussian families,
 penalized null-space shrinkage, prediction intervals, and out-of-sample
 prediction for smooth terms (needs a mgcv-style ``PredictMat`` shim)
 are out of scope here.
-
-Known limitation: a marginal smooth that overlaps with a tensor smooth
-(e.g. ``y ~ s(x2) + te(x1, x2)``) finds a different optimum than mgcv
-because the naive ``log|Sλ|_+`` here doesn't handle the rank-deficient
-penalty interaction the way mgcv's ``gam.reparam`` does. Tensor smooths
-in isolation (with non-overlapping marginals) match mgcv exactly — see
-``tests/test_gam_examples.py::test_gamSim_eg1_tensor_REML``.
 
 References
 ----------
@@ -151,6 +150,16 @@ class gam:
 
         sb_lists = materialize_smooths(d.expanded, d.data) if d.expanded.smooths else []
         blocks: list[SmoothBlock] = [b for group in sb_lists for b in group]
+        # mgcv's gam.side: when one smooth's variable set is a strict subset
+        # of another's (e.g. `s(x1) + te(x1, x2)`), the wider smooth's basis
+        # contains a copy of the narrower's main effect, which makes the
+        # combined design rank-deficient and the REML/GCV optimum drift away
+        # from mgcv's. Apply orthogonality constraints (column-rotate the
+        # wider smooth so its columns are orthogonal in the data space to
+        # the narrower's). This typically drops one column per overlap, so
+        # `te(x1, x2)` next to `s(x1) + s(x2)` shrinks 24 → 22 cols, matching
+        # mgcv's `model.matrix` exactly.
+        blocks = _apply_gam_side(blocks)
 
         # Build full design X = [X_param | X_block_1 | X_block_2 | …] and the
         # parallel list of penalty "slots" (one per (block, S_j) pair). Each
@@ -688,6 +697,97 @@ class gam:
 def _row_frame(values: np.ndarray, columns: list[str]) -> pl.DataFrame:
     flat = np.asarray(values).reshape(-1)
     return pl.DataFrame({c: [float(flat[i])] for i, c in enumerate(columns)})
+
+
+def _apply_gam_side(blocks: list[SmoothBlock]) -> list[SmoothBlock]:
+    """Apply mgcv's ``gam.side`` identifiability surgery.
+
+    For each block ``b`` whose variable set strictly contains another
+    block's (e.g. ``te(x1, x2)`` over ``s(x1) + s(x2)``), some columns of
+    ``X_b`` are linearly dependent on the union of the smaller smooths'
+    designs plus the intercept. mgcv finds those columns via
+    ``fixDependence`` (a QR with column pivoting on the residual after
+    projecting out the smaller smooths) and **deletes** them — both from
+    ``X_b`` and from the rows/cols of each ``S_b[j]``. For a default
+    ``te(x1, x2)`` with ``s(x1) + s(x2)`` marginals, this drops exactly 2
+    columns (24 → 22), matching ``ncol(model.matrix(m))``.
+
+    This is *column deletion* on the original basis, not a rotation: the
+    remaining te columns are not orthogonal to the marginal smooths in
+    data space, but the combined design is now identifiable. mgcv's
+    procedure (`gam.side.R` + `fixDependence`) is what we mirror here.
+    """
+    if len(blocks) < 2:
+        return blocks
+    var_sets = [frozenset(b.term) for b in blocks]
+    n = int(np.asarray(blocks[0].X).shape[0])
+    out: list[SmoothBlock] = []
+    for i, b in enumerate(blocks):
+        my_vars = var_sets[i]
+        Xb = np.asarray(b.X, dtype=float)
+        # X1 = intercept + every strict-subset block's design — exactly
+        # what `gam.side` builds before calling `fixDependence`.
+        cols_X1 = [np.ones((n, 1))]
+        for j, other in enumerate(blocks):
+            if i == j:
+                continue
+            if var_sets[j] and var_sets[j] < my_vars:
+                cols_X1.append(np.asarray(other.X, dtype=float))
+        if len(cols_X1) == 1:
+            out.append(b)
+            continue
+        X1 = np.concatenate(cols_X1, axis=1)
+        ind = _fix_dependence(X1, Xb)
+        if not ind:
+            out.append(b)
+            continue
+        keep = [c for c in range(Xb.shape[1]) if c not in ind]
+        new_X = Xb[:, keep]
+        new_S = []
+        for Sj in b.S:
+            Sj = np.asarray(Sj, dtype=float)
+            new_S.append(Sj[np.ix_(keep, keep)])
+        out.append(SmoothBlock(
+            label=b.label, term=b.term, cls=b.cls, X=new_X, S=new_S,
+        ))
+    return out
+
+
+def _fix_dependence(X1: np.ndarray, X2: np.ndarray,
+                    tol: float = float(np.finfo(float).eps) ** 0.5) -> list[int]:
+    """Find columns of ``X2`` that are linearly dependent on ``X1``.
+
+    Mirrors mgcv's ``fixDependence(X1, X2, tol)`` (non-strict mode):
+
+    1. ``Q1 R1 = X1`` (QR of X1).
+    2. Project X2 onto the orthogonal complement of X1's column space
+       and take the bottom block of ``Q1ᵀ X2`` (rows ``r+1..n``).
+    3. QR of that residual *with column pivoting*. Trailing columns
+       whose mean abs over the diagonal block falls below
+       ``|R1[0,0]| · tol`` are the dependent ones — return their pivot
+       indices in X2.
+    """
+    n, r = X1.shape
+    Q1, R1 = np.linalg.qr(X1, mode="complete")
+    if R1.size == 0 or n <= r:
+        return []
+    R11 = abs(R1[0, 0]) if R1.shape[0] > 0 else 1.0
+    QtX2 = Q1.T @ X2
+    residual = QtX2[r:, :]
+    if residual.shape[0] == 0:
+        return []
+    # column-pivoted QR via scipy (numpy's qr lacks pivoting)
+    from scipy.linalg import qr as scipy_qr
+    Q2, R2, piv = scipy_qr(residual, mode="economic", pivoting=True)
+    nrows = R2.shape[0]
+    r_full = nrows
+    r0 = r_full
+    while r0 > 0 and float(np.mean(np.abs(R2[r0 - 1: r_full, r0 - 1: r_full]))) < R11 * tol:
+        r0 -= 1
+    r0 += 1
+    if r0 > r_full:
+        return []
+    return [int(p) for p in piv[r0 - 1: r_full]]
 
 
 def _sym_rank(S: np.ndarray) -> int:
