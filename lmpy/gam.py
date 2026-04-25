@@ -37,7 +37,6 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 from scipy.linalg import cho_factor, cho_solve, solve_triangular
-from scipy.optimize import minimize
 from scipy.stats import f as f_dist, norm, t as t_dist
 
 from .family import Family, Gaussian
@@ -290,35 +289,15 @@ class gam:
             n_lp = 1 if include_log_phi else 0
             theta_dim = n_sp + n_lp
 
-            if method == "REML":
-                def obj(theta):
-                    rho_v = theta[:n_sp]
-                    lp_v = float(theta[n_sp]) if include_log_phi else 0.0
-                    fit_t = self._fit_given_rho(rho_v)
-                    return float(self._reml(rho_v, lp_v, fit=fit_t))
-            else:
-                def obj(theta):
-                    return float(self._gcv(theta[:n_sp]))
-
-                def obj_grad(theta):
-                    rho_v = theta[:n_sp]
-                    fit_t = self._fit_given_rho(rho_v)
-                    return self._gcv_grad(rho_v, fit=fit_t)
-
             # Initial seed.
             #
-            # REML (analytical Newton): start at ρ = 0 (sp = 1). Newton's
-            # eigen-clamped quadratic model handles the global descent;
-            # a coordinate-wise grid scan over ρ ∈ {−12,…,12} would walk
-            # one coordinate at a time and can settle in the saturation
-            # basin (sp_k → 0) when that axis descends monotonically away
-            # from the joint interior optimum. Verified for the Machines
-            # re-smooths against mgcv.
-            #
-            # GCV (L-BFGS-B): no Hessian, so L-BFGS-B from ρ=0 walks to
-            # the saturation tail on smooths where GCV decreases as
-            # sp → 0 (verified to fail mcycle's tp smooth). The two-pass
-            # coordinate grid scan finds a much better warm start.
+            # REML and GCV both run analytical Newton on the criterion's
+            # exact Hessian (mgcv's gam.outer). REML starts at ρ=0 (Newton's
+            # eigen-clamped quadratic model handles the global descent).
+            # GCV uses a coordinate grid-scan first, then Newton: the
+            # criterion has flat saturation tails on some smooths (e.g.
+            # mcycle's tp) where Newton from ρ=0 can drift toward the
+            # boundary; the grid scan finds the right basin.
             def _pearson_log_phi(rho_eval) -> float:
                 if not include_log_phi:
                     return 0.0
@@ -340,43 +319,37 @@ class gam:
             else:
                 grid = np.array([-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0])
 
-                def _eval_with_seed(rho_eval):
-                    lp = _pearson_log_phi(rho_eval)
-                    theta_try = np.r_[rho_eval, lp] if include_log_phi else rho_eval
-                    return float(obj(theta_try)), lp
+                def _gcv_at(rho_eval) -> float:
+                    try:
+                        fit_seed = self._fit_given_rho(rho_eval)
+                    except Exception:
+                        return float("inf")
+                    return float(self._gcv(rho_eval, fit=fit_seed))
 
-                best_val, best_rho0, best_logphi = np.inf, np.zeros(n_sp), 0.0
+                best_val, best_rho0 = np.inf, np.zeros(n_sp)
                 for g in grid:
                     rho_try = np.full(n_sp, g)
-                    val, lp = _eval_with_seed(rho_try)
+                    val = _gcv_at(rho_try)
                     if np.isfinite(val) and val < best_val:
-                        best_val, best_rho0, best_logphi = val, rho_try.copy(), lp
+                        best_val, best_rho0 = val, rho_try.copy()
                 cur_rho = best_rho0.copy()
                 cur_val = best_val
-                cur_logphi = best_logphi
                 for j in range(n_sp):
                     for g in grid:
                         rho_try = cur_rho.copy()
                         rho_try[j] = g
-                        val, lp = _eval_with_seed(rho_try)
+                        val = _gcv_at(rho_try)
                         if np.isfinite(val) and val < cur_val:
-                            cur_val, cur_rho, cur_logphi = val, rho_try, lp
+                            cur_val, cur_rho = val, rho_try
+                cur_logphi = 0.0  # GCV does not put log φ in θ
 
             theta0 = np.r_[cur_rho, cur_logphi] if include_log_phi else cur_rho
 
-            if method == "REML":
-                theta_hat = self._outer_newton(
-                    theta0, include_log_phi=include_log_phi
-                )
-            else:
-                bounds = [(-30.0, 30.0)] * theta_dim
-                res = minimize(
-                    obj, theta0, method="L-BFGS-B", jac=obj_grad,
-                    bounds=bounds,
-                    options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
-                )
-                theta_hat = res.x
-                self._optim = res
+            theta_hat = self._outer_newton(
+                theta0,
+                criterion=method if method == "REML" else "GCV",
+                include_log_phi=include_log_phi,
+            )
 
             if include_log_phi:
                 rho_hat = theta_hat[:n_sp]
@@ -402,14 +375,21 @@ class gam:
         # cho_solve(I) rather than via diag-tricks, since we need the full
         # matrix for Ve, per-coef SEs, and predict().
         A_inv = cho_solve((A_chol, A_chol_lower), np.eye(p))
-        # Ve = σ² A⁻¹ XᵀX A⁻¹ (frequentist); edf = diag(A⁻¹ XᵀX) (coefficient-
-        # space influence). The two expressions share A⁻¹ XᵀX so compute once.
-        A_inv_XtX = A_inv @ XtX
-        # Per-coefficient edf = diag(F) where F = A⁻¹ XᵀX. F is not
+        # mgcv's $edf and Ve are built from the PIRLS-converged X'WX, not
+        # the unweighted X'X (gam.fit3.r:644). For Gaussian-identity W ≡ I
+        # so X'WX = X'X and this is a no-op; for non-Gaussian PIRLS (Newton
+        # weights) it's required for parity.
+        if fit.w is None or np.allclose(fit.w, 1.0):
+            XtWX = XtX
+        else:
+            Xw = X * np.sqrt(fit.w)[:, None]
+            XtWX = Xw.T @ Xw
+        A_inv_XtWX = A_inv @ XtWX
+        # Per-coefficient edf = diag(F) where F = A⁻¹ X'WX. F is not
         # symmetric, so individual diag entries can be negative — mgcv
         # reports them verbatim (matches m$edf), and the per-smooth sum
         # remains non-negative and interpretable.
-        edf = np.diag(A_inv_XtX).copy()
+        edf = np.diag(A_inv_XtWX).copy()
         edf_total = float(edf.sum())
         # Prior weights (PIRLS uses ones today; binomial size / offset / prior-w
         # land later). Stored so residuals_of and Pearson-scale share the same
@@ -442,7 +422,7 @@ class gam:
         sigma = float(np.sqrt(sigma_squared)) if np.isfinite(sigma_squared) and sigma_squared >= 0 else float("nan")
 
         Vp = sigma_squared * A_inv
-        Ve = sigma_squared * A_inv_XtX @ A_inv
+        Ve = sigma_squared * A_inv_XtWX @ A_inv
 
         # ------------- attribute assembly ----------------------------------
         self.bhat = _row_frame(beta, column_names)
@@ -578,7 +558,7 @@ class gam:
         # only. sc.p = 1 if scale is estimated, 0 if known (mgcv convention).
         if n_sp > 0:
             edf2_per_coef, edf1_per_coef = self._compute_edf12(
-                rho_hat, fit, sigma_squared, A_inv, A_inv_XtX, edf, H_aug,
+                rho_hat, fit, sigma_squared, A_inv, A_inv_XtWX, edf, H_aug,
             )
             self.edf1 = edf1_per_coef
             self.edf2 = edf2_per_coef
@@ -1157,24 +1137,39 @@ class gam:
 
     def _outer_newton(
         self, theta0: np.ndarray, *, include_log_phi: bool,
+        criterion: str = "REML",
         max_iter: int = 200, conv_tol: float = 1e-9,
         max_step: float = 5.0, max_half: int = 30,
     ) -> np.ndarray:
-        """Unified analytical Newton on V_R(ρ, log φ) — mgcv's gam.outer.
+        """Unified analytical Newton on V_R(ρ, log φ) or V_g/V_u(ρ) — mgcv's gam.outer.
 
         Damped Newton with eigen-clamp on H, step cap, backtracking line
         search, and the relative-gradient stopping criterion
 
-            max(|g| / (0.1 + |V_R|)) < conv_tol      (after ≥ 4 iterations)
+            max(|g| / (0.1 + |V|)) < conv_tol      (after ≥ 4 iterations)
 
         which matches mgcv's outer convergence test. Works for any family
         — PIRLS inner solve degenerates to one Cholesky for Gaussian-
         identity (W=I, z=y).
 
         ``theta`` layout: ρ first, then a single log φ column when
-        ``include_log_phi`` is set (unknown-scale families). For known-
-        scale (Poisson, Binomial) log φ is fixed at 0.
+        ``include_log_phi`` is set (unknown-scale REML). For known-scale
+        REML (Poisson, Binomial) log φ is fixed at 0; for GCV.Cp log φ is
+        always off the outer vector.
+
+        ``criterion`` selects the objective:
+        - ``"REML"``: minimizes V_R via ``_reml`` (returns 2·V_R, hence
+          the 0.5 scaling), ``_reml_grad``, ``_reml_hessian``.
+        - ``"GCV"``: minimizes V_g (scale-unknown) or V_u (scale-known)
+          via ``_gcv``, ``_gcv_grad``, ``_gcv_hessian``. ``include_log_phi``
+          must be False (GCV does not put log φ in the outer vector — φ̂
+          is the Pearson estimate post-fit, not optimized).
         """
+        if criterion not in ("REML", "GCV"):
+            raise ValueError(f"criterion must be 'REML' or 'GCV', got {criterion!r}")
+        if criterion == "GCV" and include_log_phi:
+            raise ValueError("GCV path does not include log φ in outer θ.")
+
         n_sp = len(self._slots)
         theta = np.asarray(theta0, dtype=float).copy()
 
@@ -1183,14 +1178,36 @@ class gam:
                 return t[:n_sp], float(t[n_sp])
             return t, 0.0
 
-        def _eval(t):
-            rho_t, lp_t = _split(t)
-            try:
-                fit_t = self._fit_given_rho(rho_t)
-            except Exception:
-                return float("inf"), None
-            val_2VR = float(self._reml(rho_t, lp_t, fit=fit_t))
-            return val_2VR / 2.0, fit_t
+        if criterion == "REML":
+            def _eval(t):
+                rho_t, lp_t = _split(t)
+                try:
+                    fit_t = self._fit_given_rho(rho_t)
+                except Exception:
+                    return float("inf"), None
+                val_2VR = float(self._reml(rho_t, lp_t, fit=fit_t))
+                return val_2VR / 2.0, fit_t
+            def _grad(rho, log_phi, fit):
+                return 0.5 * self._reml_grad(
+                    rho, log_phi, fit=fit, include_log_phi=include_log_phi
+                )
+            def _hess(rho, log_phi, fit):
+                return 0.5 * self._reml_hessian(
+                    rho, log_phi, fit=fit, include_log_phi=include_log_phi
+                )
+        else:  # GCV
+            def _eval(t):
+                rho_t, _ = _split(t)
+                try:
+                    fit_t = self._fit_given_rho(rho_t)
+                except Exception:
+                    return float("inf"), None
+                val = float(self._gcv(rho_t, fit=fit_t))
+                return val, fit_t
+            def _grad(rho, log_phi, fit):
+                return self._gcv_grad(rho, fit=fit)
+            def _hess(rho, log_phi, fit):
+                return self._gcv_hessian(rho, fit=fit)
 
         f_prev, fit = _eval(theta)
         if fit is None:
@@ -1198,12 +1215,8 @@ class gam:
 
         for it in range(max_iter):
             rho, log_phi = _split(theta)
-            grad = 0.5 * self._reml_grad(
-                rho, log_phi, fit=fit, include_log_phi=include_log_phi
-            )
-            H = 0.5 * self._reml_hessian(
-                rho, log_phi, fit=fit, include_log_phi=include_log_phi
-            )
+            grad = _grad(rho, log_phi, fit)
+            H = _hess(rho, log_phi, fit)
             H = 0.5 * (H + H.T)
 
             rel_g = float(np.abs(grad).max() / (0.1 + abs(f_prev)))
@@ -1689,6 +1702,200 @@ class gam:
             + 2.0 * n * fit.dev * dtau_drho / (denom**3)
         )
 
+    def _gcv_hessian(self, rho: np.ndarray,
+                     fit: "_FitState | None" = None) -> np.ndarray:
+        """Analytical Hessian of `_gcv`. Shape (n_sp, n_sp). Wood 2008 §4.
+
+        scale_unknown:
+            V_g = n D / (n−τ)²
+            ∂²V_g/∂ρ_l∂ρ_k = n·∂²D/(n−τ)²
+                            + 2n·(∂D⊗∂τ + ∂τ⊗∂D)/(n−τ)³
+                            + 2n·D·∂²τ/(n−τ)³
+                            + 6n·D·(∂τ⊗∂τ)/(n−τ)⁴
+        scale_known:
+            V_u = D/n + 2τ/n − 1
+            ∂²V_u/∂ρ_l∂ρ_k = ∂²D/n + 2·∂²τ/n
+
+        Pieces (PIRLS-converged β̂, family-agnostic):
+
+          ∂²D/∂ρ_l∂ρ_k = 2 λ_l λ_k β̂' S_l A⁻¹ S_k β̂
+                        − 2 (∂β̂/∂ρ_l)' Sλ (∂β̂/∂ρ_k)
+                        − 2 (Sλβ̂)' ∂²β̂/(∂ρ_l ∂ρ_k)
+
+            Derived via Dp = D + β̂'Sλβ̂ subtraction: ∂²Dp = δ_lk g_k
+            − 2λ_lλ_k β̂'S_l A⁻¹ S_k β̂ (closed form from `_dDp_drho`'s g_k
+            differentiated again), and ∂²(β̂'Sλβ̂) cancels δ_lk g_k while
+            flipping the sign of the bSAS_b piece, giving the clean form
+            above.
+
+          ∂²τ/∂ρ_l∂ρ_k = tr[A⁻¹ P_l A⁻¹ P_k F] + tr[A⁻¹ P_k A⁻¹ P_l F]
+                        − tr[A⁻¹ d²A_lk F] + tr[A⁻¹ d²B_lk]
+                        − tr[A⁻¹ P_k A⁻¹ Q_l] − tr[A⁻¹ P_l A⁻¹ Q_k]
+
+            with A = X'WX+Sλ, B = X'WX, F = A⁻¹B = I−A⁻¹Sλ,
+            P_k = ∂A/∂ρ_k = X'·diag(hv_k)·X + λ_k·S_k_full,
+            Q_k = ∂B/∂ρ_k = X'·diag(hv_k)·X,
+            d²A_lk = X'·diag(d²w_lk)·X + δ_lk·λ_k·S_k_full,
+            d²B_lk = X'·diag(d²w_lk)·X,
+            d²w_lk_i = d²w/dη²·v_l_i·v_k_i + dw/dη·(X·d²b_lk)_i.
+
+        After d²A_lk = d²B_lk + δ_lk·λ_k·S_k_full and using tr[A⁻¹ d²B_lk]
+        = (diag P)' d²w_lk and tr[A⁻¹ d²B_lk F] = s' d²w_lk (same
+        Σᵢⱼ Pᵢⱼ² collapse as in `_gcv_grad`), the d²B/d²A pieces fold to
+        ``(d-s)' d²w_lk − δ_lk·λ_k·tr[A⁻¹ S_k F]``.
+
+        Gaussian-identity: hv ≡ 0 and d²w ≡ 0, so Q_k ≡ 0 and the W-deriv
+        terms collapse, leaving the clean closed-form
+        ``2 λ_l λ_k tr[A⁻¹ S_l A⁻¹ S_k F] − δ_lk·λ_k·tr[A⁻¹ S_k F]``.
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros((0, 0))
+
+        sp = np.exp(rho)
+        n, p = self.n, self.p
+        X = self._X_full
+        family = self.family
+
+        w_pirls = fit.w if fit.w is not None else np.ones(n)
+        if np.allclose(w_pirls, 1.0):
+            XtWX = self._XtX
+        else:
+            Xw = X * np.sqrt(w_pirls)[:, None]
+            XtWX = Xw.T @ Xw
+
+        # Common precomputations.
+        A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(p))
+        M = cho_solve((fit.A_chol, fit.A_chol_lower), X.T)   # (p, n)
+        P_n = X @ M                                           # (n, n)
+        d_diag = np.einsum("ij,ji->i", X, M)                  # diag(P_n)
+        Rsq = P_n * P_n
+        s = Rsq @ w_pirls
+        F = A_inv @ XtWX                                      # (p, p)
+        edf_total = float(np.trace(F))
+
+        # First-derivative ingredients.
+        db_drho = self._dbeta_drho(fit, rho)                  # (p, n_sp)
+        Sλβ = fit.S_full @ fit.beta                            # (p,)
+        dD_drho = -2.0 * (Sλβ @ db_drho)                       # (n_sp,)
+
+        # PIRLS W-derivative arrays. Always-call: zero for Gaussian-identity
+        # (verified algebraically — w=1 doesn't depend on η there), so we
+        # don't lose anything by dispatching uniformly through `_dw_deta` /
+        # `_d2w_deta2`.
+        dw_deta = self._dw_deta(fit)                           # (n,)
+        d2w_deta2 = self._d2w_deta2(fit)                       # (n,)
+        v = X @ db_drho                                        # (n, n_sp)
+        hv = dw_deta[:, None] * v                              # (n, n_sp)
+
+        # Per-slot block precomputations.
+        AinvS_block: list[np.ndarray] = []
+        Sbeta_full = np.zeros((n_sp, p))
+        AinvSbeta = np.empty((n_sp, p))
+        tr_AinvSk_F = np.zeros(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            AinvS_block.append(A_inv[:, a:b] @ slot.S)
+            beta_k = fit.beta[a:b]
+            Sb = slot.S @ beta_k
+            Sbeta_full[k, a:b] = Sb
+            AinvSbeta[k] = cho_solve(
+                (fit.A_chol, fit.A_chol_lower), Sbeta_full[k]
+            )
+            tr_AinvSk_F[k] = float(np.einsum(
+                "ij,ji->", AinvS_block[k], F[a:b, :]
+            ))
+
+        pen_piece = -sp * tr_AinvSk_F                          # (n_sp,)
+        w_piece = (d_diag - s) @ hv                            # (n_sp,)
+        dtau_drho = w_piece + pen_piece
+
+        # ---- ∂²D/∂ρ_l∂ρ_k ---------------------------------------------
+        # bSAS_b[l, k] = β̂' S_l A⁻¹ S_k β̂ (already symmetric).
+        bSAS_b = Sbeta_full @ AinvSbeta.T                      # (n_sp, n_sp)
+        Sλ_db = fit.S_full @ db_drho                            # (p, n_sp)
+        db_Sλ_db = db_drho.T @ Sλ_db                            # (n_sp, n_sp)
+        d2b = self._d2beta_drho_drho(
+            fit, rho, db_drho=db_drho, dw_deta=dw_deta
+        )                                                      # (p, n_sp, n_sp)
+        Sλβ_d2b = np.einsum("p,pij->ij", Sλβ, d2b)              # (n_sp, n_sp)
+
+        sp_outer = np.outer(sp, sp)
+        d2D = (
+            2.0 * sp_outer * bSAS_b
+            - 2.0 * db_Sλ_db
+            - 2.0 * Sλβ_d2b
+        )
+        d2D = 0.5 * (d2D + d2D.T)
+
+        # ---- ∂²τ/∂ρ_l∂ρ_k ---------------------------------------------
+        # Y_k = A⁻¹ P_k = M·diag(hv_k)·X + λ_k · A⁻¹ S_k_full   (p × p)
+        # U_k = A⁻¹ Q_k = M·diag(hv_k)·X                        (p × p)
+        Y_full = np.empty((n_sp, p, p))
+        U_full = np.empty((n_sp, p, p))
+        for k in range(n_sp):
+            a, b = self._slots[k].col_start, self._slots[k].col_end
+            MhX_k = M @ (hv[:, k:k+1] * X)
+            U_full[k] = MhX_k
+            Y_k = MhX_k.copy()
+            Y_k[:, a:b] += sp[k] * AinvS_block[k]
+            Y_full[k] = Y_k
+
+        d2tau = np.zeros((n_sp, n_sp))
+        for ll in range(n_sp):
+            for k in range(ll, n_sp):
+                # T1 + T2 = tr[(Y_l Y_k + Y_k Y_l) F]
+                YlYk = Y_full[ll] @ Y_full[k]
+                T_a = float(np.einsum("ij,ji->", YlYk, F))
+                if ll == k:
+                    T_b = T_a
+                else:
+                    YkYl = Y_full[k] @ Y_full[ll]
+                    T_b = float(np.einsum("ij,ji->", YkYl, F))
+                T1_T2 = T_a + T_b
+
+                # T4 + T5 = tr[Y_k U_l] + tr[Y_l U_k]
+                T4 = float(np.einsum("ij,ji->", Y_full[k], U_full[ll]))
+                T5 = float(np.einsum("ij,ji->", Y_full[ll], U_full[k]))
+
+                # d²w_lk and (d-s)' d²w_lk = T6 - tr[A⁻¹ d²B_lk F]
+                Xd2b_lk = X @ d2b[:, ll, k]
+                d2w_lk = (
+                    d2w_deta2 * v[:, ll] * v[:, k]
+                    + dw_deta * Xd2b_lk
+                )
+                T6_minus_T3B = float((d_diag - s) @ d2w_lk)
+                # d²A_lk has an extra δ_lk·λ_k·S_k_full beyond d²B_lk.
+                delta_S = -sp[k] * tr_AinvSk_F[k] if ll == k else 0.0
+
+                val = T1_T2 - T4 - T5 + T6_minus_T3B + delta_S
+                d2tau[ll, k] = val
+                if ll != k:
+                    d2tau[k, ll] = val
+
+        d2tau = 0.5 * (d2tau + d2tau.T)
+
+        # ---- Compose criterion Hessian --------------------------------
+        if family.scale_known:
+            return d2D / n + 2.0 * d2tau / n
+
+        denom = n - edf_total
+        if denom <= 0:
+            return np.full((n_sp, n_sp), 1e15)
+
+        Dn = float(fit.dev)
+        dD_dτ = np.outer(dD_drho, dtau_drho)
+        dτ_dτ = np.outer(dtau_drho, dtau_drho)
+        H = (
+            n * d2D / (denom * denom)
+            + 2.0 * n * (dD_dτ + dD_dτ.T) / (denom**3)
+            + 2.0 * n * Dn * d2tau / (denom**3)
+            + 6.0 * n * Dn * dτ_dτ / (denom**4)
+        )
+        return H
+
     def _db_drho(self, rho: np.ndarray, beta: np.ndarray,
                  A_chol, A_chol_lower) -> np.ndarray:
         """Analytical ∂β/∂ρ_k = -exp(ρ_k)·A⁻¹ S_k β, returned as (p, n_sp).
@@ -1710,12 +1917,12 @@ class gam:
 
     def _compute_edf12(self, rho: np.ndarray, fit: "_FitState",
                        sigma_squared: float, A_inv: np.ndarray,
-                       A_inv_XtX: np.ndarray, edf: np.ndarray,
+                       A_inv_XtWX: np.ndarray, edf: np.ndarray,
                        H_aug: np.ndarray | None):
         """mgcv's edf1 (frequentist tr(2F−F²) bound) and edf2 (sp-uncertainty
         corrected). Wood 2017 §6.11.3. Returns ``(edf2_per_coef, edf1_per_coef)``.
 
-        edf2 = diag((σ² A⁻¹ + Vc1 + Vc2) · X'X) / σ², where
+        edf2 = diag((σ² A⁻¹ + Vc1 + Vc2) · X'WX) / σ², where
 
           - Vc1 = (∂β̂/∂ρ) · Vr · (∂β̂/∂ρ)ᵀ     (β̂'s ρ-dependence)
           - Vc2 = σ² Σ_{i,j} Vr[i,j] M_i M_j^T    (Cholesky-derivative bit)
@@ -1729,7 +1936,7 @@ class gam:
         formula above is the full mgcv expression — matches
         ``gam.fit3.post.proc``'s Vp + Vc1 + Vc2 decomposition.
         """
-        F = A_inv_XtX
+        F = A_inv_XtWX
         edf1 = 2.0 * np.diag(F) - np.einsum("ij,ji->i", F, F)
 
         n_sp = len(self._slots)
@@ -1747,13 +1954,18 @@ class gam:
         Vc1 = db @ Vr @ db.T
         Vc2 = self._compute_Vc2(rho, fit, Vr_reg, sigma_squared)
 
-        # diag((σ²A⁻¹ + Vc1 + Vc2)·X'X)/σ² = edf + diag((Vc1 + Vc2)·X'X)/σ².
-        # Each summand is symmetric so einsum('ij,ij->i', M, X'X) gives
-        # the diagonal of the matrix product without forming it.
-        XtX = self._XtX
+        # diag((σ²A⁻¹ + Vc1 + Vc2)·X'WX)/σ² = edf + diag((Vc1 + Vc2)·X'WX)/σ².
+        # Each summand is symmetric so einsum('ij,ij->i', M, X'WX) gives
+        # the diagonal of the matrix product without forming it. For Gaussian
+        # identity W ≡ I and X'WX collapses to X'X.
+        if fit.w is None or np.allclose(fit.w, 1.0):
+            XtWX = self._XtX
+        else:
+            Xw = self._X_full * np.sqrt(fit.w)[:, None]
+            XtWX = Xw.T @ Xw
         if sigma_squared > 0 and np.isfinite(sigma_squared):
             Vc = Vc1 + Vc2
-            edf2 = edf + np.einsum("ij,ij->i", Vc, XtX) / sigma_squared
+            edf2 = edf + np.einsum("ij,ij->i", Vc, XtWX) / sigma_squared
         else:
             edf2 = edf.copy()
 
