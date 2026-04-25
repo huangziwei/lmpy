@@ -122,3 +122,24 @@ def fixture_meta(fx_id: str) -> tuple[dict, dict]:
 
 def fixture_X_ref(fx_id: str) -> pl.DataFrame:
     return pl.read_csv(FIXTURE_ROOT / fx_id / "X.csv", null_values="NA")
+
+
+# ---------------------------------------------------------------------------
+# glm() oracle loader — reads the JSON dumped by scripts/make_glm_oracles.R.
+# ---------------------------------------------------------------------------
+GLM_ORACLE_ROOT = FIXTURE_ROOT / "glm"
+
+
+def load_glm_oracle(name: str) -> dict:
+    """Load a stats::glm() oracle by id (e.g. 'poisson_log_quine').
+
+    Returns the parsed JSON as a dict; numeric scalars are floats, vectors
+    are plain Python lists (test code converts to numpy as needed).
+    """
+    path = GLM_ORACLE_ROOT / name / "oracle.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"glm oracle {name!r} not found at {path}; "
+            "regenerate via `Rscript scripts/make_glm_oracles.R`"
+        )
+    return json.loads(path.read_text())

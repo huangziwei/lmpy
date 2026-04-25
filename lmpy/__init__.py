@@ -12,6 +12,7 @@ from .family import (
     poisson,
 )
 from .gam import gam
+from .glm import glm
 from .lm import lm
 from .lme import lme
 from .utils import data, factor
