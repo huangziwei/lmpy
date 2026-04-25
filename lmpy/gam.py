@@ -404,16 +404,34 @@ class gam:
         else:
             loglike = float("nan")
         self.loglike = float(loglike)
+        # Augmented REML Hessian wrt (ρ, log σ²) — both edf12 (Vr in Vc1
+        # and Vc2) and vcomp (CIs on log σ_k) need it. Computed once and
+        # cached. For GCV / no-smooth / non-finite σ², leave as None and
+        # the consumers fall back to whatever they can do.
+        if (
+            method == "REML"
+            and n_sp > 0
+            and np.isfinite(sigma_squared)
+            and sigma_squared > 0
+        ):
+            log_sigma2_hat = float(np.log(sigma_squared))
+            H_aug = self._reml_hessian_augmented(rho_hat, log_sigma2_hat)
+            H_aug = 0.5 * (H_aug + H_aug.T)
+        else:
+            H_aug = None
+        self._H_aug = H_aug
         # mgcv's df rule (`logLik.gam`): use sum(edf2) when available, where
         # edf2 is the sp-uncertainty-corrected df from Wood 2017 §6.11.3.
         # edf alone systematically under-counts because it conditions on the
-        # estimated λ; edf2 = diag((σ²A⁻¹ + Vc) X'X)/σ² absorbs the extra
-        # variance from λ̂ via Vc = (∂β/∂ρ) Hλ⁻¹ (∂β/∂ρ)ᵀ. edf1 = tr(2F-F²)
-        # is the upper bound; cap edf2 at edf1 element-wise then in total.
-        # +1 is for the residual scale (sc.p in mgcv).
+        # estimated λ; edf2 = diag((σ²A⁻¹ + Vc1 + Vc2) X'X)/σ² absorbs the
+        # extra variance from λ̂. Vc1 = (∂β/∂ρ) Vr (∂β/∂ρ)ᵀ is the obvious
+        # bit; Vc2 = σ² Σ_{i,j} Vr[i,j] M_i M_j^T accounts for the
+        # ρ-dependence of L^{-T} in the Bayesian draw β̃ = β̂ + σ L^{-T} z.
+        # edf1 = tr(2F-F²) is the upper bound; cap edf2 at edf1 in total
+        # only. +1 is for the residual scale (sc.p in mgcv).
         if n_sp > 0:
             edf2_per_coef, edf1_per_coef = self._compute_edf12(
-                rho_hat, fit, sigma_squared, A_inv, A_inv_XtX, edf,
+                rho_hat, fit, sigma_squared, A_inv, A_inv_XtX, edf, H_aug,
             )
             self.edf1 = edf1_per_coef
             self.edf2 = edf2_per_coef
@@ -604,13 +622,24 @@ class gam:
 
     def _compute_edf12(self, rho: np.ndarray, fit: "_FitState",
                        sigma_squared: float, A_inv: np.ndarray,
-                       A_inv_XtX: np.ndarray, edf: np.ndarray):
+                       A_inv_XtX: np.ndarray, edf: np.ndarray,
+                       H_aug: np.ndarray | None):
         """mgcv's edf1 (frequentist tr(2F−F²) bound) and edf2 (sp-uncertainty
         corrected). Wood 2017 §6.11.3. Returns ``(edf2_per_coef, edf1_per_coef)``.
 
-        For Gaussian + identity, the dw/dρ term in mgcv's Vc2 vanishes
-        (constant weights), so only Vc1 = (∂β/∂ρ) Hλ⁻¹ (∂β/∂ρ)ᵀ
-        contributes — matches gam.fit3.post.proc's special path.
+        edf2 = diag((σ² A⁻¹ + Vc1 + Vc2) · X'X) / σ², where
+
+          - Vc1 = (∂β̂/∂ρ) · Vr · (∂β̂/∂ρ)ᵀ     (β̂'s ρ-dependence)
+          - Vc2 = σ² Σ_{i,j} Vr[i,j] M_i M_j^T    (Cholesky-derivative bit)
+
+        with M_k = ∂L^{-T}/∂ρ_k. Vr is the marginal covariance of ρ̂,
+        taken as the top-left block of pinv(H_aug) (this equals the
+        Schur complement of the augmented REML Hessian — same thing as
+        inverting the profiled-σ² Hessian, mathematically). Falls back
+        to the profiled Hessian when H_aug is unavailable (GCV / no
+        smooths). For Gaussian + identity, dw/dρ vanishes so the Vc2
+        formula above is the full mgcv expression — matches
+        ``gam.fit3.post.proc``'s Vp + Vc1 + Vc2 decomposition.
         """
         F = A_inv_XtX
         edf1 = 2.0 * np.diag(F) - np.einsum("ij,ji->i", F, F)
@@ -620,28 +649,18 @@ class gam:
             return edf.copy(), edf1
 
         db = self._db_drho(rho, fit.beta, fit.A_chol, fit.A_chol_lower)
-        H = self._reml_hessian(rho)
-        H = 0.5 * (H + H.T)
+        Vr = self._compute_Vr(rho, H_aug)
 
-        # Project onto Hλ's positive eigenspace before inverting. At sp's
-        # near a bound the function is locally flat, producing near-zero
-        # eigenvalues that would otherwise blow up after inversion. mgcv
-        # uses a similar threshold in gam.fit3.post.proc.
-        w, V = np.linalg.eigh(H)
-        w_max = float(w.max()) if w.size > 0 else 0.0
-        keep = (w > w_max * 1e-7) if w_max > 0 else np.zeros_like(w, dtype=bool)
-        if keep.any():
-            Vk = V[:, keep]
-            Hinv = (Vk / w[keep]) @ Vk.T
-            Vc1 = db @ Hinv @ db.T
-        else:
-            Vc1 = np.zeros_like(A_inv)
+        Vc1 = db @ Vr @ db.T
+        Vc2 = self._compute_Vc2(rho, fit, Vr, sigma_squared)
 
-        # diag((σ²A⁻¹ + Vc1)·X'X)/σ² = edf + diag(Vc1·X'X)/σ². Both Vc1 and
-        # X'X are symmetric → einsum('ij,ij->i') gives diag(Vc1·X'X).
+        # diag((σ²A⁻¹ + Vc1 + Vc2)·X'X)/σ² = edf + diag((Vc1 + Vc2)·X'X)/σ².
+        # Each summand is symmetric so einsum('ij,ij->i', M, X'X) gives
+        # the diagonal of the matrix product without forming it.
         XtX = self._XtX
         if sigma_squared > 0 and np.isfinite(sigma_squared):
-            edf2 = edf + np.einsum("ij,ij->i", Vc1, XtX) / sigma_squared
+            Vc = Vc1 + Vc2
+            edf2 = edf + np.einsum("ij,ij->i", Vc, XtX) / sigma_squared
         else:
             edf2 = edf.copy()
 
@@ -653,6 +672,99 @@ class gam:
         if edf2.sum() > edf1.sum():
             edf2 = edf1.copy()
         return edf2, edf1
+
+    def _compute_Vr(self, rho: np.ndarray,
+                    H_aug: np.ndarray | None) -> np.ndarray:
+        """Marginal covariance of ρ̂ — top-left ρρ block of pinv(H_aug).
+
+        When H_aug is given (REML path), this is the Schur complement
+        of the augmented Hessian, which equals the inverse of the
+        profiled-σ² Hessian up to numerical noise. When it isn't (GCV /
+        no aug Hessian available), invert the ρ-only profiled Hessian
+        directly. In both cases project onto the positive eigenspace
+        before inverting — at sp's near a bound the surface is locally
+        flat and near-zero eigenvalues would blow up. mgcv uses the
+        same trick in ``gam.fit3.post.proc``.
+        """
+        n_sp = len(self._slots)
+        if H_aug is not None:
+            w, V = np.linalg.eigh(H_aug)
+            w_max = float(w.max()) if w.size > 0 else 0.0
+            keep = (w > w_max * 1e-7) if w_max > 0 else np.zeros_like(w, dtype=bool)
+            if not keep.any():
+                return np.zeros((n_sp, n_sp))
+            Vk = V[:, keep]
+            H_inv = (Vk / w[keep]) @ Vk.T
+            return H_inv[:n_sp, :n_sp]
+        H = self._reml_hessian(rho)
+        H = 0.5 * (H + H.T)
+        w, V = np.linalg.eigh(H)
+        w_max = float(w.max()) if w.size > 0 else 0.0
+        keep = (w > w_max * 1e-7) if w_max > 0 else np.zeros_like(w, dtype=bool)
+        if not keep.any():
+            return np.zeros((n_sp, n_sp))
+        Vk = V[:, keep]
+        return (Vk / w[keep]) @ Vk.T
+
+    def _compute_Vc2(self, rho: np.ndarray, fit: "_FitState",
+                     Vr: np.ndarray, sigma_squared: float) -> np.ndarray:
+        """Cholesky-derivative correction Vc2 = σ² Σ_{i,j} Vr[i,j] M_i M_j^T,
+        where M_k = ∂L^{-T}/∂ρ_k and A = L L^T is lmpy's lower-Cholesky of
+        ``X'X + Sλ``.
+
+        Differentiating L L^T = A gives ``L^{-1} dA L^{-T}`` whose lower
+        triangle (with halved diag) is ``L^{-1} dL`` — the standard
+        formula ``dL = L · Φ(L^{-1} dA L^{-T})`` with ``Φ`` zeroing the
+        strict upper and halving the diagonal. Then differentiating
+        ``L L^{-1} = I``:
+
+            d(L^{-1}) = -L^{-1} dL L^{-1}
+            d(L^{-T}) = -L^{-T} (dL)^T L^{-T}     (transpose)
+
+        So M_k = -L^{-T} (dL_k)^T L^{-T}. The ρ-uncertainty in the
+        Bayesian draw β̃ = β̂ + σ L^{-T} z propagates as σ Σ_k ε_k M_k z
+        with ε ~ N(0, Vr), z ~ N(0, I_p), giving covariance contribution
+        σ² Σ_{i,j} Vr[i,j] M_i M_j^T.
+
+        Mirrors mgcv's gam.fit3.post.proc — closes the residual ~0.1 AIC
+        gap on bs='re' models that's left after Vc1 alone.
+        """
+        p = self.p
+        n_sp = len(self._slots)
+        if n_sp == 0 or sigma_squared <= 0 or not np.isfinite(sigma_squared):
+            return np.zeros((p, p))
+        # scipy's cho_factor leaves the unused upper triangle untouched
+        # (random memory), so explicitly mask before using as a triangular
+        # operand — solve_triangular respects `lower=True` but np.tril for
+        # the explicit L matmul below would otherwise pull garbage in.
+        L = np.tril(fit.A_chol)
+
+        M = np.empty((n_sp, p, p))
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            sp_k = float(np.exp(rho[k]))
+            # dA_k = sp_k · S_k embedded at the slot's column range.
+            dA = np.zeros((p, p))
+            dA[a:b, a:b] = sp_k * slot.S
+            # X = L^{-1} dA L^{-T} — two triangular solves.
+            Y = solve_triangular(L, dA, lower=True)
+            X = solve_triangular(L, Y.T, lower=True).T
+            # Φ(X): strict_lower(X) + 0.5·diag(X). Symmetric in floating
+            # point because X is symmetric (since dA is symmetric), so we
+            # build it from the lower triangle directly.
+            Phi = np.tril(X, -1)
+            np.fill_diagonal(Phi, 0.5 * np.diag(X))
+            dL = L @ Phi
+            # M_k = -L^{-T} (dL)^T L^{-T}. Compute as two triangular
+            # solves: G = (dL)^T L^{-T} = (L^{-1} dL)^T, then solve
+            # L^T M_k = -G.
+            G = solve_triangular(L, dL, lower=True).T
+            M[k] = solve_triangular(L.T, -G, lower=False)
+
+        # Vc2[a,b] = Σ_{i,j} Vr[i,j] M_i[a,c] M_j[b,c] — contract over
+        # the trailing axis of both M operands.
+        Vc2 = np.einsum("ij,iac,jbc->ab", Vr, M, M)
+        return sigma_squared * Vc2
 
     def _reml_unprofiled(self, rho: np.ndarray, log_sigma2: float) -> float:
         """Joint un-profiled 2·V_R as a function of (ρ, log σ²).
@@ -719,7 +831,8 @@ class gam:
         for other smooths). CIs come from the delta method on
         log(σ_k) = ½(log σ² − ρ_k) using the joint REML Hessian wrt
         (ρ, log σ²) — only meaningful under REML, so for GCV we return
-        point estimates with NaN bounds.
+        point estimates with NaN bounds. Reuses the augmented Hessian
+        cached on ``self._H_aug`` (set in ``__init__``).
         """
         n_sp = len(self._slots)
         scale_sd = float(self.sigma) if np.isfinite(self.sigma) else float("nan")
@@ -741,16 +854,13 @@ class gam:
         sd = np.exp(log_sd)
 
         # GCV / point-estimate-only path: no Hessian-derived CIs.
-        if self.method != "REML" or not np.isfinite(self.sigma_squared):
+        H = self._H_aug
+        if H is None or self.method != "REML" or not np.isfinite(self.sigma_squared):
             nan_col = [float("nan")] * len(sd)
             return pl.DataFrame({
                 "name": names, "std_dev": sd.tolist(),
                 "lower": nan_col, "upper": nan_col,
             })
-
-        log_sigma2_hat = float(np.log(self.sigma_squared))
-        H = self._reml_hessian_augmented(self._rho_hat, log_sigma2_hat)
-        H = 0.5 * (H + H.T)
 
         # Pseudo-invert on the positive eigenspace, same threshold as edf2.
         w, V = np.linalg.eigh(H)

@@ -262,9 +262,9 @@ def test_machines_re_smooths_REML():
     for `bs='re'` smooths (matching mgcv's `side.constrain=FALSE` on re
     smooths), so the design has all 27 cols, the REML optimum lands at
     mgcv's sp's, and edf/loglike/sp/coefficients agree to 4-5 digits.
-    AIC uses df = sum(edf2)+1 (Wood 2017 §6.11.3); the residual <0.1
-    AIC gap on b1 and ~0.25 on b2 is from the unimplemented Vc2 (the
-    Cholesky-derivative correction in gam.fit3.post.proc).
+    AIC uses df = sum(edf2)+1 (Wood 2017 §6.11.3) with edf2 including
+    both Vc1 (∂β/∂ρ propagation) and Vc2 (Cholesky-derivative
+    correction) — the full mgcv ``gam.fit3.post.proc`` decomposition.
     """
     d = load_dataset("nlme", "Machines")
 
@@ -275,11 +275,11 @@ def test_machines_re_smooths_REML():
     _allclose(b1.edf_total, 17.7646, atol=5e-3, name="b1.edf")
     # edf < edf2 < edf1 — sp uncertainty inflates df, capped by tr(2F-F²).
     _allclose(b1.edf1_total, 17.9952, atol=5e-3, name="b1.edf1")
-    _allclose(b1.edf2_total, 17.8600, atol=5e-2, name="b1.edf2")
+    _allclose(b1.edf2_total, 17.8600, atol=5e-3, name="b1.edf2")
     assert b1.edf_total < b1.edf2_total <= b1.edf1_total
     _allclose(b1.sigma_squared, 0.9246, atol=5e-4, name="b1.sigma2")
     _allclose(b1.loglike, -63.7353, atol=5e-3, name="b1.loglike")
-    _allclose(b1.AIC, 165.19, atol=1e-1, name="b1.AIC")
+    _allclose(b1.AIC, 165.19, atol=5e-3, name="b1.AIC")
     _assert_param(b1, "(Intercept)", 52.3556, atol=5e-3)
     # both blocks should have meaningful edf — degraded path would give ~1
     assert b1.edf_by_smooth["s(Worker)"] > 3.0
@@ -308,8 +308,7 @@ def test_machines_re_smooths_REML():
     _allclose(b2.edf_total, 17.6445, atol=5e-3, name="b2.edf")
     _allclose(b2.sigma_squared, 0.9246, atol=5e-4, name="b2.sigma2")
     _allclose(b2.loglike, -63.8246, atol=5e-3, name="b2.loglike")
-    # mgcv: 165.62. lmpy: 165.38 — Vc2 unimplemented, ~0.25 short.
-    _allclose(b2.AIC, 165.62, atol=3e-1, name="b2.AIC")
+    _allclose(b2.AIC, 165.62, atol=5e-3, name="b2.AIC")
 
 
 def test_data_helper_applies_schema_sidecar():
