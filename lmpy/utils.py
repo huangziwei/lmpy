@@ -16,7 +16,9 @@ Model-comparison helpers (``anova``, ``AIC``, ``BIC``) live in
 
 from __future__ import annotations
 
+import json
 import os
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,6 +33,7 @@ from .formula import (
     materialize,
     parse,
     referenced_columns,
+    set_ordered_cols,
 )
 
 __all__ = ["Design", "prepare_design", "data", "significance_code", "format_df"]
@@ -201,6 +204,52 @@ def _find_bundled_dataset(package: str, name: str) -> Path | None:
     return None
 
 
+# Accumulator for ordered-factor columns across data() calls within a session,
+# mirroring tests/conftest.py. Polars has no per-column "ordered" flag, so
+# ordered factors are tracked via a contextvar that lmpy.formula consults when
+# building contrasts. This set lets multiple data() calls coexist without one
+# clobbering another's ordered registrations.
+_data_ordered_cols: set[str] = set()
+
+
+def _apply_dataset_schema(df: pl.DataFrame, csv_path: Path) -> pl.DataFrame:
+    """Apply the JSON schema sidecar next to ``csv_path``, if present.
+
+    Cast factor columns to ``pl.Enum`` and register ordered factors with the
+    formula machinery. Without this, R's factor type erased by CSV round-trip
+    silently degrades ``s(...,bs='re')``, ``by=factor``, ``fs``, ``sz``, and
+    ordered-contrast paths. Sidecar format mirrors tests/conftest.py:
+    ``{"factors": {col: {"levels": [...], "ordered": bool}}}``.
+    """
+    schema_path = csv_path.with_suffix(".schema.json")
+    if not schema_path.is_file():
+        return df
+    try:
+        sch = json.loads(schema_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return df
+    factors = sch.get("factors") or {}
+    if not factors:
+        return df
+    exprs = []
+    new_ordered = set()
+    for col, spec in factors.items():
+        if col not in df.columns:
+            continue
+        levels = [str(v) for v in spec.get("levels", [])]
+        if not levels:
+            continue
+        exprs.append(pl.col(col).cast(pl.Utf8).cast(pl.Enum(levels)))
+        if spec.get("ordered"):
+            new_ordered.add(col)
+    if exprs:
+        df = df.with_columns(exprs)
+    if new_ordered:
+        _data_ordered_cols.update(new_ordered)
+        set_ordered_cols(frozenset(_data_ordered_cols))
+    return df
+
+
 def data(name: str, package: str = "R", save_to: str = "./data",
          overwrite: bool = False) -> pl.DataFrame:
     """Load a named dataset from this repo's published ``datasets/`` tree.
@@ -211,20 +260,39 @@ def data(name: str, package: str = "R", save_to: str = "./data",
     directly and never download. If no bundled copy is found, caches the
     CSV under ``save_to/{package}/{name}.csv`` on first access. Pass
     ``overwrite=True`` to bypass both lookups and re-download.
+
+    A JSON schema sidecar (``{name}.schema.json``) is loaded alongside the CSV
+    and used to restore R's factor type — columns listed under ``factors``
+    are cast to ``pl.Enum`` with their declared levels, and ones marked
+    ``ordered: true`` are registered for poly contrasts. This is essential
+    for ``bs='re'`` / ``by=factor`` / ``fs`` / ``sz`` smooths, which silently
+    take a non-factor fallthrough path when factor columns come back as
+    Int64/Utf8 from raw CSV.
     """
     if not overwrite:
         bundled = _find_bundled_dataset(package, name)
         if bundled is not None:
-            return pl.read_csv(bundled, null_values="NA")
+            df = pl.read_csv(bundled, null_values="NA")
+            return _apply_dataset_schema(df, bundled)
 
     datapath = os.path.join(save_to, package)
     os.makedirs(datapath, exist_ok=True)
-    csv_path = os.path.join(datapath, f"{name}.csv")
-    if not os.path.exists(csv_path) or overwrite:
+    csv_path = Path(datapath) / f"{name}.csv"
+    if not csv_path.exists() or overwrite:
         print(f"Downloading {name} (from {package})...")
-        url = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}.csv"
-        urllib.request.urlretrieve(url, csv_path)
-    return pl.read_csv(csv_path, null_values="NA")
+        base = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}"
+        urllib.request.urlretrieve(f"{base}.csv", csv_path)
+        # Best-effort: pull the schema sidecar too. Not all bundled datasets
+        # ship one, so a 404 is silently OK — _apply_dataset_schema then
+        # no-ops on the missing file.
+        try:
+            urllib.request.urlretrieve(
+                f"{base}.schema.json", csv_path.with_suffix(".schema.json")
+            )
+        except urllib.error.HTTPError:
+            pass
+    df = pl.read_csv(csv_path, null_values="NA")
+    return _apply_dataset_schema(df, csv_path)
 
 
 def significance_code(p_values) -> list[str]:

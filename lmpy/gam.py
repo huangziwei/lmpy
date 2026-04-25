@@ -394,13 +394,13 @@ class gam:
         self.r_squared = float(r_squared)
         self.r_squared_adjusted = float(r_squared_adjusted)
 
-        # Log-likelihood at β̂, σ̂² (unpenalized Gaussian). mgcv's
-        # $gcv.ubre/$sp live separately; this is what AIC() and logLik()
-        # consume.
-        if np.isfinite(sigma_squared) and sigma_squared > 0:
-            loglike = -0.5 * (
-                n * np.log(2 * np.pi * sigma_squared) + rss / sigma_squared
-            )
+        # Log-likelihood at the Gaussian MLE σ² = rss/n (concentrated form),
+        # matching mgcv's logLik.gam — `$sig2` is the unbiased rss/(n-edf)
+        # and is reported separately, but logLik/AIC profile σ² out at the
+        # MLE, so plugging the unbiased σ² in here would double-count the
+        # df penalty. (lm.compute_loglikelihood uses the same formula.)
+        if rss > 0:
+            loglike = -0.5 * n * (np.log(rss / n) + np.log(2 * np.pi) + 1.0)
         else:
             loglike = float("nan")
         self.loglike = float(loglike)

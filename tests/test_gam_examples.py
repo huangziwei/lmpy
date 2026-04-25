@@ -60,6 +60,9 @@ def test_mcycle_tp_REML():
     _allclose(m.sigma_squared, 506.3529, atol=5e-3, name="sigma2")
     _allclose(m.REML_criterion / 2, 616.1420, atol=5e-3, name="REML/2")
     _allclose(m.r_squared_adjusted, 0.7831484, atol=5e-4, name="r2adj")
+    # mgcv's logLik.gam profiles σ² out at the MLE rss/n (not the unbiased
+    # rss/(n-edf) reported as $sig2); pin both to lock that convention down.
+    _allclose(m.loglike, -597.8345, atol=5e-3, name="loglike")
     _assert_param(m, "(Intercept)", -25.54586, atol=5e-3)
     _allclose(m.edf_by_smooth["s(times)"], 8.624691, atol=5e-4, name="edf[s(times)]")
 
@@ -234,6 +237,71 @@ def test_gamSim_eg1_overlap_gamSide_REML():
     _allclose(m.edf_by_smooth["s(x1)"], 2.790683, atol=2e-1, name="edf[s(x1)]")
     _allclose(m.edf_by_smooth["s(x2)"], 8.044964, atol=5e-2, name="edf[s(x2)]")
     _allclose(m.edf_by_smooth["te(x1,x2)"], 1.001181, atol=5e-1, name="edf[te]")
+
+
+# ---------------------------------------------------------------------------
+# 8) nlme::Machines — re smooths (Wood 2017 §6.5 example)
+# ---------------------------------------------------------------------------
+
+
+def test_machines_re_smooths_REML():
+    """gam(score ~ Machine + s(Worker, bs='re') + s(Machine, Worker, bs='re'),
+       data=Machines, method='REML') and the by=Machine variant.
+
+    Two random-effect formulations from Wood 2017 §6.5. Exercises:
+
+      - bs='re' on a single factor (one column per Worker level)
+      - bs='re' on a Machine:Worker interaction (one column per cell)
+      - bs='re' with by=factor (one block per Machine level)
+
+    All three paths require Worker/Machine to be pl.Enum factors. With raw
+    CSV dtypes (Int64/Utf8) they silently degrade to single-column random
+    *slopes*, blowing edf to ~5 and AIC by ~170.
+
+    AIC is pinned at lmpy's output (regression). It differs from mgcv's
+    by ~0.3-0.7 because mgcv's AIC.gam uses df = sum(edf2)+1 where edf2
+    adds a smoothing-parameter-uncertainty correction (Wood 2017 §6.11.3);
+    lmpy currently reports df = sum(edf)+1. logLik itself matches mgcv
+    closely (it uses the MLE σ² = rss/n, matching logLik.gam).
+    """
+    d = load_dataset("nlme", "Machines")
+
+    b1 = gam("score ~ Machine + s(Worker, bs='re') + s(Machine, Worker, bs='re')",
+             data=d, method="REML")
+    assert b1.n == 54
+    _allclose(b1.edf_total, 17.7646, atol=1e-1, name="b1.edf")
+    _allclose(b1.sigma_squared, 0.9246, atol=5e-3, name="b1.sigma2")
+    _allclose(b1.loglike, -63.7353, atol=1e-1, name="b1.loglike")
+    _allclose(b1.AIC, 164.92, atol=5e-2, name="b1.AIC")  # lmpy regression
+    _assert_param(b1, "(Intercept)", 52.9558, atol=5e-3)
+    # both blocks should have meaningful edf — degraded path would give ~1
+    assert b1.edf_by_smooth["s(Worker)"] > 3.0
+    assert b1.edf_by_smooth["s(Machine,Worker)"] > 8.0
+
+    b2 = gam("score ~ Machine + s(Worker, bs='re') + s(Worker, bs='re', by=Machine)",
+             data=d, method="REML")
+    assert b2.n == 54
+    # by=Machine produces one block per level → 3 extra sp's, total 4
+    assert b2.sp.shape == (4,)
+    _allclose(b2.edf_total, 17.6445, atol=5e-2, name="b2.edf")
+    _allclose(b2.sigma_squared, 0.9246, atol=5e-3, name="b2.sigma2")
+    _allclose(b2.loglike, -63.8246, atol=5e-2, name="b2.loglike")
+    _allclose(b2.AIC, 164.94, atol=5e-2, name="b2.AIC")  # lmpy regression
+
+
+def test_data_helper_applies_schema_sidecar():
+    """`lmpy.data()` must restore R's factor type via the JSON schema sidecar.
+
+    Without it, factor columns come back from CSV as Int64/Utf8 and bs='re'
+    / by=factor / fs / sz smooths silently take the non-factor fallthrough
+    path — which is the Machines b1/b2 footgun (AIC ~337 instead of ~165).
+    """
+    from lmpy import data
+    d = data("Machines", "nlme")
+    assert isinstance(d.schema["Worker"], pl.Enum), \
+        f"Worker should be pl.Enum, got {d.schema['Worker']}"
+    assert isinstance(d.schema["Machine"], pl.Enum), \
+        f"Machine should be pl.Enum, got {d.schema['Machine']}"
 
 
 # ---------------------------------------------------------------------------
