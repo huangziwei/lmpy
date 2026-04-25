@@ -351,14 +351,31 @@ class gam:
                 # PIRLS-only paths (REML only — GCV.Cp errored out earlier).
                 # Outer-vector layout: (ρ_1, …, ρ_{n_sp}) for scale-known,
                 # (ρ_1, …, ρ_{n_sp}, log φ) for unknown-scale.
+                #
+                # Phase 3 wires analytical (ρ, log φ) gradient via
+                # `_reml_general_grad`. Refit at theta to share `fit` between
+                # value and gradient — saves a PIRLS solve per L-BFGS-B
+                # eval (it requests f and g together via fun_and_grad).
                 if family.scale_known:
-                    def obj(theta):
-                        return self._reml_general(theta, 0.0)
+                    def obj_and_grad(theta):
+                        fit_t = self._fit_given_rho(theta)
+                        return (
+                            self._reml_general(theta, 0.0, fit=fit_t),
+                            self._reml_general_grad(theta, 0.0, fit=fit_t,
+                                                    include_log_phi=False),
+                        )
                     theta_dim = n_sp
                 else:
-                    def obj(theta):
-                        return self._reml_general(theta[:n_sp], float(theta[n_sp]))
+                    def obj_and_grad(theta):
+                        rho_t, log_phi_t = theta[:n_sp], float(theta[n_sp])
+                        fit_t = self._fit_given_rho(rho_t)
+                        return (
+                            self._reml_general(rho_t, log_phi_t, fit=fit_t),
+                            self._reml_general_grad(rho_t, log_phi_t, fit=fit_t,
+                                                    include_log_phi=True),
+                        )
                     theta_dim = n_sp + 1
+                obj = lambda t: obj_and_grad(t)[0]
                 # ρ-grid scan with log φ seeded from a Pearson estimate at
                 # each grid point. φ floats over decades for Gamma/IG data
                 # (V(μ) varies as μ² or μ³), so a fixed log φ=0 seed makes
@@ -408,7 +425,8 @@ class gam:
                     theta0 = cur_rho
                 bounds = [(-30.0, 30.0)] * theta_dim
                 res = minimize(
-                    obj, theta0, method="L-BFGS-B", bounds=bounds,
+                    obj_and_grad, theta0, jac=True,
+                    method="L-BFGS-B", bounds=bounds,
                     options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
                 )
                 if theta_dim == n_sp + 1:
@@ -893,10 +911,12 @@ class gam:
         alpha = np.where(alpha == 0.0, np.finfo(float).eps, alpha)
         z = eta + (y - mu) / (mu_eta_v * alpha)
         w = alpha * mu_eta_v ** 2 / V
+        is_fisher_fallback = False
         if np.any(w < 0):
             alpha = np.ones(n)
             z = eta + (y - mu) / mu_eta_v
             w = mu_eta_v ** 2 / V
+            is_fisher_fallback = True
 
         XtWX = (X.T * w) @ X
         A = XtWX + Sλ
@@ -915,6 +935,7 @@ class gam:
             A_chol=A_chol, A_chol_lower=lower,
             S_full=Sλ, log_det_A=log_det_A,
             eta=eta, mu=mu, w=w, z=z, alpha=alpha,
+            is_fisher_fallback=is_fisher_fallback,
         )
 
     def _log_det_S_pos(self, rho: np.ndarray) -> float:
@@ -1019,6 +1040,226 @@ class gam:
             - Mp * float(np.log(2.0 * np.pi * phi))
         )
 
+    def _reml_general_grad(self, rho: np.ndarray, log_phi: float = 0.0,
+                           fit: "_FitState | None" = None,
+                           include_log_phi: bool = False) -> np.ndarray:
+        """Analytical gradient of `_reml_general` (2·V_R units).
+
+        Length n_sp if `include_log_phi=False`, else n_sp+1 with log_phi
+        appended. Wood 2011 §4 + mgcv gam.fit3.r:622, 630:
+
+            ∂(2·V_R)/∂ρ_k    = (∂Dp/∂ρ_k)/φ + ∂log|H|/∂ρ_k − ∂log|S|+/∂ρ_k
+            ∂(2·V_R)/∂log φ  = −Dp/φ − 2·ls'_lmpy − Mp
+
+        ls'_lmpy is the d/d(log φ) chain-rule output from `family.ls(y, wt, φ)[1]`
+        (lmpy convention, see family.py:338 docstring).
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n_sp = len(self._slots)
+        phi = float(np.exp(log_phi))
+        if not (np.isfinite(phi) and phi > 0):
+            size = n_sp + (1 if include_log_phi else 0)
+            return np.full(size, 1e15)
+
+        if n_sp == 0:
+            grad_rho = np.zeros(0)
+        else:
+            dDp = self._dDp_drho(fit, rho)
+            dlog_H = self._dlog_det_H_drho(fit, rho)
+            dlog_S = self._dlog_det_S_drho(rho, S_full=fit.S_full)
+            grad_rho = dDp / phi + dlog_H - dlog_S
+
+        if not include_log_phi:
+            return grad_rho
+
+        Mp = float(self._Mp)
+        wt = np.ones(self.n)
+        Dp = fit.dev + fit.pen
+        ls = np.asarray(self.family.ls(self._y_arr, wt, phi), dtype=float)
+        ls1 = float(ls[1])    # d ls / d(log φ), already chain-ruled
+        d_logphi = -Dp / phi - 2.0 * ls1 - Mp
+        return np.concatenate([grad_rho, [d_logphi]])
+
+    def _reml_general_hessian(self, rho: np.ndarray, log_phi: float = 0.0,
+                              fit: "_FitState | None" = None,
+                              include_log_phi: bool = False) -> np.ndarray:
+        """Analytical Hessian of `_reml_general` (2·V_R units).
+
+        Returns ((n_sp+1) × (n_sp+1)) when ``include_log_phi=True``, else
+        (n_sp × n_sp). Wood 2011 §4 for non-Gaussian, with Newton-form W:
+
+          ∂²(2·V_R)/∂ρ_l∂ρ_k = (1/φ)·∂²Dp/∂ρ_l∂ρ_k
+                              + ∂²log|H|/∂ρ_l∂ρ_k
+                              − ∂²log|S|+/∂ρ_l∂ρ_k
+
+        Pieces:
+
+          ∂²Dp/∂ρ_l∂ρ_k    = δ_lk·g_k − 2·λ_l·λ_k·β̂' S_l A⁻¹ S_k β̂   (Gaussian form)
+
+          ∂²log|S|+/∂ρ_l∂ρ_k = δ_lk·λ_k·tr(S⁺ S_k)
+                              − λ_l·λ_k·tr(S⁺ S_l S⁺ S_k)         (Gaussian form)
+
+          ∂²log|H|/∂ρ_l∂ρ_k = −tr(H⁻¹·∂H/∂ρ_l·H⁻¹·∂H/∂ρ_k)
+                              + tr(H⁻¹·∂²H/∂ρ_l∂ρ_k)
+
+        with ∂H/∂ρ_l = X' diag(h'·v_l) X + λ_l S_l (v_l := X·dβ_l) and
+
+          ∂²H/∂ρ_l∂ρ_k = X' diag(h''·v_l·v_k + h'·X·d²β_lk) X
+                         + δ_lk·λ_l·S_l
+
+        Cross-derivatives wrt log φ:
+
+          ∂²(2·V_R)/∂ρ_k∂log φ = −g_k / φ
+          ∂²(2·V_R)/∂log φ²    = Dp/φ − 2·ls'_lmpy_2
+
+        where ``ls'_lmpy_2 = family.ls(y, wt, φ)[2]`` (chain-ruled to log φ).
+
+        For Gaussian-identity (h' ≡ h'' ≡ 0) only the SS Wood block and the
+        Gaussian Dp/log|S|+ pieces survive, so the result equals 2·`_reml_hessian`
+        in the unprofiled REML formulation (the existing `_reml_hessian`
+        operates on the φ-profiled Gaussian path and returns V_R-scale).
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n_sp = len(self._slots)
+        phi = float(np.exp(log_phi))
+        size = n_sp + (1 if include_log_phi else 0)
+        if not (np.isfinite(phi) and phi > 0):
+            return np.full((size, size), 1e15)
+        if n_sp == 0:
+            H = np.zeros((size, size))
+            if include_log_phi:
+                Dp0 = fit.dev + fit.pen
+                ls = np.asarray(self.family.ls(self._y_arr,
+                                               np.ones(self.n), phi))
+                H[0, 0] = Dp0 / phi - 2.0 * float(ls[2])
+            return H
+
+        p = self.p
+        sp = np.exp(rho)
+        X = self._X_full
+        S_pinv = self._S_pinv(fit.S_full)
+
+        # Common precomputations.
+        M = cho_solve((fit.A_chol, fit.A_chol_lower), X.T)   # (p, n) = H⁻¹ X'
+        d_diag = np.einsum("ij,ji->i", X, M)                  # (n,)  diag(X H⁻¹ X')
+        P = X @ M                                              # (n, n) X H⁻¹ X'
+        Rsq = P * P                                            # (n, n) elementwise
+
+        db_drho = self._dbeta_drho(fit, rho)                   # (p, n_sp)
+        dw_deta = self._dw_deta(fit)                           # (n,)
+        d2w_deta2 = self._d2w_deta2(fit)                       # (n,)
+        d2b = self._d2beta_drho_drho(fit, rho, db_drho=db_drho,
+                                     dw_deta=dw_deta)          # (p, n_sp, n_sp)
+        v = X @ db_drho                                        # (n, n_sp)
+        hv = dw_deta[:, None] * v                              # h'·v_l, shape (n, n_sp)
+
+        # Per-slot blocks reused for ∂²Dp / log|S|+ / log|H| Gaussian-style traces.
+        AinvS_block: list[np.ndarray] = []
+        SpinvS_block: list[np.ndarray] = []
+        Sbeta_full = np.zeros((n_sp, p))
+        AinvSbeta = np.empty((n_sp, p))
+        diag_MtSM: list[np.ndarray] = []   # diag(M' S_k_full M) = (n,) for each k
+        g = np.zeros(n_sp)
+        tr_AinvS = np.zeros(n_sp)
+        tr_SpinvS = np.zeros(n_sp)
+        A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(p))
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            beta_k = fit.beta[a:b]
+            Sb = slot.S @ beta_k
+            Sbeta_full[k, a:b] = Sb
+            AinvSbeta[k] = cho_solve(
+                (fit.A_chol, fit.A_chol_lower), Sbeta_full[k]
+            )
+            g[k] = sp[k] * float(beta_k @ Sb)
+            AinvS_block.append(A_inv[:, a:b] @ slot.S)
+            SpinvS_block.append(S_pinv[:, a:b] @ slot.S)
+            tr_AinvS[k] = float(np.einsum("ij,ji->", A_inv[a:b, a:b], slot.S))
+            tr_SpinvS[k] = float(np.einsum("ij,ji->", S_pinv[a:b, a:b], slot.S))
+            # diag(M' S_k_full M)_i = M[a:b, i]' · S_k · M[a:b, i]
+            SkM = slot.S @ M[a:b, :]                          # (m_k, n)
+            diag_MtSM.append(np.einsum("ji,ji->i", M[a:b, :], SkM))
+
+        # Hessian assembly — symmetric loop.
+        H2 = np.zeros((n_sp, n_sp))
+        for i in range(n_sp):
+            a_i, b_i = self._slots[i].col_start, self._slots[i].col_end
+            for j in range(i, n_sp):
+                a_j, b_j = self._slots[j].col_start, self._slots[j].col_end
+
+                # ∂²Dp/∂ρ_i∂ρ_j: same family-agnostic form as Gaussian.
+                bSiAinvSj_b = float(Sbeta_full[i] @ AinvSbeta[j])
+                d2Dp = -2.0 * sp[i] * sp[j] * bSiAinvSj_b
+
+                # tr(H⁻¹·∂H/∂ρ_i·H⁻¹·∂H/∂ρ_j) — four pieces.
+                # WW: (h'·v_i)' · Rsq · (h'·v_j).
+                tr_WW = float(hv[:, i] @ (Rsq @ hv[:, j]))
+                # WS: tr(H⁻¹·A_i·H⁻¹·S_j) = (h'·v_i)' · diag_MtSM[j].
+                tr_WS = float(hv[:, i] @ diag_MtSM[j])
+                tr_SW = float(hv[:, j] @ diag_MtSM[i])
+                # SS: tr(H⁻¹·S_i·H⁻¹·S_j) — Gaussian block trick.
+                tr_SS = float(np.einsum(
+                    "ab,ba->",
+                    AinvS_block[i][a_j:b_j, :],
+                    AinvS_block[j][a_i:b_i, :],
+                ))
+                tr_HinvHpHinvHp = (
+                    tr_WW
+                    + sp[j] * tr_WS
+                    + sp[i] * tr_SW
+                    + sp[i] * sp[j] * tr_SS
+                )
+
+                # tr(H⁻¹·∂²H/∂ρ_i∂ρ_j).
+                #   X'·diag(h''·v_i·v_j)·X contribution: Σ d_i·h''·v_i·v_j.
+                #   X'·diag(h'·X·d²β_ij)·X        contribution: Σ d_i·h'·(X·d²β_ij).
+                Xd2b = X @ d2b[:, i, j]                       # (n,)
+                tr_d2H = (
+                    float(np.sum(d_diag * d2w_deta2 * v[:, i] * v[:, j]))
+                    + float(np.sum(d_diag * dw_deta * Xd2b))
+                )
+                # δ_lk·λ_l·tr(H⁻¹·S_l) is the off-square diagonal term.
+                d2logH_ij = -tr_HinvHpHinvHp + tr_d2H
+
+                # ∂²log|S|+/∂ρ_i∂ρ_j Gaussian form.
+                tr_SpSiSpSj = float(np.einsum(
+                    "ab,ba->",
+                    SpinvS_block[i][a_j:b_j, :],
+                    SpinvS_block[j][a_i:b_i, :],
+                ))
+                d2logS_ij = -sp[i] * sp[j] * tr_SpSiSpSj
+
+                cross_2VR = d2Dp / phi + d2logH_ij - d2logS_ij
+                if i == j:
+                    # Diagonal also picks up the δ_lk·g_k from ∂²Dp,
+                    # δ_lk·λ_l·tr(H⁻¹·S_l) from ∂²H, and δ_lk·λ_k·tr(S⁺ S_k)
+                    # from ∂²log|S|+.
+                    H2[i, i] = (
+                        cross_2VR
+                        + g[i] / phi
+                        + sp[i] * tr_AinvS[i]
+                        - sp[i] * tr_SpinvS[i]
+                    )
+                else:
+                    H2[i, j] = H2[j, i] = cross_2VR
+
+        if not include_log_phi:
+            return H2
+
+        # Augment with log φ row/col.
+        H_aug = np.zeros((n_sp + 1, n_sp + 1))
+        H_aug[:n_sp, :n_sp] = H2
+        for k in range(n_sp):
+            cross = -g[k] / phi
+            H_aug[k, n_sp] = cross
+            H_aug[n_sp, k] = cross
+        Dp = fit.dev + fit.pen
+        ls = np.asarray(self.family.ls(self._y_arr, np.ones(self.n), phi))
+        H_aug[n_sp, n_sp] = Dp / phi - 2.0 * float(ls[2])
+        return H_aug
+
     def _S_pinv(self, S_full: np.ndarray) -> np.ndarray:
         """Pseudo-inverse of Sλ on its fixed range space.
 
@@ -1036,6 +1277,320 @@ class gam:
         w_top = np.clip(w[order[:r]], 1e-300, None)
         V_top = V[:, order[:r]]
         return (V_top / w_top) @ V_top.T
+
+    def _dbeta_drho(self, fit: "_FitState",
+                    rho: np.ndarray) -> np.ndarray:
+        """Implicit-function-theorem derivative ∂β̂/∂ρ_k at PIRLS-converged β̂.
+
+        The penalized score equation `s(β̂) = ∂ℓ/∂β |_β̂ - Sλ(ρ) β̂ = 0`
+        differentiated in ρ_k gives, with H = -∂²ℓ_p/∂β∂β' = X'WX + Sλ
+        (Newton-form W) at converged β̂:
+
+            ∂β̂/∂ρ_k = -λ_k · H⁻¹ · S_k · β̂
+
+        This holds for any family/link as long as PIRLS uses Newton weights
+        (so X'WX = -∂²ℓ/∂β∂β' at β̂); for canonical links Newton ≡ Fisher
+        and the formula reduces to the Gaussian case used implicitly in
+        ``_reml_hessian``'s ``AinvSbeta``. Returns a (p, n_sp) array.
+        """
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros((self.p, 0))
+        sp = np.exp(rho)
+        out = np.empty((self.p, n_sp))
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            Sk_beta_full = np.zeros(self.p)
+            Sk_beta_full[a:b] = slot.S @ fit.beta[a:b]
+            Ainv_Skb = cho_solve((fit.A_chol, fit.A_chol_lower), Sk_beta_full)
+            out[:, k] = -sp[k] * Ainv_Skb
+        return out
+
+    def _dw_deta(self, fit: "_FitState") -> np.ndarray:
+        """∂w_i/∂η_i at PIRLS-converged β̂. Length-n.
+
+        PIRLS Newton weights are w(μ) = α(μ)·μ_eta(μ)²/V(μ) with
+        α(μ) = 1 + (y-μ)·B(μ), B(μ) = V'/V + g''·μ_eta. Differentiating:
+
+            ∂(log w)/∂μ = α'/α − 2·g''·μ_eta − V'/V
+            α'(μ)       = −B(μ) + (y-μ)·B'(μ)
+            B'(μ)       = V''/V − (V'/V)² + g'''·μ_eta − (g'')²·μ_eta²
+
+        and dw/dη = (dw/dμ)·μ_eta = w·μ_eta·∂(log w)/∂μ.
+
+        For canonical links the Newton form gives α≡1 (B≡0 by canonical
+        identity g'V=1), so α'/α=0 and only the (-2·g''·μ_eta − V'/V)
+        terms survive — that's the Fisher derivative. For
+        ``fit.is_fisher_fallback`` we explicitly drop the α'/α term to
+        stay consistent with the α=1 override the PIRLS path applied.
+        """
+        link = self.family.link
+        family = self.family
+        y = self._y_arr
+        mu = fit.mu
+        eta = fit.eta
+        w = fit.w
+        alpha = fit.alpha
+
+        mu_eta = link.mu_eta(eta)
+        V = family.variance(mu)
+        Vp = family.dvar(mu)
+        Vpp = family.d2var(mu)
+        g2 = link.d2link(mu)
+        g3 = link.d3link(mu)
+
+        # α'/α term — set to zero for the Fisher fallback path.
+        if fit.is_fisher_fallback:
+            alpha_prime_over_alpha = np.zeros_like(mu)
+        else:
+            B = Vp / V + g2 * mu_eta
+            Bp = Vpp / V - (Vp / V) ** 2 + g3 * mu_eta - g2 ** 2 * mu_eta ** 2
+            alpha_prime = -B + (y - mu) * Bp
+            alpha_prime_over_alpha = alpha_prime / alpha
+
+        dlogw_dmu = alpha_prime_over_alpha - 2.0 * g2 * mu_eta - Vp / V
+        return w * mu_eta * dlogw_dmu
+
+    def _d2beta_drho_drho(self, fit: "_FitState", rho: np.ndarray,
+                          db_drho: np.ndarray | None = None,
+                          dw_deta: np.ndarray | None = None) -> np.ndarray:
+        """∂²β̂/∂ρ_l∂ρ_k at PIRLS-converged β̂. Returns a (p, n_sp, n_sp) array.
+
+        Differentiating dβ_k = -λ_k·H⁻¹·S_k·β̂ in ρ_l and using the IFT
+        identity ∂H⁻¹/∂ρ_l = -H⁻¹·(∂H/∂ρ_l)·H⁻¹:
+
+            ∂²β̂/∂ρ_l∂ρ_k = δ_lk · dβ_k
+                          − H⁻¹ · (∂H/∂ρ_l) · dβ_k
+                          − λ_k · H⁻¹ · S_k · dβ_l
+
+        with ∂H/∂ρ_l = X'·diag(h'·v_l)·X + λ_l·S_l (v_l := X·dβ_l).
+        Symmetric in (l, k) by construction of the formula:
+            ∂²β̂/∂ρ_l∂ρ_k = δ_lk·dβ_k
+                          − H⁻¹·X'·(h' · v_l · v_k)
+                          − λ_l · H⁻¹·S_l·dβ_k
+                          − λ_k · H⁻¹·S_k·dβ_l
+        — the two S terms swap when (l, k) swap; the X'·(h'·v_l·v_k) term
+        is invariant under the swap. Symmetry is exploited in the loop.
+
+        For Gaussian-identity, h' ≡ 0 so the W-derivative term drops and
+        the result reduces to the standard penalty-only IFT formula.
+        """
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros((self.p, 0, 0))
+        if db_drho is None:
+            db_drho = self._dbeta_drho(fit, rho)
+        sp = np.exp(rho)
+        X = self._X_full
+        v = X @ db_drho                     # (n, n_sp): v_l = X·dβ_l
+
+        # h'(η) — only present for PIRLS fits (fit.w not None). Gaussian fast
+        # path doesn't reach this method.
+        if dw_deta is None:
+            dw_deta = self._dw_deta(fit)
+
+        # Per-slot S_k·dβ_k[a:b] in the embedded p-vector, stored once.
+        Skdb_full = np.zeros((n_sp, self.p, n_sp))
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            for ll in range(n_sp):
+                Skdb_full[k, a:b, ll] = slot.S @ db_drho[a:b, ll]
+
+        out = np.empty((self.p, n_sp, n_sp))
+        for k in range(n_sp):
+            for l in range(k, n_sp):
+                # H⁻¹·X'·(h' · v_l · v_k)  — the W-deriv contribution.
+                rhs_W = X.T @ (dw_deta * v[:, l] * v[:, k])
+                # H⁻¹·S_l·dβ_k (full p-vector, only nonzero at slot l's range)
+                # and H⁻¹·S_k·dβ_l, embedded already in Skdb_full.
+                rhs = (
+                    rhs_W
+                    + sp[l] * Skdb_full[l, :, k]
+                    + sp[k] * Skdb_full[k, :, l]
+                )
+                # The implicit-function-theorem formula above:
+                #   ∂²β̂/∂ρ_l∂ρ_k = δ_lk·dβ_k − H⁻¹·rhs_combined
+                d2 = -cho_solve(
+                    (fit.A_chol, fit.A_chol_lower), rhs
+                )
+                if l == k:
+                    d2 = d2 + db_drho[:, k]
+                out[:, l, k] = d2
+                if l != k:
+                    out[:, k, l] = d2
+        return out
+
+    def _d2w_deta2(self, fit: "_FitState") -> np.ndarray:
+        """∂²w_i/∂η_i² at PIRLS-converged β̂. Length-n.
+
+        Differentiating h(η) := w(η) twice (with y, ρ fixed; only η varies):
+
+            d log h / dη   = μ_eta · D                where D = α'/α − 2 g'' μ_eta − V'/V
+            d²h/dη²        = h · μ_eta² · (D² + D' − D · g'' · μ_eta)
+
+        with D' = ∂D/∂μ:
+
+            D' = α''/α − (α'/α)² − 2 g''' μ_eta + 2 (g'')² μ_eta² − V''/V + (V'/V)²
+            α''(μ) = −2 B' + (y−μ) · B''
+            B''(μ) = V'''/V − 3 V'·V''/V² + 2 V'³/V³
+                     + g'''' μ_eta − 3 g'' g''' μ_eta² + 2 (g'')³ μ_eta³
+
+        For the Fisher fallback path (PIRLS forced α=1 because Newton-w<0),
+        α'/α and α''/α are both dropped — same convention as ``_dw_deta``.
+        """
+        link = self.family.link
+        family = self.family
+        y = self._y_arr
+        mu = fit.mu
+        eta = fit.eta
+        w = fit.w
+        alpha = fit.alpha
+
+        mu_eta = link.mu_eta(eta)
+        V = family.variance(mu)
+        Vp = family.dvar(mu)
+        Vpp = family.d2var(mu)
+        Vppp = family.d3var(mu)
+        g2 = link.d2link(mu)
+        g3 = link.d3link(mu)
+        g4 = link.d4link(mu)
+
+        Vp_V = Vp / V
+        Vpp_V = Vpp / V
+
+        # B(μ) = V'/V + g''·μ_eta and its first derivative — already used in
+        # `_dw_deta` for α'.
+        Bp = Vpp_V - Vp_V ** 2 + g3 * mu_eta - g2 ** 2 * mu_eta ** 2
+        # Second derivative B''(μ) = ∂B'/∂μ.
+        Bpp = (
+            Vppp / V - 3.0 * Vp * Vpp / (V * V) + 2.0 * Vp ** 3 / V ** 3
+            + g4 * mu_eta - 3.0 * g2 * g3 * mu_eta ** 2
+            + 2.0 * g2 ** 3 * mu_eta ** 3
+        )
+
+        if fit.is_fisher_fallback:
+            alpha_prime_over_alpha = np.zeros_like(mu)
+            alpha_pp_over_alpha = np.zeros_like(mu)
+        else:
+            B = Vp_V + g2 * mu_eta
+            alpha_prime = -B + (y - mu) * Bp
+            alpha_prime_over_alpha = alpha_prime / alpha
+            alpha_pp = -2.0 * Bp + (y - mu) * Bpp
+            alpha_pp_over_alpha = alpha_pp / alpha
+
+        D = alpha_prime_over_alpha - 2.0 * g2 * mu_eta - Vp_V
+        Dp = (
+            alpha_pp_over_alpha - alpha_prime_over_alpha ** 2
+            - 2.0 * g3 * mu_eta + 2.0 * g2 ** 2 * mu_eta ** 2
+            - Vpp_V + Vp_V ** 2
+        )
+        return w * mu_eta ** 2 * (D ** 2 + Dp - D * g2 * mu_eta)
+
+    def _dlog_det_S_drho(self, rho: np.ndarray,
+                         S_pinv: np.ndarray | None = None,
+                         S_full: np.ndarray | None = None) -> np.ndarray:
+        """∂log|Sλ|+/∂ρ_k = λ_k · tr(S⁺ S_k). Length-n_sp.
+
+        S⁺ is the rank-stable pseudo-inverse from `_S_pinv` (top
+        ``penalty_rank`` eigenpairs of Sλ). For exact-rank-stable
+        scenarios this matches the existing term in `_reml_grad`.
+        """
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros(0)
+        if S_pinv is None:
+            if S_full is None:
+                S_full = self._build_S_lambda(rho)
+            S_pinv = self._S_pinv(S_full)
+        sp = np.exp(rho)
+        out = np.empty(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            tr_SpinvSk = float(np.einsum(
+                "ij,ji->", S_pinv[a:b, a:b], slot.S
+            ))
+            out[k] = sp[k] * tr_SpinvSk
+        return out
+
+    def _dlog_det_H_drho(self, fit: "_FitState", rho: np.ndarray,
+                         db_drho: np.ndarray | None = None) -> np.ndarray:
+        """∂log|H|/∂ρ_k where H = X'WX + Sλ at converged β̂. Length-n_sp.
+
+        Determinant identity: ∂log|H|/∂ρ_k = tr(H⁻¹ ∂H/∂ρ_k).
+
+            ∂H/∂ρ_k = X' diag(∂w/∂ρ_k) X + λ_k S_k
+
+        Trace decomposition with d_i := (X H⁻¹ X')_{ii} (length-n):
+
+            tr(H⁻¹ X' diag(∂w/∂ρ_k) X) = Σ_i d_i · (∂w_i/∂ρ_k)
+            ∂w_i/∂ρ_k = (∂w/∂η)_i · (X · ∂β̂/∂ρ_k)_i
+
+        For Gaussian-identity, ∂w/∂η ≡ 0, and the first term vanishes —
+        recovering the existing `λ_k · tr(H⁻¹ S_k)` form in `_reml_grad`.
+        """
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros(0)
+        X = self._X_full
+        sp = np.exp(rho)
+
+        # diag(X H⁻¹ X') in O(n·p²): solve H · M = X' for each obs row,
+        # then row-wise einsum. We compute H⁻¹ X' as a (p, n) matrix once.
+        Hinv_Xt = cho_solve((fit.A_chol, fit.A_chol_lower), X.T)
+        d = np.einsum("ij,ji->i", X, Hinv_Xt)   # diag(X H⁻¹ X'), shape (n,)
+
+        # For Gaussian-identity (PIRLS not used) fit.w is None — the
+        # caller never reaches this path. PIRLS-converged fits always
+        # have w populated.
+        dw_deta = self._dw_deta(fit)
+
+        if db_drho is None:
+            db_drho = self._dbeta_drho(fit, rho)
+
+        # ∂η/∂ρ has shape (n, n_sp); ∂w/∂ρ = dw_deta[:, None] · ∂η/∂ρ.
+        deta_drho = X @ db_drho                  # (n, n_sp)
+        dw_drho = dw_deta[:, None] * deta_drho   # (n, n_sp)
+
+        out = np.empty(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            # tr(H⁻¹ S_k): same block trick as `_reml_grad`.
+            Hinv_block = cho_solve(
+                (fit.A_chol, fit.A_chol_lower), np.eye(self.p)
+            )[a:b, a:b]
+            tr_Hinv_Sk = float(np.einsum("ij,ji->", Hinv_block, slot.S))
+            out[k] = float(np.sum(d * dw_drho[:, k])) + sp[k] * tr_Hinv_Sk
+        return out
+
+    def _dDp_drho(self, fit: "_FitState",
+                  rho: np.ndarray) -> np.ndarray:
+        """∂Dp/∂ρ_k at PIRLS-converged β̂. Length-n_sp.
+
+        Dp = -2·ℓ(β̂) + β̂'Sλ β̂ (deviance + penalty). Differentiating in ρ_k
+        and applying β̂(ρ) chain rule:
+
+            ∂Dp/∂ρ_k = (∂(-2ℓ)/∂β |_β̂) · ∂β̂/∂ρ_k
+                     + 2·β̂' Sλ · ∂β̂/∂ρ_k
+                     + λ_k · β̂' S_k β̂
+
+        At convergence the penalized score is zero: -∂ℓ/∂β |_β̂ + Sλ β̂ = 0,
+        i.e. ∂ℓ/∂β |_β̂ = Sλ β̂. Substituting cancels the first two terms:
+
+            ∂Dp/∂ρ_k = λ_k · β̂' S_k β̂
+
+        Same closed form as the Gaussian special case (`g_k` in `_reml_grad`).
+        Holds for any family with PIRLS-converged β̂.
+        """
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros(0)
+        sp = np.exp(rho)
+        out = np.empty(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            beta_k = fit.beta[a:b]
+            out[k] = sp[k] * float(beta_k @ slot.S @ beta_k)
+        return out
 
     def _reml_grad(self, rho: np.ndarray,
                    fit: "_FitState | None" = None) -> np.ndarray:
@@ -1938,11 +2493,13 @@ class _FitState:
         "dev", "pen", "rss",
         "A_chol", "A_chol_lower",
         "S_full", "log_det_A",
+        "is_fisher_fallback",
     )
 
     def __init__(self, *, beta, dev, pen, A_chol, A_chol_lower,
                  S_full, log_det_A,
-                 eta=None, mu=None, w=None, z=None, alpha=None):
+                 eta=None, mu=None, w=None, z=None, alpha=None,
+                 is_fisher_fallback=False):
         self.beta = beta
         self.dev = dev
         self.rss = dev               # back-compat alias for Gaussian path
@@ -1956,3 +2513,8 @@ class _FitState:
         self.A_chol_lower = A_chol_lower
         self.S_full = S_full
         self.log_det_A = log_det_A
+        # True iff PIRLS forced α=1 at convergence because Newton's
+        # α formula produced a w<0. In that case dα/dμ is taken as 0
+        # for derivative purposes (the analytical α'(μ) is not
+        # consistent with the override).
+        self.is_fisher_fallback = is_fisher_fallback

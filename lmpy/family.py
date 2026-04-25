@@ -304,6 +304,7 @@ class Family:
     def variance(self, mu): raise NotImplementedError
     def dvar(self, mu): raise NotImplementedError
     def d2var(self, mu): raise NotImplementedError
+    def d3var(self, mu): raise NotImplementedError
 
     def dev_resids(self, y, mu, wt) -> np.ndarray:
         """Per-observation deviance contributions; sum is the deviance D."""
@@ -361,6 +362,7 @@ class Gaussian(Family):
     def variance(self, mu): return np.ones_like(np.asarray(mu, dtype=float))
     def dvar(self, mu): return np.zeros_like(np.asarray(mu, dtype=float))
     def d2var(self, mu): return np.zeros_like(np.asarray(mu, dtype=float))
+    def d3var(self, mu): return np.zeros_like(np.asarray(mu, dtype=float))
 
     def dev_resids(self, y, mu, wt):
         y = np.asarray(y, dtype=float); mu = np.asarray(mu, dtype=float)
@@ -406,6 +408,8 @@ class Gamma(Family):
         mu = np.asarray(mu, dtype=float); return 2.0 * mu
     def d2var(self, mu):
         return np.full_like(np.asarray(mu, dtype=float), 2.0)
+    def d3var(self, mu):
+        return np.zeros_like(np.asarray(mu, dtype=float))
 
     def dev_resids(self, y, mu, wt):
         y = np.asarray(y, dtype=float); mu = np.asarray(mu, dtype=float)
@@ -468,6 +472,7 @@ class Poisson(Family):
     def variance(self, mu): return np.asarray(mu, dtype=float).copy()
     def dvar(self, mu): return np.ones_like(np.asarray(mu, dtype=float))
     def d2var(self, mu): return np.zeros_like(np.asarray(mu, dtype=float))
+    def d3var(self, mu): return np.zeros_like(np.asarray(mu, dtype=float))
 
     def dev_resids(self, y, mu, wt):
         # mgcv: 2 wt (y log(y/μ) - (y-μ)); with the convention 0·log(0/μ) = 0
@@ -529,6 +534,8 @@ class Binomial(Family):
         return 1.0 - 2.0 * np.asarray(mu, dtype=float)
     def d2var(self, mu):
         return np.full_like(np.asarray(mu, dtype=float), -2.0)
+    def d3var(self, mu):
+        return np.zeros_like(np.asarray(mu, dtype=float))
 
     def dev_resids(self, y, mu, wt):
         # mgcv (C_binomial_dev_resids): 2 wt [ y_log_y(y, μ) + y_log_y(1-y, 1-μ) ]
@@ -589,6 +596,8 @@ class InverseGaussian(Family):
         mu = np.asarray(mu, dtype=float); return 3.0 * mu * mu
     def d2var(self, mu):
         return 6.0 * np.asarray(mu, dtype=float)
+    def d3var(self, mu):
+        return np.full_like(np.asarray(mu, dtype=float), 6.0)
 
     def dev_resids(self, y, mu, wt):
         # mgcv: wt · (y - μ)² / (y · μ²).
