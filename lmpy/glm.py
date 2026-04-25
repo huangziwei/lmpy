@@ -20,11 +20,40 @@ import polars as pl
 from scipy.linalg import qr, solve_triangular
 from scipy.stats import norm, t as student_t
 
-from .family import Family, Gaussian, Link
-from .formula import materialize
+from .family import Binomial, Family, Gaussian, Link
+from .formula import _eval_atom, deparse, materialize, parse, Call, Name
 from .utils import format_df, prepare_design, significance_code
 
 __all__ = ["glm"]
+
+
+def _coerce_response(y_series: pl.Series, family: Family) -> np.ndarray:
+    """Cast the response column to a numeric float array, with R's
+    factor-response convention for ``Binomial``.
+
+    R's ``glm(y ~ x, family=binomial)`` accepts a 2-level factor on the
+    LHS: level 1 → 0 (failure), level 2 → 1 (success). Boolean is the
+    same shape (FALSE → 0, TRUE → 1). For other families and numeric y
+    we just float-cast.
+    """
+    dt = y_series.dtype
+    if isinstance(family, Binomial):
+        if dt == pl.Boolean:
+            return y_series.to_numpy().astype(float)
+        if dt == pl.String or isinstance(dt, (pl.Categorical, pl.Enum)):
+            if isinstance(dt, pl.Enum):
+                levels = list(dt.categories)
+            else:
+                # No declared order — fall back to alphabetical, which is
+                # R's `factor()` default when `levels=` is unspecified.
+                levels = sorted(y_series.drop_nulls().unique().to_list())
+            if len(levels) != 2:
+                raise ValueError(
+                    f"Binomial response factor must have 2 levels; "
+                    f"got {len(levels)}: {levels}"
+                )
+            return (y_series.to_numpy() != levels[0]).astype(float)
+    return y_series.to_numpy().astype(float).flatten()
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +312,37 @@ class glm:
         if control:
             ctl.update(control)
 
+        # cbind(success, failure) ~ ... — R's two-column binomial form. Rewrite
+        # to (proportion, weights = success + failure) so the rest of the
+        # pipeline runs unchanged. This must happen before prepare_design,
+        # which doesn't accept Call() on the LHS.
+        f_parsed = parse(formula)
+        if (isinstance(f_parsed.lhs, Call)
+                and f_parsed.lhs.fn == "cbind"
+                and len(f_parsed.lhs.args) == 2):
+            if not isinstance(self.family, Binomial):
+                raise ValueError(
+                    "cbind(success, failure) ~ ... LHS only makes sense "
+                    "for Binomial; got family="
+                    f"{self.family.name!r}"
+                )
+            s_blk = _eval_atom(f_parsed.lhs.args[0], data)
+            f_blk = _eval_atom(f_parsed.lhs.args[1], data)
+            s = s_blk.values.flatten().astype(float)
+            f = f_blk.values.flatten().astype(float)
+            tot = s + f
+            with np.errstate(divide="ignore", invalid="ignore"):
+                p = np.where(tot > 0, s / tot, 0.0)
+            data = data.with_columns(pl.Series("_lmpy_cbind_p", p))
+            cb_w = tot
+            # Multiply onto caller-supplied weights (R's frequency-weight
+            # convention), defaulting to ones.
+            if weights is None:
+                weights = cb_w
+            else:
+                weights = np.asarray(weights, dtype=float).flatten() * cb_w
+            formula = f"_lmpy_cbind_p ~ {deparse(f_parsed.rhs)}"
+
         d = prepare_design(formula, data)
         self._expanded = d.expanded
         self._design_data = d.data
@@ -290,7 +350,7 @@ class glm:
         self.y = d.y                                  # pl.Series
 
         X = self.X.to_numpy().astype(float)
-        y = self.y.to_numpy().astype(float).flatten()
+        y = _coerce_response(self.y, self.family)
         n, p = X.shape
 
         prior_w = (np.ones(n) if weights is None
@@ -307,6 +367,15 @@ class glm:
                else np.asarray(offset, dtype=float).flatten())
         if off.shape != (n,):
             raise ValueError(f"offset must have length {n}, got {off.shape}")
+        # Add any `offset(...)` terms parsed from the formula. R's glm()
+        # sums formula-level offset(...) calls with the offset= arg, so
+        # `y ~ x + offset(log(t))` and `y ~ x, offset=log(t)` produce the
+        # same fit. expanded.offsets holds the inner AST of each call;
+        # _eval_atom evaluates it against the NA-cleaned design data so
+        # row-alignment matches X / y.
+        for off_node in d.expanded.offsets:
+            blk = _eval_atom(off_node, d.data)
+            off = off + blk.values.flatten().astype(float)
         self._offset = off
 
         self.column_names = list(self.X.columns)
