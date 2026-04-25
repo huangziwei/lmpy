@@ -1871,12 +1871,15 @@ def _collect_names(node, names: set[str]) -> None:
 
 
 def referenced_columns(expanded: ExpandedFormula) -> set[str]:
-    """Every data-column Name referenced by any term, bar, or offset.
+    """Every data-column Name referenced by any term, bar, offset, or smooth.
 
     Public helper used by the NA-omit paths in ``materialize`` /
     ``materialize_bars`` and by ``lmpy.utils.prepare_design`` (so prepare
     can align the response to the NA-cleaned X without relying on a
-    shared index — polars has none).
+    shared index — polars has none). Smooths must be included so that
+    ``prepare_design`` drops NAs on smooth-only variables (e.g.
+    ``y ~ s(x)``) — otherwise the parametric design and the smooth basis
+    produced by ``materialize_smooths`` end up with different row counts.
     """
     referenced: set[str] = set()
     for t in expanded.terms:
@@ -1886,6 +1889,8 @@ def referenced_columns(expanded: ExpandedFormula) -> set[str]:
         _collect_names(b, referenced)
     for o in expanded.offsets:
         _collect_names(o, referenced)
+    for s in expanded.smooths:
+        _collect_names(s, referenced)
     return referenced
 
 

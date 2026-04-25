@@ -13,7 +13,8 @@ import polars as pl
 import pytest
 
 from conftest import FIXTURE_ROOT, fixture_meta, fixtures_by_kind, load_dataset
-from lmpy.formula import expand, materialize, parse
+from lmpy.formula import expand, materialize, parse, referenced_columns
+from lmpy.utils import prepare_design
 
 WR_FIXTURES = fixtures_by_kind("wr")
 WR_IDS = [e["id"] for e in WR_FIXTURES]
@@ -65,3 +66,23 @@ def test_wr_materialize_matches_R(fx_id: str):
                 f"  ref cols: {list(X_ref.columns)}"
             ),
         )
+
+
+def test_referenced_columns_includes_smooth_vars():
+    # NA-omit must see smooth-only variables; otherwise prepare_design and
+    # materialize_smooths disagree on row count and gam() raises a concat
+    # ValueError. Regression: pisa's `s(Income)` had 3 rows with non-NA
+    # Overall but NA Income, breaking n=57 vs 54.
+    ef = expand(parse("y ~ x + s(z, bs='cr') + te(u, v, by=g)"))
+    assert referenced_columns(ef) >= {"x", "z", "u", "v", "g"}
+
+
+def test_prepare_design_drops_na_on_smooth_only_var():
+    df = pl.DataFrame({
+        "y": [1.0, 2.0, 3.0, 4.0, 5.0],
+        "z": [0.1, None, 0.3, 0.4, None],
+    })
+    d = prepare_design("y ~ s(z)", df)
+    assert d.data.height == 3
+    assert d.X.height == 3
+    assert d.y.len() == 3
