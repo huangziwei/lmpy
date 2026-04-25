@@ -19,8 +19,9 @@ The post-migration lme is expected to expose, at minimum:
                                         column name (R-canonical, e.g.
                                         '(Intercept)', 'MachineB')
     m.REML_criterion       — only set when REML=True
-    m.deviance, m.loglike, m.AIC, m.BIC, m.df_resid   — only set when
-                                                        REML=False (ML)
+    m.deviance, m.loglike, m.df_resid   — only set when REML=False (ML)
+    m.AIC, m.BIC           — set for both; REML uses the REML criterion
+                             as ``-2 log L`` (matches lme4's AIC()/BIC())
 """
 
 from __future__ import annotations

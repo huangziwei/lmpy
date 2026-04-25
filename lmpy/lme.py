@@ -159,9 +159,16 @@ class lme:
     deviance : float
         Optimized ML deviance, ``-2 log L``.
     loglike : float
-    AIC, BIC : float
     df_resid : int
         ``n - npar`` (matches lme4's printed ``df.resid``).
+
+    Attributes (both REML and ML)
+    -----------------------------
+    AIC, BIC : float
+        Information criteria. For ML fits, computed from the ML deviance;
+        for REML fits, from the REML criterion (matches lme4's ``AIC()``
+        and ``BIC()``). REML AIC/BIC are only comparable across models
+        with the same fixed-effects structure.
     """
 
     def __init__(self, formula: str, data: pl.DataFrame, REML: bool = True):
@@ -336,8 +343,10 @@ class lme:
             self.deviance = opt
             self.loglike = -0.5 * opt
             self.df_resid = n - self.npar
-            self.AIC = self.deviance + 2.0 * self.npar
-            self.BIC = self.deviance + np.log(n) * self.npar
+        # AIC/BIC use the ML deviance for ML fits and the REML criterion
+        # for REML fits, matching lme4's ``AIC.merMod`` / ``BIC.merMod``.
+        self.AIC = opt + 2.0 * self.npar
+        self.BIC = opt + np.log(n) * self.npar
 
     # ---- deviance building blocks --------------------------------------
     #
