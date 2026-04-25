@@ -258,61 +258,58 @@ def test_machines_re_smooths_REML():
     CSV dtypes (Int64/Utf8) they silently degrade to single-column random
     *slopes*, blowing edf to ~5 and AIC by ~170.
 
-    AIC uses mgcv's df = sum(edf2)+1 rule (Wood 2017 §6.11.3 / logLik.gam),
-    where edf2 corrects edf for smoothing-parameter uncertainty via
-    Vc1 = (∂β/∂ρ) Hλ⁻¹ (∂β/∂ρ)ᵀ, capped at edf1 = tr(2F − F²). Without
-    this correction (df = sum(edf)+1), AIC was ~0.3 below mgcv. The
-    remaining ~0.1 gap to mgcv comes from a different REML optimum:
-    lmpy drops `s(Machine,Worker)` columns dependent on `s(Worker)` via
-    gam.side, while mgcv keeps all 27 columns (the identity penalty
-    handles ID), so the two REML surfaces are slightly different shapes.
+    Pins target mgcv's published values directly: gam.side is now skipped
+    for `bs='re'` smooths (matching mgcv's `side.constrain=FALSE` on re
+    smooths), so the design has all 27 cols, the REML optimum lands at
+    mgcv's sp's, and edf/loglike/sp/coefficients agree to 4-5 digits.
+    AIC uses df = sum(edf2)+1 (Wood 2017 §6.11.3); the residual <0.1
+    AIC gap on b1 and ~0.25 on b2 is from the unimplemented Vc2 (the
+    Cholesky-derivative correction in gam.fit3.post.proc).
     """
     d = load_dataset("nlme", "Machines")
 
     b1 = gam("score ~ Machine + s(Worker, bs='re') + s(Machine, Worker, bs='re')",
              data=d, method="REML")
     assert b1.n == 54
-    _allclose(b1.edf_total, 17.7646, atol=1e-1, name="b1.edf")
+    assert b1.p == 27  # full mgcv design, no gam.side surgery on re smooths
+    _allclose(b1.edf_total, 17.7646, atol=5e-3, name="b1.edf")
     # edf < edf2 < edf1 — sp uncertainty inflates df, capped by tr(2F-F²).
-    _allclose(b1.edf1_total, 17.9952, atol=5e-2, name="b1.edf1")
-    _allclose(b1.edf2_total, 17.8600, atol=1e-1, name="b1.edf2")
+    _allclose(b1.edf1_total, 17.9952, atol=5e-3, name="b1.edf1")
+    _allclose(b1.edf2_total, 17.8600, atol=5e-2, name="b1.edf2")
     assert b1.edf_total < b1.edf2_total <= b1.edf1_total
-    _allclose(b1.sigma_squared, 0.9246, atol=5e-3, name="b1.sigma2")
-    _allclose(b1.loglike, -63.7353, atol=1e-1, name="b1.loglike")
-    # mgcv: 165.19 (df=18.86). lmpy: 165.10 (df=18.77) — within 0.1.
-    _allclose(b1.AIC, 165.19, atol=2e-1, name="b1.AIC")
-    _assert_param(b1, "(Intercept)", 52.9558, atol=5e-3)
+    _allclose(b1.sigma_squared, 0.9246, atol=5e-4, name="b1.sigma2")
+    _allclose(b1.loglike, -63.7353, atol=5e-3, name="b1.loglike")
+    _allclose(b1.AIC, 165.19, atol=1e-1, name="b1.AIC")
+    _assert_param(b1, "(Intercept)", 52.3556, atol=5e-3)
     # both blocks should have meaningful edf — degraded path would give ~1
     assert b1.edf_by_smooth["s(Worker)"] > 3.0
     assert b1.edf_by_smooth["s(Machine,Worker)"] > 8.0
 
-    # vcomp: scale matches mgcv tightly; smooth std.devs are off by the
-    # same sp-difference noted above. CIs are present (REML path).
+    # vcomp: matches mgcv to 3 decimals on points and CIs.
     vc = b1.vcomp
     assert vc.shape == (3, 4)
     assert vc["name"].to_list() == ["s(Worker)", "s(Machine,Worker)", "scale"]
-    scale_row = vc.filter(pl.col("name") == "scale").row(0, named=True)
-    _allclose(scale_row["std_dev"], 0.9615, atol=1e-3, name="vcomp scale.std")
-    _allclose(scale_row["lower"],   0.7632, atol=5e-3, name="vcomp scale.lo")
-    _allclose(scale_row["upper"],   1.2114, atol=5e-3, name="vcomp scale.hi")
-    # smooth point estimates: σ/√sp_k, both > 1 (random-effects are
-    # meaningful — degraded fit would give std ≪ scale).
-    for nm in ["s(Worker)", "s(Machine,Worker)"]:
+    expected = {
+        "s(Worker)":         (4.7811, 2.2499, 10.1600),
+        "s(Machine,Worker)": (3.7295, 2.3828,  5.8374),
+        "scale":             (0.9616, 0.7633,  1.2114),
+    }
+    for nm, (sd, lo, hi) in expected.items():
         row = vc.filter(pl.col("name") == nm).row(0, named=True)
-        assert row["std_dev"] > 1.0, f"{nm} std too small"
-        assert row["lower"] < row["std_dev"] < row["upper"]
-        assert row["lower"] > 0.0
+        _allclose(row["std_dev"], sd, atol=5e-3, name=f"vcomp {nm}.std")
+        _allclose(row["lower"],   lo, atol=2e-2, name=f"vcomp {nm}.lo")
+        _allclose(row["upper"],   hi, atol=5e-2, name=f"vcomp {nm}.hi")
 
     b2 = gam("score ~ Machine + s(Worker, bs='re') + s(Worker, bs='re', by=Machine)",
              data=d, method="REML")
     assert b2.n == 54
     # by=Machine produces one block per level → 3 extra sp's, total 4
     assert b2.sp.shape == (4,)
-    _allclose(b2.edf_total, 17.6445, atol=5e-2, name="b2.edf")
-    _allclose(b2.sigma_squared, 0.9246, atol=5e-3, name="b2.sigma2")
-    _allclose(b2.loglike, -63.8246, atol=5e-2, name="b2.loglike")
-    # mgcv: 165.19 (df=18.86). lmpy: 165.38 — within 0.2.
-    _allclose(b2.AIC, 165.19, atol=3e-1, name="b2.AIC")
+    _allclose(b2.edf_total, 17.6445, atol=5e-3, name="b2.edf")
+    _allclose(b2.sigma_squared, 0.9246, atol=5e-4, name="b2.sigma2")
+    _allclose(b2.loglike, -63.8246, atol=5e-3, name="b2.loglike")
+    # mgcv: 165.62. lmpy: 165.38 — Vc2 unimplemented, ~0.25 short.
+    _allclose(b2.AIC, 165.62, atol=3e-1, name="b2.AIC")
 
 
 def test_data_helper_applies_schema_sidecar():

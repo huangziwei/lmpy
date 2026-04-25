@@ -963,10 +963,16 @@ def _apply_gam_side(blocks: list[SmoothBlock]) -> list[SmoothBlock]:
     ``te(x1, x2)`` with ``s(x1) + s(x2)`` marginals, this drops exactly 2
     columns (24 → 22), matching ``ncol(model.matrix(m))``.
 
-    This is *column deletion* on the original basis, not a rotation: the
-    remaining te columns are not orthogonal to the marginal smooths in
-    data space, but the combined design is now identifiable. mgcv's
-    procedure (`gam.side.R` + `fixDependence`) is what we mirror here.
+    Random-effect smooths (``bs='re'``) carry ``side.constrain=FALSE`` in
+    mgcv: their identity penalty already identifies the fit even with a
+    rank-deficient X, so gam.side neither constrains them nor includes
+    them in X1 when constraining other blocks. Replicating that here
+    matters for `s(Worker, bs='re') + s(Machine, Worker, bs='re')` style
+    nestings — dropping the 6 dependent interaction columns shifts the
+    REML surface (different log|A|, log|S|+) and lands at a different
+    optimum than mgcv. Skipping the surgery keeps the design at p=27
+    (matching mgcv) at the cost of a rank-deficient X that's still PD
+    once Sλ = λ·I is added in the re block.
     """
     if len(blocks) < 2:
         return blocks
@@ -974,13 +980,16 @@ def _apply_gam_side(blocks: list[SmoothBlock]) -> list[SmoothBlock]:
     n = int(np.asarray(blocks[0].X).shape[0])
     out: list[SmoothBlock] = []
     for i, b in enumerate(blocks):
+        if not _side_constrain(b):
+            out.append(b)
+            continue
         my_vars = var_sets[i]
         Xb = np.asarray(b.X, dtype=float)
-        # X1 = intercept + every strict-subset block's design — exactly
-        # what `gam.side` builds before calling `fixDependence`.
+        # X1 = intercept + every strict-subset, side-constrained block's
+        # design — exactly what `gam.side` builds before `fixDependence`.
         cols_X1 = [np.ones((n, 1))]
         for j, other in enumerate(blocks):
-            if i == j:
+            if i == j or not _side_constrain(other):
                 continue
             if var_sets[j] and var_sets[j] < my_vars:
                 cols_X1.append(np.asarray(other.X, dtype=float))
@@ -1002,6 +1011,12 @@ def _apply_gam_side(blocks: list[SmoothBlock]) -> list[SmoothBlock]:
             label=b.label, term=b.term, cls=b.cls, X=new_X, S=new_S,
         ))
     return out
+
+
+def _side_constrain(b: SmoothBlock) -> bool:
+    """Mirrors mgcv's ``smooth$side.constrain``. Random-effect smooths
+    (``re.smooth.spec``) opt out — their identity penalty handles ID."""
+    return b.cls != "re.smooth.spec"
 
 
 def _fix_dependence(X1: np.ndarray, X2: np.ndarray,
