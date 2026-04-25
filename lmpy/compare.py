@@ -7,6 +7,8 @@ each other.
 
 from __future__ import annotations
 
+import inspect
+
 import polars as pl
 from scipy.stats import chi2, f
 
@@ -17,13 +19,37 @@ from .utils import format_df, significance_code
 __all__ = ["anova", "AIC", "BIC"]
 
 
+def _caller_names(models, frame, fallback: str = "model") -> list[str]:
+    """Recover caller-bound variable names for ``models``, like R's
+    ``match.call``. Walks ``frame``'s locals + globals; falls back to
+    ``f"{fallback} {i}"`` when a model has no unique binding (e.g.
+    passed as an expression or aliased to multiple names).
+    """
+    if frame is None:
+        return [f"{fallback} {i}" for i in range(len(models))]
+    scope = {**frame.f_globals, **frame.f_locals}
+    by_id: dict[int, list[str]] = {}
+    for name, val in scope.items():
+        if name.startswith("_"):
+            continue
+        by_id.setdefault(id(val), []).append(name)
+    out = []
+    for i, m in enumerate(models):
+        names = by_id.get(id(m), [])
+        out.append(names[0] if len(names) == 1 else f"{fallback} {i}")
+    return out
+
+
 def AIC(*models) -> None:
     """Print an AIC comparison table for one or more fitted models.
 
-    Each model must expose ``.AIC``, ``.npar``, and ``.formula``.
+    Each model must expose ``.AIC`` and ``.npar``. Row labels are
+    recovered from the caller's variable names (R-style); falls back
+    to ``model i`` for unbound or aliased arguments.
     """
+    names = _caller_names(models, inspect.currentframe().f_back)
     rows = pl.DataFrame({
-        "":    [m.formula for m in models],
+        "":    names,
         "df":  [m.npar    for m in models],
         "AIC": [round(m.AIC, 2) for m in models],
     })
@@ -33,10 +59,13 @@ def AIC(*models) -> None:
 def BIC(*models) -> None:
     """Print a BIC comparison table for one or more fitted models.
 
-    Each model must expose ``.BIC``, ``.npar``, and ``.formula``.
+    Each model must expose ``.BIC`` and ``.npar``. Row labels are
+    recovered from the caller's variable names (R-style); falls back
+    to ``model i`` for unbound or aliased arguments.
     """
+    names = _caller_names(models, inspect.currentframe().f_back)
     rows = pl.DataFrame({
-        "":    [m.formula for m in models],
+        "":    names,
         "df":  [m.npar    for m in models],
         "BIC": [round(m.BIC, 2) for m in models],
     })
@@ -51,24 +80,25 @@ def anova(*models):
       for 3+). REML fits are internally refit by ML before the LRT.
 
     Rows are sorted by parameter count (smaller model first), matching
-    R's ``anova``. Row labels ``model 0..N`` preserve *input* order so
-    they remain traceable to the passed arguments.
+    R's ``anova``. Row labels are recovered from the caller's variable
+    names (R-style); falls back to ``model i`` for unbound or aliased
+    arguments, preserving *input* order.
     """
     if len(models) < 2:
         raise TypeError("anova(): need at least two models")
+    labels = _caller_names(models, inspect.currentframe().f_back)
     if all(isinstance(m, lme) for m in models):
-        return _anova_lme(*models)
+        return _anova_lme(*models, labels=labels)
     if all(isinstance(m, lm) for m in models):
-        return _anova_lm(*models)
+        return _anova_lm(*models, labels=labels)
     raise TypeError("anova(): all models must be the same type (lm or lme)")
 
 
-def _anova_lm(*models):
+def _anova_lm(*models, labels: list[str]):
     """F-test ANOVA table comparing nested ``lm`` fits."""
     # Sort ascending by npar (= descending by df_residuals, matching R).
     order = sorted(range(len(models)), key=lambda i: models[i].df_residuals,
                    reverse=True)
-    labels = [f"model {i}" for i in range(len(models))]
 
     dfs  = [models[i].df_residuals for i in order]
     rss  = [models[i].rss           for i in order]
@@ -116,15 +146,17 @@ def _anova_lm(*models):
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
 
 
-def _anova_lme(*models):
+def _anova_lme(*models, labels: list[str]):
     """Likelihood-ratio test for nested ``lme`` fits (lme4-style)."""
     # LRT requires ML; silently refit any REML inputs.
+    refit = any(m.REML for m in models)
     models = tuple(
         (lme(m.formula, m.data, REML=False) if m.REML else m) for m in models
     )
+    if refit:
+        print("refitting model(s) with ML (instead of REML)")
     # Sort ascending by npar, preserving original indices for row labels.
     order = sorted(range(len(models)), key=lambda i: models[i].npar)
-    labels = [f"model {i}" for i in range(len(models))]
 
     npar_col: list[int] = []
     aic_col: list[float] = []
