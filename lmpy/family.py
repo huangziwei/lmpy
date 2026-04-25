@@ -323,6 +323,18 @@ class Family:
         the caller adds ``+2·edf`` (or whatever df rule it uses)."""
         raise NotImplementedError
 
+    def _aic_dev1(self, dev, scale, wt) -> float:
+        """The ``dev1`` argument that ``aic(y, μ, dev1, wt, n)`` consumes.
+
+        Mirrors ``gam.fit3.r:848-849``. For unknown-scale non-Gaussian families
+        (Gamma, IG) and scale-known families (Poisson, binomial), this is
+        ``scale · Σwt`` so the AIC uses the Pearson/REML scale estimator (or
+        the fixed scale=1). Gaussian overrides this to return ``dev`` directly
+        because the MLE σ² = dev/n has a closed form and mgcv prefers it
+        over the moment estimator for the AIC.
+        """
+        return float(scale) * float(np.sum(np.asarray(wt, dtype=float)))
+
     def ls(self, y, wt, scale) -> np.ndarray:
         """Saturated log-likelihood at μ=y, plus its 1st/2nd derivative
         wrt ``log φ`` (φ = scale) — used by REML when scale is unknown.
@@ -361,6 +373,12 @@ class Gaussian(Family):
         # mgcv's gaussian()$aic: n·(log(2πσ²)+1) + 2 — note the +2 is the
         # "+1 family df" placeholder; downstream adds 2·edf for the model.
         return n_eff * (np.log(2.0 * np.pi * sigma2) + 1.0) + 2.0
+
+    def _aic_dev1(self, dev, scale, wt):
+        # Gaussian MLE σ² = dev/n is closed-form, so mgcv passes dev directly
+        # (gam.fit3.r:848). Caller's `dev` is the family deviance = RSS for
+        # Gaussian. n_eff = Σwt and dev/n_eff = MLE σ².
+        return float(dev)
 
     def ls(self, y, wt, scale):
         # mgcv: ls = -½·nobs·log(2π·φ) + ½·Σ log w[w>0]

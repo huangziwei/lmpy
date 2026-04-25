@@ -79,8 +79,15 @@ class gam:
         Per-coefficient Wald t-stat and p-value — only meaningful for
         *parametric* rows; smooth-basis rows are reported but users
         should interpret via the smooth-level table (``smooth_table``).
-    fitted, residuals : np.ndarray
-        Length-n arrays, ``ŷ = Xβ̂`` and ``y − ŷ``.
+    linear_predictors : np.ndarray
+        Length-n linear predictor ``η = Xβ̂``.
+    fitted_values : np.ndarray
+        Length-n fitted mean ``μ̂ = g⁻¹(η)``. For Gaussian-identity, μ = η.
+    fitted : np.ndarray
+        Alias for ``fitted_values`` (was ``η``; equivalent for Gaussian).
+    residuals : np.ndarray
+        Length-n response residuals ``y − μ̂``. Use ``residuals_of(type=…)``
+        to request deviance/Pearson/working/response variants.
     sigma, sigma_squared : float
         Residual SD and variance (``scale`` in mgcv).
     sp : np.ndarray
@@ -351,13 +358,26 @@ class gam:
         # remains non-negative and interpretable.
         edf = np.diag(A_inv_XtX).copy()
         edf_total = float(edf.sum())
-        # df.residual used in mgcv = n - edf_total. For Gaussian:
-        #   σ̂² = rss / (n - edf_total)
-        # (mgcv also uses this to rescale GCV; REML uses (n - Mp)). We store
-        # both for summary output.
+        # Prior weights (PIRLS uses ones today; binomial size / offset / prior-w
+        # land later). Stored so residuals_of and Pearson-scale share the same
+        # weights PIRLS fit with.
+        self._wt = np.ones(n)
+        wt = self._wt
+        # df.residual used in mgcv = n - edf_total. Pearson scale
+        # estimator: Σ wt·(y-μ)²/V(μ) / df_resid for unknown-scale families,
+        # 1.0 for Poisson/Binomial. For Gaussian (V=1, wt=1) this reduces to
+        # rss / df_resid, so the Gaussian path stays bit-identical.
         df_resid = float(n - edf_total)
-        sigma_squared = rss / df_resid if df_resid > 0 else float("nan")
-        sigma = float(np.sqrt(sigma_squared)) if np.isfinite(sigma_squared) else float("nan")
+        if self.family.scale_known:
+            scale = 1.0
+        elif df_resid > 0:
+            V = self.family.variance(fit.mu)
+            pearson = float(np.sum(wt * (y - fit.mu) ** 2 / V))
+            scale = pearson / df_resid
+        else:
+            scale = float("nan")
+        sigma_squared = scale                 # alias kept for back-compat
+        sigma = float(np.sqrt(sigma_squared)) if np.isfinite(sigma_squared) and sigma_squared >= 0 else float("nan")
 
         Vp = sigma_squared * A_inv
         Ve = sigma_squared * A_inv_XtX @ A_inv
@@ -380,15 +400,38 @@ class gam:
             pv = np.full_like(t_stats, np.nan)
         self.p_values = _row_frame(pv, column_names)
 
-        fitted = X @ beta
-        residuals = y - fitted
-        self.fitted = fitted
-        self.residuals = residuals
+        eta = fit.eta
+        mu = fit.mu
+        self.linear_predictors = eta
+        self.fitted_values = mu
+        self.fitted = mu                      # alias; for Gaussian μ = η
+        # Default residuals = deviance residuals (mgcv default). For Gaussian
+        # with prior weights = 1, sign(y-μ)·√((y-μ)²) = (y-μ), so the existing
+        # Gaussian RSS-based summaries stay bit-identical.
+        self.residuals = self._deviance_residuals(y, mu, self._wt)
         self.sigma = sigma
         self.sigma_squared = sigma_squared
+        self.scale = sigma_squared            # mgcv's `$scale`
         self.df_residuals = df_resid
-        self.rss = float(rss)
-        self.deviance = float(rss)
+        # Family deviance: `_FitState.dev` already holds Σ family.dev_resids
+        # (Gaussian path: same as RSS). Keep `m.rss` as an alias for the
+        # Gaussian-era name; new code should read `m.deviance`.
+        self.deviance = float(fit.dev)
+        self.rss = self.deviance              # alias (Gaussian: dev = rss)
+
+        # Null deviance: deviance of the intercept-only model. For an intercept-
+        # only GLM the score equation gives μ̂ = weighted mean of y for any
+        # link (μ is constant and the weighted mean is the unique solution).
+        # Without an intercept fall back to η ≡ 0 ⇒ μ ≡ linkinv(0). Mirrors
+        # `glm.fit`'s `wtdmu`. For Gaussian (V=1, wt=1) with intercept this
+        # reduces to Σ(y - mean(y))² = tss; without intercept to Σy² = yty.
+        if has_intercept:
+            mu_null_const = float(np.sum(wt * y) / np.sum(wt))
+            mu_null = np.full(n, mu_null_const)
+        else:
+            mu_null = self.family.link.linkinv(np.zeros(n))
+        self.null_deviance = float(np.sum(self.family.dev_resids(y, mu_null, wt)))
+        self.df_null = float(n - 1) if has_intercept else float(n)
 
         self.Vp = Vp
         self.Ve = Ve
@@ -403,33 +446,43 @@ class gam:
             edf_by_smooth[b.label] = float(edf[a:bcol].sum())
         self.edf_by_smooth = edf_by_smooth
 
+        # Response-scale residual SS is what mgcv's r.sq is built on (uses
+        # `object$y - object$fitted.values`, not deviance residuals — see
+        # `summary.gam` line ~4055 in mgcv 1.9). For Gaussian-identity with
+        # an intercept, sum(y - μ) = 0 from the unpenalized intercept's score
+        # equation, so the variance-based formula reduces algebraically to
+        # `1 - rss·(n-1)/(tss·df_resid)`, matching the legacy
+        # `1 - (1 - rss/tss)(n-1)/df_resid` exactly.
+        ss_resid_response = float(np.sum(wt * (y - mu) ** 2))
         if has_intercept and tss > 0:
-            r_squared = 1.0 - rss / tss
-            # mgcv's adjusted R² uses df.residual and n - 1 like lm:
-            # 1 - (1 - R²) (n - 1) / df.residual
-            r_squared_adjusted = (
-                1.0 - (1.0 - r_squared) * (n - 1) / df_resid
-                if df_resid > 0 else float("nan")
-            )
+            r_squared = 1.0 - ss_resid_response / tss
+        elif yty > 0:
+            r_squared = 1.0 - ss_resid_response / yty
         else:
-            r_squared = 1.0 - rss / yty if yty > 0 else float("nan")
-            r_squared_adjusted = (
-                1.0 - (1.0 - r_squared) * n / df_resid
-                if df_resid > 0 else float("nan")
-            )
+            r_squared = float("nan")
+        # mgcv's r.sq formula: 1 - var(√w·(y-μ))·(n-1) / (var(√w·(y-mean.y))·df_resid)
+        # with var() = unbiased sample variance (denom n-1), matching R's var().
+        if df_resid > 0 and n > 1:
+            sqrt_wt = np.sqrt(wt)
+            mean_y_w = float(np.sum(wt * y) / np.sum(wt))
+            v_resid = float(np.var(sqrt_wt * (y - mu), ddof=1))
+            v_total = float(np.var(sqrt_wt * (y - mean_y_w), ddof=1))
+            if v_total > 0:
+                r_squared_adjusted = 1.0 - v_resid * (n - 1) / (v_total * df_resid)
+            else:
+                r_squared_adjusted = float("nan")
+        else:
+            r_squared_adjusted = float("nan")
         self.r_squared = float(r_squared)
         self.r_squared_adjusted = float(r_squared_adjusted)
-
-        # Log-likelihood at the Gaussian MLE σ² = rss/n (concentrated form),
-        # matching mgcv's logLik.gam — `$sig2` is the unbiased rss/(n-edf)
-        # and is reported separately, but logLik/AIC profile σ² out at the
-        # MLE, so plugging the unbiased σ² in here would double-count the
-        # df penalty. (lm.compute_loglikelihood uses the same formula.)
-        if rss > 0:
-            loglike = -0.5 * n * (np.log(rss / n) + np.log(2 * np.pi) + 1.0)
+        # Deviance explained — mgcv: (null.deviance - deviance) / null.deviance.
+        if self.null_deviance > 0:
+            self.deviance_explained = float(
+                (self.null_deviance - self.deviance) / self.null_deviance
+            )
         else:
-            loglike = float("nan")
-        self.loglike = float(loglike)
+            self.deviance_explained = float("nan")
+
         # Augmented REML Hessian wrt (ρ, log σ²) — both edf12 (Vr in Vc1
         # and Vc2) and vcomp (CIs on log σ_k) need it. Computed once and
         # cached. For GCV / no-smooth / non-finite σ², leave as None and
@@ -454,7 +507,7 @@ class gam:
         # bit; Vc2 = σ² Σ_{i,j} Vr[i,j] M_i M_j^T accounts for the
         # ρ-dependence of L^{-T} in the Bayesian draw β̃ = β̂ + σ L^{-T} z.
         # edf1 = tr(2F-F²) is the upper bound; cap edf2 at edf1 in total
-        # only. +1 is for the residual scale (sc.p in mgcv).
+        # only. sc.p = 1 if scale is estimated, 0 if known (mgcv convention).
         if n_sp > 0:
             edf2_per_coef, edf1_per_coef = self._compute_edf12(
                 rho_hat, fit, sigma_squared, A_inv, A_inv_XtX, edf, H_aug,
@@ -468,12 +521,26 @@ class gam:
             self.edf2 = edf.copy()
             self.edf1_total = edf_total
             self.edf2_total = edf_total
-        # logLik.gam additionally caps df at length(coef) — relevant only at
-        # the totally-unpenalized end where edf2 ≈ p; keep it for parity.
-        df_for_aic = min(self.edf2_total, float(p))
-        self.npar = df_for_aic + 1.0
-        self.AIC = -2.0 * loglike + 2.0 * self.npar
-        self.BIC = -2.0 * loglike + float(np.log(n)) * self.npar
+
+        # AIC / logLik via mgcv's logLik.gam machinery (mgcv.r:4420):
+        #   m$aic = family.aic(y, μ, dev1, wt, n) + 2·sum(edf)         (mgcv.r:1843)
+        #   logLik(m) = sum(edf) + sc.p − m$aic/2                       (mgcv.r:4428)
+        #   df_for_AIC = min(sum(edf2) + sc.p,  p_coef + sc.p)          (mgcv.r:4431-33)
+        #   AIC(m) = -2·logLik(m) + 2·df_for_AIC                        (R's AIC.default)
+        # `dev1` is family-specific (Gaussian uses dev directly, the Pearson
+        # σ̂² is moment-based for the rest); see Family._aic_dev1.
+        sc_p = 0.0 if self.family.scale_known else 1.0
+        dev1 = self.family._aic_dev1(self.deviance, scale, wt)
+        family_aic = float(self.family.aic(y, fit.mu, dev1, wt, n))
+        mgcv_aic = family_aic + 2.0 * edf_total                    # mgcv's m$aic
+        logLik = sc_p + edf_total - 0.5 * mgcv_aic                 # mgcv's logLik value
+        df_for_aic = min(self.edf2_total + sc_p, float(p) + sc_p)  # capped at np
+        self.loglike = float(logLik)
+        self.logLik = self.loglike                                 # alias (mgcv-style name)
+        self.npar = float(df_for_aic)
+        self.AIC = -2.0 * logLik + 2.0 * df_for_aic
+        self.BIC = -2.0 * logLik + float(np.log(n)) * df_for_aic
+        self._mgcv_aic = float(mgcv_aic)                           # mgcv's m$aic (different from AIC!)
 
         if method == "REML":
             if n_sp > 0:
@@ -1381,6 +1448,45 @@ class gam:
     # Public post-fit API
     # -----------------------------------------------------------------------
 
+    def _deviance_residuals(self, y, mu, wt) -> np.ndarray:
+        """``sign(y - μ)·√(per-obs deviance)`` — mgcv's default residual."""
+        d_i = self.family.dev_resids(y, mu, wt)
+        d_i = np.maximum(d_i, 0.0)            # FP cleanup near zero
+        return np.sign(y - mu) * np.sqrt(d_i)
+
+    def residuals_of(self, type: str = "deviance") -> np.ndarray:
+        """GLM residuals of the requested ``type``.
+
+        Mirrors ``residuals.glm`` / ``residuals.gam`` in R.
+
+        Parameters
+        ----------
+        type : {"deviance", "pearson", "working", "response"}
+            - ``"deviance"`` (default): ``sign(y-μ)·√(per-obs deviance)``.
+            - ``"pearson"``: ``(y-μ)·√(wt / V(μ))``.
+            - ``"working"``: ``(y-μ) · g'(μ)`` (η-scale residual).
+            - ``"response"``: ``y - μ``.
+        """
+        if type not in ("deviance", "pearson", "working", "response"):
+            raise ValueError(
+                f"type must be one of 'deviance', 'pearson', 'working', "
+                f"'response'; got {type!r}"
+            )
+        y = self._y_arr
+        mu = self.fitted_values
+        wt = self._wt
+        if type == "response":
+            return y - mu
+        if type == "deviance":
+            return self._deviance_residuals(y, mu, wt)
+        V = self.family.variance(mu)
+        if type == "pearson":
+            return (y - mu) * np.sqrt(wt / np.maximum(V, 0.0))
+        # working: (y-μ) · g'(μ) = (y-μ) / (dμ/dη)
+        eta = self.linear_predictors
+        dmu_deta = self.family.link.mu_eta(eta)
+        return (y - mu) / dmu_deta
+
     def predict(self, newdata: pl.DataFrame | None = None) -> np.ndarray:
         """Return in-sample fitted values ``ŷ = Xβ̂``.
 
@@ -1410,8 +1516,8 @@ class gam:
 
     def __repr__(self) -> str:
         out = [
-            "Family: gaussian",
-            "Link function: identity",
+            f"Family: {self.family.name}",
+            f"Link function: {self.family.link.name}",
             "",
             f"Formula: {self.formula}",
             "",
@@ -1427,8 +1533,8 @@ class gam:
         """mgcv-style summary: parametric table + smooth-edf table + fit stats."""
         out = [
             "",
-            "Family: gaussian",
-            "Link function: identity",
+            f"Family: {self.family.name}",
+            f"Link function: {self.family.link.name}",
             "",
             f"Formula: {self.formula}",
             "",
@@ -1516,13 +1622,9 @@ class gam:
             out.append("")
 
         # -- fit stats ------------------------------------------------------
-        dev_expl = (
-            1.0 - self.rss / self._tss
-            if self._tss > 0 else float("nan")
-        )
         out.append(
             f"R-sq.(adj) = {self.r_squared_adjusted:.3g}  "
-            f"Deviance explained = {dev_expl * 100:.1f}%"
+            f"Deviance explained = {self.deviance_explained * 100:.1f}%"
         )
         if self.method == "REML":
             out.append(

@@ -430,12 +430,128 @@ def test_pirls_init_canonical_inverse_gaussian():
     assert m.n == n
     assert np.all(np.isfinite(m._beta))
     assert np.all(np.isfinite(m.fitted))
-    # m.fitted is the linear predictor η = X β; for IG canonical link
-    # valideta requires η>0 finite.
+    # m.fitted is μ = linkinv(η). For canonical IG link (1/μ²) μ>0 ⇔ η>0,
+    # so this also serves as a valideta check on the converged fit.
     assert np.all(m.fitted > 0)
+    assert np.all(m.linear_predictors > 0)
     assert m.sigma_squared > 0
     # Intercept ≈ link(mean(y)) = 1/mean(y)² for an intercept-only fit;
     # with a smooth that captures most of the signal it lands near
     # link(mean(mu_true)) = 1/1.5² ≈ 0.444.
     intercept = m.bhat["(Intercept)"][0]
     assert 0.30 < intercept < 0.60
+
+
+# ---------------------------------------------------------------------------
+# Phase 1.9 — non-Gaussian post-fit smoke. trees + Gamma(log) is the canonical
+# small-n GLM example; mgcv's r.sq, deviance_explained, and null_deviance only
+# depend on (y, μ, wt, family) and family.dev_resids, so those land at mgcv's
+# values even before the REML score is family-aware (Phase 2). sp/edf/AIC
+# still depend on the (Gaussian-only) REML score, so they're pinned at lmpy's
+# current values with a TODO — Phase 4's mgcv-oracle battery tightens them.
+# ---------------------------------------------------------------------------
+
+
+def test_trees_gamma_log_smoke():
+    """trees + Gamma(log), method='REML': pin family-agnostic post-fit values
+    against mgcv (those that don't depend on sp), and lmpy's current
+    sp-dependent values as a regression guard until Phase 2 lands."""
+    from lmpy import Gamma
+    d = load_dataset("R", "trees")
+    m = gam("Volume ~ s(Height) + s(Girth)", d, family=Gamma(link="log"),
+            method="REML")
+
+    # Family / link plumbing.
+    assert m.family.name == "Gamma"
+    assert m.family.link.name == "log"
+    assert m.family.scale_known is False
+
+    # μ vs η: log-link ⇒ μ = exp(η), strictly positive.
+    assert np.all(m.fitted_values > 0)
+    np.testing.assert_allclose(
+        m.fitted_values, np.exp(m.linear_predictors), atol=1e-12,
+    )
+    assert m.fitted is m.fitted_values or np.array_equal(m.fitted, m.fitted_values)
+
+    # df: n=31, intercept-only null ⇒ df_null = n-1 = 30.
+    assert m.n == 31
+    np.testing.assert_allclose(m.df_null, 30.0, atol=0.0)
+
+    # mgcv-anchored (only depend on (y, μ, family); sp-independent):
+    #   summary(m)$r.sq            = 0.9744
+    #   summary(m)$dev.expl        = 0.97829   (≈ 0.9783)
+    #   m$null.deviance            = 8.3172
+    np.testing.assert_allclose(m.r_squared_adjusted, 0.9744316520, atol=5e-5)
+    np.testing.assert_allclose(m.deviance_explained, 0.9783011668, atol=5e-5)
+    np.testing.assert_allclose(m.null_deviance, 8.3172012147, atol=5e-4)
+
+    # lmpy's current sp/edf/scale/deviance/AIC/logLik. mgcv's values for these
+    # differ until Phase 2 brings the REML score in line; Phase 4 tightens
+    # the tolerance and re-pins against mgcv.
+    # TODO(Phase 4): re-pin against summary(mgcv::gam(..., family=Gamma(log)))
+    # and tighten atol; the values below are lmpy-current (2026-04-25).
+    np.testing.assert_allclose(m.sp, [59167494.948, 0.208312900], rtol=1e-4)
+    np.testing.assert_allclose(m.edf_total, 4.781907, atol=5e-5)
+    np.testing.assert_allclose(m.edf2_total, 5.310036, atol=5e-5)
+    np.testing.assert_allclose(m.scale, 0.0068376384, atol=5e-7)
+    np.testing.assert_allclose(m.sigma_squared, m.scale, atol=0.0)
+    np.testing.assert_allclose(m.deviance, 0.1804735615, atol=5e-7)
+    np.testing.assert_allclose(m.logLik, -65.8841605695, atol=5e-5)
+    np.testing.assert_allclose(m.AIC, 144.3883935160, atol=5e-5)
+    np.testing.assert_allclose(m._mgcv_aic, 143.3321355567, atol=5e-5)
+
+    # AIC.default identity: AIC = -2·logLik + 2·npar (by construction).
+    np.testing.assert_allclose(m.AIC, -2.0 * m.logLik + 2.0 * m.npar, atol=1e-10)
+    np.testing.assert_allclose(m.BIC, -2.0 * m.logLik + np.log(m.n) * m.npar,
+                               atol=1e-10)
+
+    # Intercept: log(weighted_mean(Volume)) ≈ log(30.17) ≈ 3.408 for an
+    # intercept-only fit; with two smooths absorbing most of the signal
+    # the fitted intercept lands near 3.276.
+    np.testing.assert_allclose(m.bhat["(Intercept)"][0], 3.2756425861, atol=5e-5)
+
+    # First-five fitted μ — pin lmpy-current. Phase 4 retightens vs mgcv.
+    np.testing.assert_allclose(
+        m.fitted_values[:5],
+        [10.621876572, 10.360047121, 10.410548711, 16.428942450, 19.683743786],
+        atol=5e-5,
+    )
+
+    # Gamma(log) residual identities:
+    #   working = (y-μ)/(dμ/dη) = (y-μ)/μ
+    #   pearson = (y-μ)·√(wt/V) = (y-μ)/μ        (V=μ², wt=1)
+    # ⇒ pearson == working for log Gamma.
+    pearson = m.residuals_of("pearson")
+    working = m.residuals_of("working")
+    np.testing.assert_allclose(pearson, working, atol=1e-12)
+    response = m.residuals_of("response")
+    np.testing.assert_allclose(response, m._y_arr - m.fitted_values, atol=0.0)
+    # Default residuals = deviance residuals.
+    np.testing.assert_array_equal(m.residuals, m.residuals_of("deviance"))
+
+
+def test_gaussian_residual_identities_and_aic_self_consistency():
+    """For Gaussian-identity all four residual types collapse to (y-μ).
+    Independent of mgcv pins, so this catches future regressions in
+    residuals_of without depending on a fixture."""
+    d = load_dataset("MASS", "mcycle")
+    m = gam("accel ~ s(times)", d, method="REML")
+    y = m._y_arr
+    mu = m.fitted_values
+    target = y - mu
+    # η == μ for identity link.
+    np.testing.assert_allclose(m.linear_predictors, mu, atol=0.0)
+    np.testing.assert_allclose(m.residuals_of("response"), target, atol=0.0)
+    np.testing.assert_allclose(m.residuals_of("deviance"), target, atol=1e-12)
+    np.testing.assert_allclose(m.residuals_of("pearson"),  target, atol=1e-12)
+    np.testing.assert_allclose(m.residuals_of("working"),  target, atol=1e-12)
+    # m.residuals defaults to deviance residuals.
+    np.testing.assert_array_equal(m.residuals, m.residuals_of("deviance"))
+    # Deviance residual identity: Σ d_i² = m.deviance for Gaussian (V=1).
+    np.testing.assert_allclose(np.sum(m.residuals_of("deviance") ** 2),
+                               m.deviance, atol=1e-9)
+    # AIC.default self-consistency.
+    np.testing.assert_allclose(m.AIC, -2.0 * m.logLik + 2.0 * m.npar, atol=1e-10)
+    # Bad type raises.
+    with pytest.raises(ValueError):
+        m.residuals_of("partial")
