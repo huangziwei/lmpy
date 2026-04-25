@@ -139,7 +139,7 @@ class gam:
         formula: str,
         data: pl.DataFrame,
         *,
-        method: str = "REML",
+        method: str = "GCV.Cp",
         sp: np.ndarray | None = None,
         family: Family | None = None,
     ):
@@ -149,17 +149,10 @@ class gam:
         self.formula = formula
         self.method = method
         self.family = Gaussian() if family is None else family
-        # GCV is only meaningful when scale is known (Poisson, binomial). For
-        # unknown-scale non-Gaussian families (Gamma, gaussian-non-identity,
-        # etc.), scale enters the criterion non-analytically and mgcv requires
-        # REML/ML — we follow.
-        if (method == "GCV.Cp"
-                and not (self.family.name == "gaussian"
-                         and self.family.link.name == "identity")):
-            raise NotImplementedError(
-                "GCV.Cp is currently only supported for Gaussian-identity; "
-                "use method='REML' for non-Gaussian families."
-            )
+        # GCV.Cp dispatches by family.scale_known: scale-unknown (Gaussian,
+        # Gamma, IG) → GCV `n·D/(n−τ)²`; scale-known (Poisson, Binomial) →
+        # UBRE `D/n + 2·τ/n − 1`. mgcv's `gam.outer` does the same dispatch
+        # under method="GCV.Cp".
         d = prepare_design(formula, data)
         self._expanded = d.expanded
         self.data = d.data
@@ -304,10 +297,13 @@ class gam:
                     fit_t = self._fit_given_rho(rho_v)
                     return float(self._reml(rho_v, lp_v, fit=fit_t))
             else:
-                # GCV.Cp — Stage 2 generalizes to any family. Today still
-                # Gaussian-identity by the entry-point gate.
                 def obj(theta):
                     return float(self._gcv(theta[:n_sp]))
+
+                def obj_grad(theta):
+                    rho_v = theta[:n_sp]
+                    fit_t = self._fit_given_rho(rho_v)
+                    return self._gcv_grad(rho_v, fit=fit_t)
 
             # Initial seed.
             #
@@ -373,11 +369,10 @@ class gam:
                     theta0, include_log_phi=include_log_phi
                 )
             else:
-                # GCV stays on L-BFGS-B until Stage 2 lands analytical
-                # GCV/UBRE derivatives.
                 bounds = [(-30.0, 30.0)] * theta_dim
                 res = minimize(
-                    obj, theta0, method="L-BFGS-B", bounds=bounds,
+                    obj, theta0, method="L-BFGS-B", jac=obj_grad,
+                    bounds=bounds,
                     options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 500},
                 )
                 theta_hat = res.x
@@ -1580,16 +1575,119 @@ class gam:
             out[k] = sp[k] * float(beta_k @ slot.S @ beta_k)
         return out
 
-    def _gcv(self, rho: np.ndarray) -> float:
-        """Generalized cross-validation score. Wood 2017 §4.4."""
-        fit = self._fit_given_rho(rho)
+    def _gcv(self, rho: np.ndarray, fit: "_FitState | None" = None) -> float:
+        """GCV (scale-unknown) or UBRE/Mallows-Cp (scale-known). Wood 2017 §4.4.
+
+            scale_unknown:  V_g = n · D / (n − τ)²
+            scale_known:    V_u = D/n + 2·τ/n − 1     (φ ≡ 1)
+
+        with D = Σ family.dev_resid(y, μ̂, wt) the deviance and
+        τ = tr((X'WX + Sλ)⁻¹ X'WX) the effective degrees of freedom at
+        PIRLS-converged W. For Gaussian-identity, W=I ⇒ X'WX = X'X and
+        D = rss, recovering the pre-Stage-2 closed form bit-identically.
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n = self.n
+        if fit.w is None or np.allclose(fit.w, 1.0):
+            XtWX = self._XtX
+        else:
+            Xw = self._X_full * np.sqrt(fit.w)[:, None]
+            XtWX = Xw.T @ Xw
         A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(self.p))
-        A_inv_XtX = A_inv @ self._XtX
-        edf_total = float(np.trace(A_inv_XtX))
-        denom = self.n - edf_total
+        edf_total = float(np.trace(A_inv @ XtWX))
+        if self.family.scale_known:
+            return fit.dev / n + 2.0 * edf_total / n - 1.0
+        denom = n - edf_total
         if denom <= 0:
             return 1e15
-        return self.n * fit.rss / (denom * denom)
+        return n * fit.dev / (denom * denom)
+
+    def _gcv_grad(self, rho: np.ndarray,
+                  fit: "_FitState | None" = None) -> np.ndarray:
+        """Analytical gradient of `_gcv`. Length n_sp. Wood 2008 §4.
+
+            scale_unknown:  ∂V_g/∂ρ_k = n·∂D/∂ρ_k / (n−τ)²
+                                       + 2·n·D·∂τ/∂ρ_k / (n−τ)³
+            scale_known:    ∂V_u/∂ρ_k = ∂D/∂ρ_k / n + 2·∂τ/∂ρ_k / n
+
+        Pieces (PIRLS-converged β̂, family-agnostic):
+
+          ∂D/∂ρ_k = −2·(Sλ β̂)' · ∂β̂/∂ρ_k
+              The penalized score is zero at converged β̂ ⇒ ∂D/∂β = −2·Sλ β̂
+              regardless of family/link, so chain through β̂(ρ).
+
+          τ = tr(A⁻¹ X'WX),  A = X'WX + Sλ
+          ∂τ/∂ρ_k = (d − s)' · hv_k  −  λ_k · tr(A⁻¹ S_k F)
+
+        with d = diag(X A⁻¹ X'), R = X A⁻¹ X' element-wise squared,
+        s = R²·w_pirls, hv_k = ∂w/∂ρ_k = dw/dη · (X·∂β̂/∂ρ_k)_k. For
+        Gaussian-identity, hv ≡ 0 so the W-derivative drops, recovering
+        the standard `−λ_k·tr(A⁻¹ S_k F)` form.
+        """
+        if fit is None:
+            fit = self._fit_given_rho(rho)
+        n_sp = len(self._slots)
+        if n_sp == 0:
+            return np.zeros(0)
+
+        sp = np.exp(rho)
+        n, p = self.n, self.p
+        X = self._X_full
+        family = self.family
+
+        # X'WX (= self._XtX shortcut when fit.w = ones, e.g. Gaussian-identity).
+        w_pirls = fit.w if fit.w is not None else np.ones(n)
+        if np.allclose(w_pirls, 1.0):
+            XtWX = self._XtX
+        else:
+            Xw = X * np.sqrt(w_pirls)[:, None]
+            XtWX = Xw.T @ Xw
+
+        A_inv = cho_solve((fit.A_chol, fit.A_chol_lower), np.eye(p))
+        F = A_inv @ XtWX
+        edf_total = float(np.trace(F))
+
+        # ∂D/∂ρ_k via chain through β̂.
+        db_drho = self._dbeta_drho(fit, rho)              # (p, n_sp)
+        Sλ_beta = fit.S_full @ fit.beta                    # (p,)
+        dD_drho = -2.0 * (Sλ_beta @ db_drho)               # (n_sp,)
+
+        # ∂τ/∂ρ_k. M = A⁻¹·X', P = X·M.
+        M = cho_solve((fit.A_chol, fit.A_chol_lower), X.T)
+        P = X @ M
+        d_diag = np.einsum("ij,ji->i", X, M)               # diag(P)
+        # Penalty piece: −λ_k · tr(A⁻¹·S_k·F).
+        pen_piece = np.empty(n_sp)
+        for k, slot in enumerate(self._slots):
+            a, b = slot.col_start, slot.col_end
+            AinvSk = A_inv[:, a:b] @ slot.S
+            pen_piece[k] = -sp[k] * float(
+                np.einsum("ij,ji->", AinvSk, F[a:b, :])
+            )
+
+        # W-deriv piece: (d − s)' hv_k. dw/dη = 0 for Gaussian-identity ⇒ skip.
+        if family.name == "gaussian" and family.link.name == "identity":
+            w_piece = np.zeros(n_sp)
+        else:
+            dw_deta = self._dw_deta(fit)                   # (n,)
+            v = X @ db_drho                                # (n, n_sp)
+            hv = dw_deta[:, None] * v                      # (n, n_sp)
+            Rsq = P * P
+            s = Rsq @ w_pirls
+            w_piece = (d_diag - s) @ hv                    # (n_sp,)
+
+        dtau_drho = w_piece + pen_piece
+
+        if family.scale_known:
+            return dD_drho / n + 2.0 * dtau_drho / n
+        denom = n - edf_total
+        if denom <= 0:
+            return np.zeros(n_sp)
+        return (
+            n * dD_drho / (denom * denom)
+            + 2.0 * n * fit.dev * dtau_drho / (denom**3)
+        )
 
     def _db_drho(self, rho: np.ndarray, beta: np.ndarray,
                  A_chol, A_chol_lower) -> np.ndarray:
