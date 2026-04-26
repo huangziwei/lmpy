@@ -34,6 +34,7 @@ Wood (2017), *Generalized Additive Models* (2nd ed.), §6.2, §6.6.
 
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from scipy.linalg import cho_factor, cho_solve, solve_triangular
@@ -42,6 +43,7 @@ from scipy.stats import f as f_dist, norm, t as t_dist
 from .family import Family, Gaussian
 from .formula import SmoothBlock, materialize_smooths
 from .design import prepare_design
+from .lm import _label_top_n, _lowess, _qq_plot
 from .utils import (
     _dig_tst,
     format_df,
@@ -449,6 +451,20 @@ class gam:
         self.sigma = sigma
         self.sigma_squared = sigma_squared
         self.scale = sigma_squared            # mgcv's `$scale`
+
+        # Penalized hat-matrix diagonal h_ii = w_i·(X·A_F⁻¹·X')_ii — mgcv's
+        # `m$hat`, sums to edf_total. Plus rstandard.gam-style standardized
+        # residuals: r / (σ̂·√(1−h)). For Gaussian-identity fit_F.w is None ⇒
+        # unit weights. Cached here so plot_* methods don't recompute.
+        w_F = fit_F.w if fit_F.w is not None else np.ones(n)
+        HX = X @ A_inv
+        self.leverage = (HX * X).sum(axis=1) * w_F
+        sigma_for_std = sigma if np.isfinite(sigma) and sigma > 0 else 1.0
+        denom = sigma_for_std * np.sqrt(np.clip(1.0 - self.leverage, 1e-12, None))
+        V_mu = self.family.variance(mu)
+        pearson_res = (y - mu) * np.sqrt(self._wt / np.maximum(V_mu, 0.0))
+        self.std_dev_residuals = self.residuals / denom
+        self.std_pearson_residuals = pearson_res / denom
         self.df_residuals = df_resid
         # Family deviance: `_FitState.dev` already holds Σ family.dev_resids
         # (Gaussian path: same as RSS). Keep `m.rss` as an alias for the
@@ -2814,6 +2830,129 @@ class gam:
             )
 
         print("\n".join(out))
+
+    # ----- diagnostic plots -----------------------------------------------
+    #
+    # Match the graphical half of mgcv's gam.check + R's plot.glm:
+    # - x-axis on residual panels = η̂ (linear predictors), labeled
+    #   "Predicted values".
+    # - panels 1/2/3 use deviance residuals (residuals.gam default).
+    # - panel 5 (leverage) uses standardized Pearson residuals on y, with
+    #   Cook's-distance contours scaled by edf_total.
+    #
+    # Per-smooth effect curves (mgcv's plot.gam) and the 2D fitted-surface
+    # view (vis.gam) are separate plot methods, added in later passes.
+
+    def plot_observed_fitted(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black", label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        y = self._y_arr
+        yhat = self.fitted_values
+        ax.scatter(yhat, y, facecolor=facecolor, edgecolor=edgecolor)
+        lo = float(min(y.min(), yhat.min()))
+        hi = float(max(y.max(), yhat.max()))
+        ax.plot([lo, hi], [lo, hi], color="black", linestyle="--")
+        _label_top_n(ax, yhat, y, scores=y - yhat, n=label_n)
+        ax.set_xlabel("Fitted (μ̂)")
+        ax.set_ylabel("Observed")
+        ax.set_title("Observed vs. Fitted")
+
+    def plot_residuals(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        eta = self.linear_predictors
+        r = self.residuals_of("deviance")
+        ax.scatter(eta, r, facecolor=facecolor, edgecolor=edgecolor)
+        ax.axhline(0, color="black", linestyle="--")
+        if smooth:
+            xs, ys = _lowess(eta, r)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, eta, r, scores=r, n=label_n)
+        ax.set_xlabel("Predicted values")
+        ax.set_ylabel("Residuals")
+        ax.set_title("Residuals vs. Fitted Plot")
+
+    def plot_qq(self, ax=None, figsize=None, label_n=3):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        _qq_plot(
+            ax, self.std_dev_residuals, label_n=label_n,
+            ylabel="Std. deviance resid.",
+        )
+
+    def plot_scale_location(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        eta = self.linear_predictors
+        s = np.sqrt(np.abs(self.std_dev_residuals))
+        ax.scatter(eta, s, facecolor=facecolor, edgecolor=edgecolor)
+        if smooth:
+            xs, ys = _lowess(eta, s)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, eta, s, scores=self.std_dev_residuals, n=label_n)
+        ax.set_xlabel("Predicted values")
+        ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ deviance\ resid.}|}$")
+        ax.set_title("Scale-Location")
+
+    def plot_leverage(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        cook_levels=(0.5, 1.0),
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        h = self.leverage
+        r = self.std_pearson_residuals
+        ax.scatter(h, r, facecolor=facecolor, edgecolor=edgecolor)
+        ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
+        if smooth:
+            xs, ys = _lowess(h, r)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        # Cook's contours for GAM: D_i = (r²/k)·h/(1−h), k = edf_total —
+        # the GAM analogue of GLM's `rank(X)` for the Bayesian penalized
+        # hat matrix. Solving for r: r = ±sqrt(c·k·(1−h)/h).
+        k = max(float(self.edf_total), 1.0)
+        ymin, ymax = ax.get_ylim()
+        h_max = float(np.clip(h.max() * 1.1, 1e-3, 0.999))
+        h_grid = np.linspace(1e-3, h_max, 200)
+        for c in cook_levels:
+            rline = np.sqrt(c * k * (1 - h_grid) / h_grid)
+            ax.plot(h_grid, rline, color="red", linestyle="--", linewidth=0.8)
+            ax.plot(h_grid, -rline, color="red", linestyle="--", linewidth=0.8)
+        ax.set_ylim(ymin, ymax)
+        cook = (r ** 2 / k) * h / np.clip(1 - h, 1e-12, None)
+        _label_top_n(ax, h, r, scores=cook, n=label_n)
+        ax.set_xlabel("Leverage")
+        ax.set_ylabel("Std. Pearson resid.")
+        ax.set_title("Residuals vs. Leverage")
+
+    def plot(self, figsize=None, smooth=True, label_n=3):
+        """4-panel diagnostic, matching the graphical part of gam.check.
+
+        Per-smooth effect curves (mgcv's plot.gam) and the 2D fitted-surface
+        viewer (vis.gam) live in separate methods and are not part of this
+        diagnostic panel.
+        """
+        if figsize is None:
+            figsize = (10, 8)
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        self.plot_residuals(ax=axes[0, 0], smooth=smooth, label_n=label_n)
+        self.plot_qq(ax=axes[0, 1], label_n=label_n)
+        self.plot_scale_location(ax=axes[1, 0], smooth=smooth, label_n=label_n)
+        self.plot_leverage(ax=axes[1, 1], smooth=smooth, label_n=label_n)
+        fig.tight_layout()
 
 
 # --------------------------------------------------------------------------
