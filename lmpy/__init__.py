@@ -25,5 +25,4 @@ from .stats import (
     t_test,
     wilcox_test,
 )
-from .design import factor
-from .utils import data
+from .data import data, factor
