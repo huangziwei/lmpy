@@ -94,6 +94,51 @@ def _label_top_n(ax, xs, ys, scores, n=3, indices=None):
         )
 
 
+def _qq_plot(
+    ax, vals, labels=None, label_n=3,
+    xlabel="Theoretical Quantiles",
+    ylabel="Standardized Residuals",
+    title="Normal Q-Q",
+):
+    """Normal Q-Q on ax with quartile-based reference line, label top |vals|.
+
+    `labels` optionally maps an index to a custom annotation string;
+    otherwise the integer index is used.
+    """
+    vals = np.asarray(vals, dtype=float)
+    n = len(vals)
+    if n < 2:
+        return
+    sort_idx = np.argsort(vals)
+    v = vals[sort_idx]
+    a = 3.0 / 8.0 if n <= 10 else 0.5
+    probs = (np.arange(1, n + 1) - a) / (n + 1 - 2 * a)
+    q = norm.ppf(probs)
+    ax.scatter(q, v, facecolor="none", edgecolor="black")
+    ry1, ry3 = np.quantile(v, [0.25, 0.75])
+    qx1, qx3 = norm.ppf([0.25, 0.75])
+    slope = (ry3 - ry1) / (qx3 - qx1)
+    intercept = ry1 - slope * qx1
+    xs = np.array([q.min(), q.max()])
+    ax.plot(xs, slope * xs + intercept, color="black", linestyle="--")
+    if label_n:
+        n_lab = min(int(label_n), n)
+        top = np.argsort(-np.abs(vals))[:n_lab]
+        rank = np.empty(n, dtype=int)
+        rank[sort_idx] = np.arange(n)
+        for orig_i in top:
+            pos = rank[orig_i]
+            text = str(labels[orig_i]) if labels is not None else str(int(orig_i))
+            ax.annotate(
+                text, (q[pos], v[pos]),
+                fontsize=8, color="black",
+                xytext=(3, 3), textcoords="offset points",
+            )
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+
+
 class lm:
     def __init__(
         self,
@@ -607,40 +652,7 @@ class lm:
 
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
-        r_orig = self.std_residuals
-        n = len(r_orig)
-        sort_idx = np.argsort(r_orig)
-        r = r_orig[sort_idx]
-        a = 3.0 / 8.0 if n <= 10 else 0.5
-        probs = (np.arange(1, n + 1) - a) / (n + 1 - 2 * a)
-        q = norm.ppf(probs)
-        ax.scatter(q, r, facecolor=facecolor, edgecolor=edgecolor)
-        # reference line through the 1st and 3rd quartiles, like R's qqline
-        ry1, ry3 = np.quantile(r, [0.25, 0.75])
-        qx1, qx3 = norm.ppf([0.25, 0.75])
-        slope = (ry3 - ry1) / (qx3 - qx1)
-        intercept = ry1 - slope * qx1
-        xs = np.array([q.min(), q.max()])
-        ax.plot(xs, slope * xs + intercept, color="black", linestyle="--")
-        # label by largest |std_resid|, mapping orig idx → sorted position
-        if label_n:
-            n_lab = min(int(label_n), n)
-            top_orig = np.argsort(-np.abs(r_orig))[:n_lab]
-            rank = np.empty(n, dtype=int)
-            rank[sort_idx] = np.arange(n)
-            for orig_i in top_orig:
-                pos = rank[orig_i]
-                ax.annotate(
-                    str(int(orig_i)),
-                    (q[pos], r[pos]),
-                    fontsize=8,
-                    color="black",
-                    xytext=(3, 3),
-                    textcoords="offset points",
-                )
-        ax.set_xlabel("Theoretical Quantiles")
-        ax.set_ylabel("Standardized Residuals")
-        ax.set_title("Normal Q-Q")
+        _qq_plot(ax, self.std_residuals, label_n=label_n)
 
     def plot_scale_location(
         self,

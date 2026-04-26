@@ -18,6 +18,7 @@ Models Using lme4", J. Stat. Software 67(1), §5 ("Profiled Deviance").
 
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from scipy.linalg import solve_triangular
@@ -31,6 +32,7 @@ from sksparse.cholmod import (
 
 from .formula import materialize_bars
 from .design import prepare_design
+from .lm import _label_top_n, _lowess, _qq_plot
 from .utils import format_df, format_signif, format_signif_jointly
 
 __all__ = ["lme", "Profile"]
@@ -295,6 +297,8 @@ class lme:
         # Fitted values ŷ = Xβ̂ + Z Λ û and residuals ε̂ = y − ŷ
         self.fitted = np.einsum("ij,j->i", X, beta) + ZL @ self._u
         self.residuals = y - self.fitted
+        # ε̂ / σ̂ — what lme4 calls Pearson / "Scaled residuals"
+        self.scaled_residuals = self.residuals / sigma
 
         # Var(β̂) = σ̂² (XᵀX_eff)⁻¹ = σ̂² R_x⁻ᵀ R_x⁻¹
         Rx_inv = solve_triangular(Rx, np.eye(p), lower=True)
@@ -790,6 +794,207 @@ class lme:
             out.append("")
             out.extend(corr_lines)
         print("\n".join(out))
+
+    # ---- diagnostic plots ----------------------------------------------
+
+    def _ranef(self):
+        """BLUPs in original units with posterior SEs, sliced per bar.
+
+        Returns a list of ``(bar_key, levels, cnames, b_mat, se_mat)`` —
+        ``b_mat`` and ``se_mat`` are ``(n_levels, n_components)`` arrays.
+
+        Posterior covariance: ``Var(b̂ | y) = σ² · Λ M⁻¹ Λᵀ``. We pull the
+        diagonal in ``O(q²)`` via one dense ``F.solve(Λᵀ_dense)``; ``q``
+        well into the thousands triggers heavy work, so this is lazy and
+        cached. Defensively re-factorizes ``M`` at θ̂ since callers like
+        ``profile()`` over-write the factor during their own optimization.
+        """
+        cache = getattr(self, "_ranef_cache", None)
+        if cache is not None:
+            return cache
+        Lt = self._build_Lt_sparse(self.theta)
+        ZL = self._Z_sp @ Lt.T
+        M = (ZL.T @ ZL + self._eye_q_sp).tocsc()
+        self._chol_factor.factorize(M)
+        F = self._chol_factor
+        Lt_dense = Lt.toarray()
+        b_full = (Lt_dense.T @ self._u).ravel()
+        M_inv_Lt = F.solve(Lt_dense)
+        var_b = self.sigma_squared * (Lt_dense * M_inv_Lt).sum(axis=0)
+        se_full = np.sqrt(np.clip(var_b, 0.0, None))
+
+        out = []
+        Gp = self._re.Gp
+        flist = self._re.flist_levels
+        for k, key in enumerate(self._re.cnms):
+            start, end = Gp[k], Gp[k + 1]
+            cnames = self._re.cnms[key]
+            cnames = list(cnames) if isinstance(cnames, list) else [cnames]
+            c = len(cnames)
+            n_levels = (end - start) // c
+            b_mat = b_full[start:end].reshape(n_levels, c)
+            se_mat = se_full[start:end].reshape(n_levels, c)
+            # Recover original group name (lme4 suffixes ".1", ".2" if reused)
+            gname = key
+            if gname not in flist:
+                base, _, tail = key.rpartition(".")
+                if tail.isdigit() and base in flist:
+                    gname = base
+            levels = list(flist[gname])
+            out.append((key, levels, cnames, b_mat, se_mat))
+        self._ranef_cache = out
+        return out
+
+    def _pooled_std_blups(self) -> np.ndarray:
+        """All BLUPs concatenated, each component scaled by its model SD.
+
+        Used by the 2×2 ``plot()``'s combined random-effect Q-Q panel.
+        """
+        out = []
+        for key, _levels, _cnames, b_mat, _se in self._ranef():
+            sds = self.sd_re[key]
+            for j, sd in enumerate(sds):
+                if sd > 0:
+                    out.append(b_mat[:, j] / float(sd))
+        if not out:
+            return np.array([])
+        return np.concatenate(out)
+
+    def plot_observed_fitted(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black", label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        y = np.asarray(self.y, dtype=float)
+        yhat = np.asarray(self.fitted, dtype=float)
+        ax.scatter(yhat, y, facecolor=facecolor, edgecolor=edgecolor)
+        lo = float(min(y.min(), yhat.min()))
+        hi = float(max(y.max(), yhat.max()))
+        ax.plot([lo, hi], [lo, hi], color="black", linestyle="--")
+        _label_top_n(ax, yhat, y, scores=self.residuals, n=label_n)
+        ax.set_xlabel("Fitted")
+        ax.set_ylabel("Observed")
+        ax.set_title("Observed vs. Fitted")
+
+    def plot_residuals(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        yhat = np.asarray(self.fitted, dtype=float)
+        r = np.asarray(self.residuals, dtype=float)
+        ax.scatter(yhat, r, facecolor=facecolor, edgecolor=edgecolor)
+        ax.axhline(0, color="black", linestyle="--")
+        if smooth:
+            xs, ys = _lowess(yhat, r)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, yhat, r, scores=r, n=label_n)
+        ax.set_xlabel("Fitted")
+        ax.set_ylabel("Residuals")
+        ax.set_title("Residuals vs. Fitted Plot")
+
+    def plot_qq(self, ax=None, figsize=None, label_n=3):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        _qq_plot(ax, self.scaled_residuals, label_n=label_n)
+
+    def plot_scale_location(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        yhat = np.asarray(self.fitted, dtype=float)
+        s = np.sqrt(np.abs(self.scaled_residuals))
+        ax.scatter(yhat, s, facecolor=facecolor, edgecolor=edgecolor)
+        if smooth:
+            xs, ys = _lowess(yhat, s)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, yhat, s, scores=self.scaled_residuals, n=label_n)
+        ax.set_xlabel("Fitted")
+        ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ Residuals}|}$")
+        ax.set_title("Scale-Location")
+
+    def plot_qq_ranef(self, figsize=None, label_n=3):
+        """Per-bar-component Q-Q of BLUPs — checks RE normality."""
+        panels = []
+        for key, levels, cnames, b_mat, _se in self._ranef():
+            for j, cname in enumerate(cnames):
+                panels.append((f"{key}: {cname}", b_mat[:, j], levels))
+        n_panels = len(panels)
+        if figsize is None:
+            figsize = (3.2 * n_panels, 3.0)
+        fig, axes = plt.subplots(1, n_panels, figsize=figsize, squeeze=False)
+        axes = axes.ravel()
+        for ax, (title, vals, lvls) in zip(axes, panels):
+            _qq_plot(
+                ax, vals,
+                labels=[str(x) for x in lvls],
+                label_n=label_n,
+                ylabel="Random Effect",
+                title=title,
+            )
+        fig.tight_layout()
+
+    def plot_ranef(self, figsize=None):
+        """Caterpillar plot — BLUP ± posterior SE per level, sorted."""
+        panels = []
+        for key, levels, cnames, b_mat, se_mat in self._ranef():
+            for j, cname in enumerate(cnames):
+                panels.append(
+                    (f"{key}: {cname}", b_mat[:, j], se_mat[:, j], levels)
+                )
+        n_panels = len(panels)
+        if figsize is None:
+            max_levels = max(len(p[3]) for p in panels)
+            height = max(3.0, min(0.18 * max_levels, 12.0))
+            figsize = (3.2 * n_panels, height)
+        fig, axes = plt.subplots(1, n_panels, figsize=figsize, squeeze=False)
+        axes = axes.ravel()
+        for ax, (title, b, se, levels) in zip(axes, panels):
+            order = np.argsort(b)
+            b_sorted = b[order]
+            se_sorted = se[order]
+            labels_sorted = [str(levels[i]) for i in order]
+            n = len(b)
+            y_pos = np.arange(n)
+            ax.errorbar(
+                b_sorted, y_pos, xerr=se_sorted,
+                fmt="o", color="black", ecolor="gray",
+                markersize=3, capsize=2, linewidth=0.8,
+            )
+            ax.axvline(0, color="black", linestyle="--", linewidth=0.8)
+            ax.set_yticks(y_pos)
+            if n <= 30:
+                ax.set_yticklabels(labels_sorted, fontsize=7)
+            else:
+                ax.set_yticklabels([])
+            ax.set_xlabel("Random Effect")
+            ax.set_title(title)
+        fig.tight_layout()
+
+    def plot(self, figsize=None, smooth=True, label_n=3):
+        """4-panel diagnostic: Residuals, Q-Q residuals, Scale-Location, Q-Q BLUPs."""
+        if figsize is None:
+            figsize = (10, 8)
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        self.plot_residuals(ax=axes[0, 0], smooth=smooth, label_n=label_n)
+        self.plot_qq(ax=axes[0, 1], label_n=label_n)
+        self.plot_scale_location(ax=axes[1, 0], smooth=smooth, label_n=label_n)
+        pooled = self._pooled_std_blups()
+        if len(pooled) >= 4:
+            _qq_plot(
+                axes[1, 1], pooled, label_n=label_n,
+                ylabel="Standardized BLUPs (pooled)",
+                title="Random-Effects Q-Q",
+            )
+        else:
+            axes[1, 1].set_title("Random-Effects Q-Q (n too small)")
+        fig.tight_layout()
 
 
 def _invert_zeta(vals: np.ndarray, zetas: np.ndarray, target: float) -> float:
