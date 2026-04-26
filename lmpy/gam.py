@@ -3642,12 +3642,15 @@ class VisResult:
         figsize: tuple | None = None,
         cmap: str = "viridis",
         levels: int = 20,
+        contour_levels=None,
         se_mult: float = 0.0,
         elev: float = 30.0,
         azim: float = -60.0,
         zlabel: str | None = None,
         aspect: str | float | None = "equal",
         colorbar: bool = True,
+        clabel: bool = False,
+        clabel_kwargs: dict | None = None,
     ):
         """Render the surface.
 
@@ -3683,8 +3686,18 @@ class VisResult:
             X, Y = np.meshgrid(m1_num, m2_num, indexing="xy")
             Z = self.fit.T
             cf = ax.contourf(X, Y, Z, levels=levels, cmap=cmap)
-            ax.contour(X, Y, Z, levels=levels, colors="black",
-                       linewidths=0.4, alpha=0.5)
+            # Bump line strength when labels are on so the numbers sit on
+            # readable lines, not faint guides.
+            line_alpha = 0.8 if clabel else 0.5
+            line_width = 0.6 if clabel else 0.4
+            line_levels = contour_levels if contour_levels is not None else levels
+            cs = ax.contour(X, Y, Z, levels=line_levels, colors="black",
+                            linewidths=line_width, alpha=line_alpha)
+            if clabel:
+                kw = dict(inline=True, fontsize=8, fmt="%.2f")
+                if clabel_kwargs:
+                    kw.update(clabel_kwargs)
+                ax.clabel(cs, **kw)
             if colorbar:
                 plt.colorbar(cf, ax=ax, label=z_lab)
             ax.set_xlabel(x_lab)
