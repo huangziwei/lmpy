@@ -41,7 +41,7 @@ from scipy.linalg import cho_factor, cho_solve, solve_triangular
 from scipy.stats import f as f_dist, norm, t as t_dist
 
 from .family import Family, Gaussian
-from .formula import SmoothBlock, materialize_smooths
+from .formula import BasisSpec, SmoothBlock, materialize_smooths
 from .design import prepare_design
 from .lm import _label_top_n, _lowess, _qq_plot
 from .utils import (
@@ -2467,29 +2467,29 @@ class gam:
         return (y - mu) / dmu_deta
 
     def predict(self, newdata: pl.DataFrame | None = None) -> np.ndarray:
-        """Return in-sample fitted values ``ŷ = Xβ̂``.
+        """Return predicted response values ``ŷ = g⁻¹(X_new β̂)``.
 
-        Out-of-sample prediction (``newdata != None``) requires a
-        mgcv-style ``PredictMat`` that evaluates each smooth's stored
-        basis (knots, Lanczos eigenvectors, sum-to-zero constraint) at
-        the new covariate values. That machinery isn't part of
-        ``lmpy.formula`` yet, so this v1 raises for new data rather than
-        return fuzzy results from re-materializing the basis over
-        ``[train, new]`` — for tp in particular, the basis is genuinely
-        data-dependent and the re-materialized X differs from the fit's.
+        With ``newdata=None`` returns the in-sample ``self.fitted``. Otherwise
+        rebuilds the parametric design via ``materialize`` and replays each
+        smooth block's ``BasisSpec`` (mgcv's ``Predict.matrix.<class>``) on
+        ``newdata``, applies the link's inverse, and returns the response.
         """
         if newdata is None:
             return self.fitted
-        if self._expanded.smooths:
-            raise NotImplementedError(
-                "predict(newdata=...) for models with smooth terms is not "
-                "yet supported — needs a PredictMat implementation in "
-                "lmpy.formula. Use m.fitted for in-sample predictions."
-            )
         from .formula import materialize  # local to avoid cycle at module load
 
-        X_new = materialize(self._expanded, newdata).to_numpy().astype(float)
-        return X_new @ self._beta
+        X_param = materialize(self._expanded, newdata).to_numpy().astype(float)
+        cols = [X_param]
+        for b in self._blocks:
+            if b.spec is None:
+                raise RuntimeError(
+                    f"smooth block {b.label!r} (cls={b.cls!r}) has no BasisSpec; "
+                    "predict(newdata=...) requires every smooth to carry one."
+                )
+            cols.append(np.asarray(b.spec.predict_mat(newdata), dtype=float))
+        X_new = np.concatenate(cols, axis=1) if len(cols) > 1 else X_param
+        eta = X_new @ self._beta
+        return self.family.link.linkinv(eta)
 
     # ------------- printing ------------------------------------------------
 
@@ -3169,8 +3169,20 @@ def _apply_gam_side(blocks: list[SmoothBlock]) -> list[SmoothBlock]:
         for Sj in b.S:
             Sj = np.asarray(Sj, dtype=float)
             new_S.append(Sj[np.ix_(keep, keep)])
+        if b.spec is None:
+            new_spec = None
+        else:
+            # Compose with any prior keep_cols so re-running gam.side is idempotent.
+            keep_arr = np.asarray(keep, dtype=np.intp)
+            prior = b.spec.keep_cols
+            new_keep = keep_arr if prior is None else prior[keep_arr]
+            new_spec = BasisSpec(
+                raw=b.spec.raw, by=b.spec.by, absorb=b.spec.absorb,
+                keep_cols=new_keep,
+            )
         out.append(SmoothBlock(
             label=b.label, term=b.term, cls=b.cls, X=new_X, S=new_S,
+            spec=new_spec,
         ))
     return out
 

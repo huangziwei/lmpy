@@ -52,7 +52,7 @@ def _canonicalize_fs_reference(X_ref, r_meta, data):
         mask = fac_arr == lev
         Xr[mask, :] = X_ref[mask, j * p : (j + 1) * p]
 
-    Xr_canonical = _canonicalize_fs_null_basis(Xr, rank)
+    Xr_canonical, _rot, _signs = _canonicalize_fs_null_basis(Xr, rank)
 
     X_new = np.zeros_like(X_ref)
     for j, lev in enumerate(flev):

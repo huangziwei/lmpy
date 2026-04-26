@@ -2221,12 +2221,471 @@ class SmoothBlock:
     Produced by `materialize_smooths`. Matches what R's
     `smoothCon(..., absorb.cons=TRUE, scale.penalty=TRUE)` returns for each
     block under a given smooth.spec.
+
+    `spec` carries the predict-time state (raw-basis evaluator + optional
+    `by=` and absorb-constraint replays). It is the lmpy port of mgcv's
+    `Predict.matrix.<class>` dispatch — calling `spec.predict_mat(new_data)`
+    rebuilds the design rows for new x in the same parameterization the fit
+    used.
     """
     label: str                      # e.g. "s(x)", "s(Machine,Worker)"
     term: list[str]                 # variable names referenced
     cls: str                        # class name (e.g. "re.smooth.spec")
     X: np.ndarray                   # basis matrix, (n, k)
     S: list[np.ndarray]             # penalty matrices, each (k, k)
+    spec: Optional["BasisSpec"] = None   # predict-time replay state
+
+
+# ---------------------------------------------------------------------------
+# Predict.matrix machinery
+#
+# Each smooth block carries a `BasisSpec` that fully captures the state needed
+# to re-evaluate its design rows on new data. mgcv's `Predict.matrix.<class>`
+# dispatch is replicated here as a small class hierarchy: a `_RawBasis`
+# subclass per bs evaluates the raw (pre-by, pre-absorb) basis at new x; a
+# `_ByMask` (optional) replays factor / numeric `by=` masking; an
+# `_AbsorbTransform` (optional) replays the sum-to-zero rotation that
+# `_absorb_sumzero` applied during fitting.
+#
+# Each `_build_*_smooth` constructs the appropriate `_RawBasis`, hands it
+# to `_apply_by_and_absorb`, and the resulting block's `spec` field carries
+# the complete chain. `block.spec.predict_mat(self.data) ≈ block.X` is a
+# strong sanity invariant — checked by `tests/test_smooths_predict.py`.
+# ---------------------------------------------------------------------------
+
+
+class _RawBasis:
+    """Per-bs raw basis evaluator. ``eval(data) → (n, k_pre)`` matrix.
+
+    Concrete subclasses store whatever state mgcv's smooth.construct stashes
+    in ``object$xt`` (knots, eigenvectors, scale factors, …) so the same
+    basis can be evaluated on new data.
+    """
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        raise NotImplementedError
+
+
+@dataclass(slots=True)
+class _AbsorbTransform:
+    """Replay ``_absorb_sumzero`` on new-data rows.
+
+    Two paths matching the in-sample code:
+      * full path (``full_Z`` set): ``X_new = X @ full_Z``.
+      * sparse path (``indi``/``Z_sub``/``keep_mask`` set): ``X[:, indi]`` is
+        rotated by ``Z_sub``, the result placed back at ``indi[:nz]``, then
+        the dropped column is removed via ``keep_mask``.
+    """
+    full_Z: Optional[np.ndarray] = None
+    indi: Optional[np.ndarray] = None
+    Z_sub: Optional[np.ndarray] = None
+    keep_mask: Optional[np.ndarray] = None
+
+    def apply(self, X: np.ndarray) -> np.ndarray:
+        if self.full_Z is not None:
+            return X @ self.full_Z
+        if self.indi is None:
+            return X
+        nz = len(self.indi) - 1
+        X_new = X.copy()
+        if nz > 0:
+            X_new[:, self.indi[:nz]] = X[:, self.indi] @ self.Z_sub
+        return X_new[:, self.keep_mask]
+
+
+@dataclass(slots=True)
+class _ByMask:
+    """Replay ``by=`` masking. Factor: indicator ``by_col == level``. Numeric:
+    multiply by ``by_col`` value.
+    """
+    expr: str
+    kind: str        # "factor" | "numeric"
+    level: object = None  # for factor; None for numeric
+
+    def apply(self, X: np.ndarray, data: pl.DataFrame) -> np.ndarray:
+        col = _eval_by_col(self.expr, data)
+        if self.kind == "factor":
+            arr = col.to_numpy() if isinstance(col, pl.Series) else col
+            mask = (arr == self.level).astype(float)
+            return X * mask[:, None]
+        # numeric
+        if isinstance(col, pl.Series):
+            arr = col.to_numpy().astype(float)
+        else:
+            arr = np.asarray(col, dtype=float)
+        return X * arr[:, None]
+
+
+@dataclass(slots=True)
+class BasisSpec:
+    """Predict-time state for one SmoothBlock — chains raw → by → absorb → keep_cols.
+
+    ``keep_cols`` is set by ``gam.side`` when overlapping smooths force the
+    drop of linearly-dependent columns from this block's design (matches
+    mgcv's ``fixDependence``). All other steps run unchanged; the column
+    filter is applied last so it stays consistent with the post-drop X / S.
+    """
+    raw: _RawBasis
+    by: Optional[_ByMask] = None
+    absorb: Optional[_AbsorbTransform] = None
+    keep_cols: Optional[np.ndarray] = None
+
+    def predict_mat(self, data: pl.DataFrame) -> np.ndarray:
+        X = self.raw.eval(data)
+        if self.by is not None:
+            X = self.by.apply(X, data)
+        if self.absorb is not None:
+            X = self.absorb.apply(X)
+        if self.keep_cols is not None:
+            X = X[:, self.keep_cols]
+        return X
+
+
+# ---- Concrete _RawBasis subclasses (one per bs) -----------------------------
+#
+# Each class stores exactly the state mgcv's smooth.construct.<bs>.smooth.spec
+# stashes in `object` for predict-time evaluation. Method `eval(data)` mirrors
+# `Predict.matrix.<class>(object, data)` — returns the (n, k_pre) raw basis on
+# new rows, before by-masking and absorb.cons replays (which BasisSpec layers
+# on top).
+
+
+@dataclass(slots=True)
+class _CRRawBasis(_RawBasis):
+    """`smooth.construct.cr.smooth.spec` — natural cubic regression spline."""
+    term: str
+    knots: np.ndarray
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        x = data[self.term].to_numpy().astype(float)
+        return _cr_basis(x, self.knots)
+
+
+@dataclass(slots=True)
+class _CCRawBasis(_RawBasis):
+    """`smooth.construct.cc.smooth.spec` — cyclic cubic regression spline."""
+    term: str
+    knots: np.ndarray
+    BD: np.ndarray
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        x = data[self.term].to_numpy().astype(float)
+        return _cc_basis(x, self.knots, self.BD)
+
+
+@dataclass(slots=True)
+class _PSRawBasis(_RawBasis):
+    """`smooth.construct.ps.smooth.spec` — Eilers & Marx P-spline."""
+    term: str
+    knots: np.ndarray
+    m0: int
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        x = data[self.term].to_numpy().astype(float)
+        return _ps_basis(x, self.knots, self.m0)
+
+
+@dataclass(slots=True)
+class _BSRawBasis(_RawBasis):
+    """`smooth.construct.bs.smooth.spec` — mgcv's B-spline (NOT splines::bs)."""
+    term: str
+    knots: np.ndarray
+    m0: int
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        x = data[self.term].to_numpy().astype(float)
+        return _bs_design(x, self.knots, self.m0, deriv=0)
+
+
+@dataclass(slots=True)
+class _CPRawBasis(_RawBasis):
+    """`smooth.construct.cp.smooth.spec` — cyclic P-spline."""
+    term: str
+    knots: np.ndarray
+    ord_: int
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        x = data[self.term].to_numpy().astype(float)
+        return _cp_basis(x, self.knots, self.ord_)
+
+
+@dataclass(slots=True)
+class _GPRawBasis(_RawBasis):
+    """`smooth.construct.gp.smooth.spec` — Gaussian-process / Kammann–Wand.
+
+    Stores the resolved kernel definition (`defn`), the centered knot grid
+    (`xu_c`), the kept eigenvectors (`UZ`), and the data shift; predict
+    rebuilds [E(x_c, xu_c) @ UZ | T(x_c)] using the same defn so rho is
+    fixed at fit time.
+    """
+    term: list[str]
+    shift: np.ndarray
+    xu_c: np.ndarray
+    defn: tuple[float, float, float]
+    UZ: np.ndarray
+    stationary: bool
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        x_full = np.column_stack(
+            [data[v].to_numpy().astype(float) for v in self.term]
+        )
+        x_c = x_full - self.shift
+        E_x = _gp_E_with_defn(x_c, self.xu_c, self.defn)
+        X_radial = E_x @ self.UZ
+        T_mat = _gp_T(x_c, self.stationary)
+        return np.hstack([X_radial, T_mat])
+
+
+@dataclass(slots=True)
+class _TPRawBasis(_RawBasis):
+    """`smooth.construct.tp.smooth.spec` — thin-plate regression spline.
+
+    Predict is `[η(||x_c - Xu_c||) | T(x_c)] @ UZ`, with column-norm
+    rescaling `w` reapplied after — same chain as `_tp_raw` builds at fit.
+    """
+    term: list[str]
+    shift: np.ndarray
+    Xu: np.ndarray   # unique, centered knot grid (nu, d)
+    m: int
+    d: int
+    M: int
+    k: int
+    UZ: np.ndarray   # (nu + M, k)
+    w: np.ndarray    # column-norm rescaling, length k
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        x_full = np.column_stack(
+            [data[v].to_numpy().astype(float) for v in self.term]
+        )
+        x_c = x_full - self.shift
+        n = x_c.shape[0]
+        nu = self.Xu.shape[0]
+        eta0 = _tp_eta_const(self.m, self.d)
+        # Pairwise η(||x_i - Xu_j||): (n, nu).
+        diff = x_c[:, None, :] - self.Xu[None, :, :]
+        rsq = (diff * diff).sum(axis=-1)
+        E = _tp_fast_eta_vec(self.m, self.d, rsq.ravel(), eta0).reshape(n, nu)
+        T_mat = _tp_T(x_c, self.m, self.d)
+        # b = [E | T] is (n, nu + M); X_raw = b @ UZ then rescale by w.
+        b = np.hstack([E, T_mat])
+        X_raw = b @ self.UZ
+        return X_raw / self.w
+
+
+@dataclass(slots=True)
+class _ADRawBasis(_RawBasis):
+    """`smooth.construct.ad.smooth.spec` — adaptive P-spline (1D or 2D).
+
+    Underlying basis is ps (1D) or row-Kron of two ps margins (2D). The
+    adaptive part lives entirely in S, so predict re-evaluates the ps basis
+    at new x.
+    """
+    term: list[str]
+    knots_per_term: list[np.ndarray]
+    m0: int
+    k_per_term: list[int]
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        cols = [
+            data[t].to_numpy().astype(float) for t in self.term
+        ]
+        bases = [
+            _ps_basis(cols[i], self.knots_per_term[i], self.m0)
+            for i in range(len(self.term))
+        ]
+        if len(bases) == 1:
+            return bases[0]
+        # 2D: row-wise Kronecker, term[0] inner (matches _build_ad_smooth).
+        Xi, Xj = bases
+        n = Xi.shape[0]
+        ki, kj = self.k_per_term
+        return (Xi[:, :, None] * Xj[:, None, :]).reshape(n, ki * kj)
+
+
+@dataclass(slots=True)
+class _RERawBasis(_RawBasis):
+    """`smooth.construct.re.smooth.spec` — random-effect indicator basis.
+
+    Predict re-runs the same `model.matrix(~ term1:term2:...-1)` on new data.
+    Storing the original training columns and levels would let us validate
+    that new-data factor levels are a subset of fit-time levels (mgcv errors
+    on unseen levels); for now we just rebuild via materialize().
+    """
+    term: list[str]
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        rhs = None
+        for v in self.term:
+            node = Name(v)
+            rhs = node if rhs is None else BinOp(":", rhs, node)
+        fake = Formula(lhs=None, rhs=rhs)
+        ef = expand(fake)
+        ef.intercept = False
+        return materialize(ef, data).to_numpy().astype(float)
+
+
+@dataclass(slots=True)
+class _FSRawBasis(_RawBasis):
+    """`smooth.construct.fs.smooth.spec` — factor-smooth interaction.
+
+    Predict replays:
+      1. base tp (or other) basis evaluated at new x via stored ``base_raw``
+      2. nat.param(type=1) reparameterization via ``P`` (so X_r = Xb @ P);
+         we store ``Xr_T = P`` directly — the post-canonicalization rotation
+         is captured by ``null_rot`` (eigenvectors of Xn'Xn) and ``null_signs``
+      3. block-wise duplicate across factor levels, masking by `data[fterm]`
+    The full result has shape ``(n, p * nf)`` matching the fit-time block.
+    """
+    fterm: str
+    flev: list
+    p: int
+    rank: int
+    null_d: int
+    base_raw: _RawBasis  # the inner tp/etc. raw basis
+    P: np.ndarray   # nat.param transform: Xr = Xb @ P
+    null_rot: Optional[np.ndarray]  # (null_d, null_d) — None if null_d == 0
+    null_signs: Optional[np.ndarray]  # length null_d
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        Xb = self.base_raw.eval(data)
+        Xr = Xb @ self.P
+        if self.null_d > 0:
+            # Re-rotate the null block: same as _canonicalize_fs_null_basis
+            # but using the *fixed* rotation from training (not recomputed
+            # from new data).
+            Xn = Xr[:, self.rank:] @ self.null_rot
+            Xn *= self.null_signs[None, :]
+            Xr = np.concatenate([Xr[:, :self.rank], Xn], axis=1)
+        n = Xr.shape[0]
+        nf = len(self.flev)
+        p = self.p
+        out = np.zeros((n, p * nf))
+        fac_arr = data[self.fterm].to_numpy()
+        for j, lev in enumerate(self.flev):
+            mask = (fac_arr == lev).astype(float)
+            out[:, j * p : (j + 1) * p] = Xr * mask[:, None]
+        return out
+
+
+@dataclass(slots=True)
+class _LinearTransformRawBasis(_RawBasis):
+    """Wrap a raw basis with a fixed post-multiplication: ``inner.eval(d) @ M``.
+
+    Used by ti's centered margins (M = sum-to-zero Z) and te/ti's np=TRUE
+    SVD reparameterization (M = XP).
+    """
+    inner: _RawBasis
+    M: np.ndarray
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        return self.inner.eval(data) @ self.M
+
+
+@dataclass(slots=True)
+class _TensorRawBasis(_RawBasis):
+    """Row-wise Kronecker of margin raw bases — mgcv's
+    ``tensor.prod.model.matrix`` for ``Predict.matrix.tensor.smooth``.
+
+    Each margin produces an (n, p_i) matrix; the tensor row is their
+    Khatri-Rao product (margin 0 outermost). Predict re-runs each margin
+    on the new data and tensor-multiplies, identical to
+    `_tensor_prod_X([m.eval(data) for m in margins])`.
+    """
+    margins: list[_RawBasis]
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        Xm = [m.eval(data) for m in self.margins]
+        return _tensor_prod_X(Xm)
+
+
+@dataclass(slots=True)
+class _T2RawBasis(_RawBasis):
+    """Wood's t2 tensor — like ``_TensorRawBasis`` but each margin's columns
+    are pre-rotated by the stored ``nat.param`` ``P_i`` (so the margin design
+    splits into [range | null]), and the final output is the
+    ``t2.model.matrix`` block-Kronecker structure with optional
+    null-space-block sum-to-zero ``Zn``.
+
+    Stored state mirrors ``_build_t2_smooth``:
+      * ``margins``     — raw margin bases (no nat.param applied)
+      * ``P_per_margin`` — per-margin nat.param transform; ``Xi_np = Xi_raw @ P``
+      * ``ranks``       — per-margin range size (range first, null after)
+      * ``null_dim``    — overall null dimension (controls drop-last-col / Zn)
+      * ``Zn``          — partial absorb.cons rotation for the null block when
+        ``null_dim >= 2`` (else None — null_dim 0 needs no constraint, null_dim 1
+        drops the last column).
+    """
+    margins: list[_RawBasis]
+    P_per_margin: list[np.ndarray]
+    ranks: list[int]
+    null_dim: int
+    Zn: Optional[np.ndarray]
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        Xm_np = [
+            m.eval(data) @ P
+            for m, P in zip(self.margins, self.P_per_margin)
+        ]
+        X, sub_cols = _t2_model_matrix(Xm_np, self.ranks)
+        nup = sum(sub_cols)
+        if self.null_dim == 0:
+            return X
+        if self.null_dim == 1:
+            keep = np.ones(X.shape[1], dtype=bool)
+            keep[-1] = False
+            return X[:, keep]
+        X_R = X[:, :nup]
+        X_N = X[:, nup:]
+        return np.concatenate([X_R, X_N @ self.Zn], axis=1)
+
+
+@dataclass(slots=True)
+class _SZRawBasis(_RawBasis):
+    """`smooth.construct.sz.smooth.spec` — zero-center nested smooth.
+
+    Predict replays:
+      1. base smooth (typically tp) at new non-factor terms
+      2. block-wise expansion across all combinations of factor levels
+      3. Kronecker sum-to-zero contrast (XZKr) — drops last-level block per
+         factor and subtracts it from each non-last block.
+    Stored state matches `_build_sz_smooth`: factor terms + their levels in
+    schema order, the base raw evaluator, and the per-factor sizes for XZKr.
+    """
+    term_full: list[str]
+    ftermlist: list[str]
+    flev: list[list]
+    nf: list[int]
+    base_raw: _RawBasis
+    p0: int
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        Xb = self.base_raw.eval(data)
+        n = Xb.shape[0]
+        total_levels = int(np.prod(self.nf))
+        p_full = self.p0 * total_levels
+        fac_arrs = [data[ft].to_numpy() for ft in self.ftermlist]
+
+        def _iter_combos():
+            if not self.nf:
+                yield ()
+                return
+            idx = [0] * len(self.nf)
+            while True:
+                yield tuple(idx)
+                for d in range(len(self.nf) - 1, -1, -1):
+                    idx[d] += 1
+                    if idx[d] < self.nf[d]:
+                        break
+                    idx[d] = 0
+                else:
+                    return
+
+        X = np.zeros((n, p_full))
+        for blk_pos, combo in enumerate(_iter_combos()):
+            mask = np.ones(n, dtype=float)
+            for j, a in enumerate(combo):
+                mask *= (fac_arrs[j] == self.flev[j][a]).astype(float)
+            X[:, blk_pos * self.p0 : (blk_pos + 1) * self.p0] = Xb * mask[:, None]
+        return _xz_kr_contrast(X, self.nf, self.p0)
 
 
 def _smooth_bs(call: Call) -> str:
@@ -2376,6 +2835,7 @@ def _apply_by_and_absorb(
     S_list: list[np.ndarray],
     cls: str,
     term: list[str],
+    raw_basis: _RawBasis | None = None,
 ) -> list[SmoothBlock]:
     """Apply mgcv's smoothCon post-processing:
     scale.penalty → by-handling → absorb.cons → SmoothBlock(s).
@@ -2384,6 +2844,12 @@ def _apply_by_and_absorb(
     For factor `by`: produce one block per level with (by==lev)*X; each
     gets absorb.cons applied.
     For no `by`: one block with absorb.cons applied.
+
+    ``raw_basis`` (when provided) gets attached to each block as the predict
+    half of mgcv's ``Predict.matrix.<class>``. Per-bs constructors thread their
+    `_RawBasis` subclass here so `block.spec.predict_mat(new_data)` reproduces
+    the same scale.penalty-free design rows the fit used (the by-mask and
+    absorb-rotation steps are layered on automatically).
     """
     S_list = [(S + S.T) / 2.0 for S in S_list]
     S_list = _scale_penalty(X, S_list)
@@ -2391,8 +2857,13 @@ def _apply_by_and_absorb(
     by_expr = _smooth_by_expr(call)
     base_label = _smooth_label(call)
     if by_expr is None:
-        X2, S2 = _absorb_sumzero(X, S_list)
-        return [SmoothBlock(label=base_label, term=term, cls=cls, X=X2, S=S2)]
+        X2, S2, T = _absorb_sumzero(X, S_list)
+        spec = (
+            BasisSpec(raw=raw_basis, by=None, absorb=T)
+            if raw_basis is not None else None
+        )
+        return [SmoothBlock(label=base_label, term=term, cls=cls,
+                            X=X2, S=S2, spec=spec)]
 
     by_col = _eval_by_col(by_expr, data)
     if _is_factor_like(by_col):
@@ -2411,9 +2882,18 @@ def _apply_by_and_absorb(
         for lev in levels:
             mask = (by_arr == lev).astype(float)
             X_lev = X * mask[:, None]
-            X2, S2 = _absorb_sumzero(X_lev, S_list, C_source=X)
+            X2, S2, T = _absorb_sumzero(X_lev, S_list, C_source=X)
             label = f"{base_label}:{by_expr}{lev}"
-            blocks.append(SmoothBlock(label=label, term=term, cls=cls, X=X2, S=S2))
+            spec = (
+                BasisSpec(
+                    raw=raw_basis,
+                    by=_ByMask(expr=by_expr, kind="factor", level=lev),
+                    absorb=T,
+                )
+                if raw_basis is not None else None
+            )
+            blocks.append(SmoothBlock(label=label, term=term, cls=cls,
+                                      X=X2, S=S2, spec=spec))
         return blocks
 
     # Numeric by: multiply X by by-column, skip absorb.cons.
@@ -2422,9 +2902,17 @@ def _apply_by_and_absorb(
     else:
         by_arr = np.asarray(by_col, dtype=float)
     X2 = X * by_arr[:, None]
+    spec = (
+        BasisSpec(
+            raw=raw_basis,
+            by=_ByMask(expr=by_expr, kind="numeric"),
+            absorb=None,
+        )
+        if raw_basis is not None else None
+    )
     return [SmoothBlock(
         label=f"{base_label}:{by_expr}",
-        term=term, cls=cls, X=X2, S=S_list,
+        term=term, cls=cls, X=X2, S=S_list, spec=spec,
     )]
 
 
@@ -2479,9 +2967,11 @@ def _build_re_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     # factor by → one block per level; numeric by → multiply X by by.
     base_label = _smooth_label(call)
     by_expr = _smooth_by_expr(call)
+    raw = _RERawBasis(term=list(term_vars))
     if by_expr is None:
         return [SmoothBlock(label=base_label, term=term_vars,
-                            cls="re.smooth.spec", X=X, S=S_list)]
+                            cls="re.smooth.spec", X=X, S=S_list,
+                            spec=BasisSpec(raw=raw, by=None, absorb=None))]
     by_col = _eval_by_col(by_expr, data)
     if _is_factor_like(by_col):
         levels = _factor_levels(by_col)
@@ -2494,6 +2984,11 @@ def _build_re_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
                 cls="re.smooth.spec",
                 X=X * (by_arr == lev).astype(float)[:, None],
                 S=S_list,
+                spec=BasisSpec(
+                    raw=raw,
+                    by=_ByMask(expr=by_expr, kind="factor", level=lev),
+                    absorb=None,
+                ),
             )
             for lev in levels
         ]
@@ -2505,6 +3000,9 @@ def _build_re_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         label=f"{base_label}:{by_expr}", term=term_vars,
         cls="re.smooth.spec",
         X=X * by_arr[:, None], S=S_list,
+        spec=BasisSpec(
+            raw=raw, by=_ByMask(expr=by_expr, kind="numeric"), absorb=None,
+        ),
     )]
 
 
@@ -2512,7 +3010,7 @@ def _absorb_sumzero(
     X: np.ndarray,
     S_list: list[np.ndarray],
     C_source: np.ndarray | None = None,
-) -> tuple[np.ndarray, list[np.ndarray]]:
+) -> tuple[np.ndarray, list[np.ndarray], _AbsorbTransform]:
     """Apply mgcv's default `absorb.cons=TRUE` sum-to-zero constraint.
 
     Mirrors mgcv `smoothCon`: C = colMeans(X) (1×k). If every entry of C is
@@ -2529,10 +3027,14 @@ def _absorb_sumzero(
     then applies the same Householder Q to every `by.dum * X` block. Callers
     that want that behaviour pass the pre-by X as C_source so each per-level
     absorb uses the shared constraint instead of each block's own colSums.
+
+    Returns ``(X_new, S_new, transform)`` where ``transform.apply(X_raw_new)``
+    replays the same rotation on new-data rows — the predict-time half of
+    mgcv's ``Predict.matrix`` dispatch.
     """
     n, k = X.shape
     if k == 0:
-        return X, list(S_list)
+        return X, list(S_list), _AbsorbTransform()
     C = (C_source if C_source is not None else X).mean(axis=0)
     indi = np.flatnonzero(C != 0)  # exact inequality, matching mgcv
     nx = len(indi)
@@ -2542,7 +3044,7 @@ def _absorb_sumzero(
         Z = Q[:, 1:]
         X_new = X @ Z
         S_new = [Z.T @ S @ Z for S in S_list]
-        return X_new, S_new
+        return X_new, S_new, _AbsorbTransform(full_Z=Z)
 
     # Sparse-like path: some cols of C are exactly 0; QR only the nonzero
     # subset, place the (nx-1) null-space cols back at indi[:nx-1], and drop
@@ -2570,7 +3072,9 @@ def _absorb_sumzero(
             ZSZ[:, indi[:nz]] = ZSZ[:, indi] @ Z_sub
         ZSZ = ZSZ[:, keep_mask]
         S_new.append(ZSZ)
-    return X_new, S_new
+    return X_new, S_new, _AbsorbTransform(
+        indi=indi, Z_sub=Z_sub, keep_mask=keep_mask,
+    )
 
 
 def _cr_F_matrix(knots: np.ndarray) -> np.ndarray:
@@ -2696,8 +3200,11 @@ def _build_cr_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     (sum-to-zero) and scale.penalty.
     """
     term = _smooth_term_vars(call)
-    X, S_list, _knots = _cr_raw(call, data, term)
-    return _apply_by_and_absorb(call, data, X, S_list, "cr.smooth.spec", term)
+    X, S_list, knots = _cr_raw(call, data, term)
+    raw = _CRRawBasis(term=term[0], knots=knots)
+    return _apply_by_and_absorb(
+        call, data, X, S_list, "cr.smooth.spec", term, raw_basis=raw,
+    )
 
 
 # ---- cc (cyclic cubic regression spline) -----------------------------------
@@ -2850,7 +3357,10 @@ def _build_cc_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     else:
         S = D.T @ BD
         S_list = [S]
-    return _apply_by_and_absorb(call, data, X, S_list, "cc.smooth.spec", term)
+    raw = _CCRawBasis(term=term[0], knots=knots, BD=BD)
+    return _apply_by_and_absorb(
+        call, data, X, S_list, "cc.smooth.spec", term, raw_basis=raw,
+    )
 
 
 # ---- ps (P-spline, Eilers & Marx) ------------------------------------------
@@ -2960,7 +3470,10 @@ def _build_ps_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     knots = _ps_knots(x, m[0], k)
     X = _ps_basis(x, knots, m[0])
     S = _ps_penalty(k, m[1])
-    return _apply_by_and_absorb(call, data, X, [S], "pspline.smooth", term)
+    raw = _PSRawBasis(term=term[0], knots=knots, m0=m[0])
+    return _apply_by_and_absorb(
+        call, data, X, [S], "pspline.smooth", term, raw_basis=raw,
+    )
 
 
 # ---- cp (cyclic P-spline) --------------------------------------------------
@@ -3171,7 +3684,10 @@ def _build_bs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     knots = _bs_knots_eval(x, m0, bs_dim)
     X = _bs_design(x, knots, m0, deriv=0)
     S_list = [_bs_penalty(knots, m0, m2) for m2 in m[1:]]
-    return _apply_by_and_absorb(call, data, X, S_list, "Bspline.smooth", term)
+    raw = _BSRawBasis(term=term[0], knots=knots, m0=m0)
+    return _apply_by_and_absorb(
+        call, data, X, S_list, "Bspline.smooth", term, raw_basis=raw,
+    )
 
 
 def _build_cp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
@@ -3190,7 +3706,10 @@ def _build_cp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     if m[1] > X.shape[1] - 1:
         raise ValueError("penalty order too high for basis dimension")
     S = _cp_penalty(X.shape[1], m[1])
-    return _apply_by_and_absorb(call, data, X, [S], "cpspline.smooth", term)
+    raw = _CPRawBasis(term=term[0], knots=knots, ord_=ord_)
+    return _apply_by_and_absorb(
+        call, data, X, [S], "cpspline.smooth", term, raw_basis=raw,
+    )
 
 
 # ---- gp (Gaussian process / Kammann–Wand) ----------------------------------
@@ -3330,7 +3849,13 @@ def _build_gp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     T = _gp_T(x_c, stationary)
     X = np.hstack([X_radial, T])
 
-    return _apply_by_and_absorb(call, data, X, [D], "gp.smooth.spec", term)
+    raw = _GPRawBasis(
+        term=list(term), shift=shift, xu_c=xu_c, defn=defn,
+        UZ=UZ, stationary=stationary,
+    )
+    return _apply_by_and_absorb(
+        call, data, X, [D], "gp.smooth.spec", term, raw_basis=raw,
+    )
 
 
 # ---- tp (thin-plate regression spline, Wood 2003) --------------------------
@@ -3845,10 +4370,11 @@ def _tp_rlanczos(
 
 def _tp_raw(
     call: Call, data: pl.DataFrame, term: list[str],
-) -> tuple[np.ndarray, list[np.ndarray], int, int, int]:
+) -> tuple[np.ndarray, list[np.ndarray], int, int, int, dict]:
     """Bare `smooth.construct.tp.smooth.spec` output: no scale.penalty,
-    no absorb.cons, no drop_null. Returns `(X_raw, S_list, M, k, rank)`
-    where `rank = k - M`.
+    no absorb.cons, no drop_null. Returns `(X_raw, S_list, M, k, rank, state)`
+    where `rank = k - M` and ``state`` carries the predict-time replay
+    fields (``shift``, ``Xu``, ``m``, ``d``, ``UZ``, ``w``).
 
     Separated from `_build_tp_smooth` so that `fs` smooths (which
     reparameterize the bare tp output before duplicating across factor
@@ -3976,7 +4502,8 @@ def _tp_raw(
     X_raw = X_raw / w
     S_list = [S / w[:, None] / w[None, :] for S in S_list]
 
-    return X_raw, S_list, M, k, k - M
+    state = dict(shift=shift, Xu=Xu, m=m, d=d, UZ=UZ, w=w, M=M, k=k)
+    return X_raw, S_list, M, k, k - M, state
 
 
 def _build_tp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
@@ -3987,7 +4514,7 @@ def _build_tp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     `absorb.cons=TRUE, scale.penalty=TRUE` after our standard post-processing.
     """
     term = _smooth_term_vars(call)
-    X_raw, S_list, M, k, _rank = _tp_raw(call, data, term)
+    X_raw, S_list, M, k, _rank, state = _tp_raw(call, data, term)
 
     if _tp_drop_null(call):
         # `m=c(m, 0)`: drop the last M (null-space) columns, center remaining,
@@ -4003,7 +4530,13 @@ def _build_tp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
             cls="tprs.smooth", X=X_raw, S=S_list,
         )]
 
-    return _apply_by_and_absorb(call, data, X_raw, S_list, "tprs.smooth", term)
+    raw = _TPRawBasis(
+        term=list(term), shift=state["shift"], Xu=state["Xu"],
+        m=state["m"], d=state["d"], M=M, k=k, UZ=state["UZ"], w=state["w"],
+    )
+    return _apply_by_and_absorb(
+        call, data, X_raw, S_list, "tprs.smooth", term, raw_basis=raw,
+    )
 
 
 # ---- fs: factor-smooth interaction ------------------------------------------
@@ -4141,7 +4674,9 @@ def _fs_find_factor(term: list[str], data: pl.DataFrame) -> tuple[str | None, li
     return fterm, others
 
 
-def _canonicalize_fs_null_basis(Xr: np.ndarray, rank: int) -> np.ndarray:
+def _canonicalize_fs_null_basis(
+    Xr: np.ndarray, rank: int,
+) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
     """Rotate the null-space columns of Xr to a LAPACK-independent basis.
 
     mgcv's `nat.param(type=1)` leaves the null eigenspace of RSR spanned by
@@ -4152,21 +4687,27 @@ def _canonicalize_fs_null_basis(Xr: np.ndarray, rank: int) -> np.ndarray:
     a deterministic, data-driven basis computable from any LAPACK's nat.param
     output (the 2×2 / small eigendecomp of `Xn^T Xn` is stable across libs).
     Sign convention: largest-magnitude entry of each column is positive.
+
+    Returns ``(out, V_n, signs)`` where ``V_n`` is the (null_d, null_d)
+    rotation and ``signs`` are the per-column ±1 flips. Both are ``None``
+    when ``null_d == 0``.
     """
     p = Xr.shape[1]
     null_d = p - rank
     if null_d == 0:
-        return Xr
+        return Xr, None, None
     Xn = Xr[:, rank:] - Xr[:, rank:].mean(axis=0, keepdims=True)
     _w, V_n = np.linalg.eigh(Xn.T @ Xn)  # ascending; largest eig last
     Xn_rot = Xr[:, rank:] @ V_n
+    signs = np.ones(null_d)
     for c in range(null_d):
         m = int(np.argmax(np.abs(Xn_rot[:, c])))
         if Xn_rot[m, c] < 0:
             Xn_rot[:, c] = -Xn_rot[:, c]
+            signs[c] = -1.0
     out = Xr.copy()
     out[:, rank:] = Xn_rot
-    return out
+    return out, V_n, signs
 
 
 def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
@@ -4187,15 +4728,15 @@ def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
 
     # Build base tp smooth on the non-factor terms — bare output, no
     # scale.penalty, no absorb.cons.
-    Xb, Sb_list, M, k, rank = _tp_raw(call, data, others)
+    Xb, Sb_list, M, k, rank, state = _tp_raw(call, data, others)
     null_d = k - rank
     Sb = Sb_list[0]
 
     # nat.param(type=1) — make the base penalty an identity on its range.
-    Xr, D, _P = _nat_param(Xb, Sb, rank=rank, type_=1, unit_fnorm=True)
+    Xr, D, P = _nat_param(Xb, Sb, rank=rank, type_=1, unit_fnorm=True)
     # mgcv inherits its LAPACK's rotation of the degenerate null eigenspace;
     # re-rotate to a canonical basis so lmpy's output is deterministic.
-    Xr = _canonicalize_fs_null_basis(Xr, rank)
+    Xr, null_rot, null_signs = _canonicalize_fs_null_basis(Xr, rank)
     p = Xr.shape[1]
 
     # Factor levels in alphabetic order (R's factor() default).
@@ -4226,9 +4767,18 @@ def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     # scale.penalty runs on the final (duplicated) X and each S.
     S_list = _scale_penalty(X, S_list)
 
+    base_raw = _TPRawBasis(
+        term=list(others), shift=state["shift"], Xu=state["Xu"],
+        m=state["m"], d=state["d"], M=M, k=k, UZ=state["UZ"], w=state["w"],
+    )
+    raw = _FSRawBasis(
+        fterm=fterm, flev=list(flev), p=p, rank=rank, null_d=null_d,
+        base_raw=base_raw, P=P, null_rot=null_rot, null_signs=null_signs,
+    )
     return [SmoothBlock(
         label=_smooth_label(call), term=term,
         cls="fs.interaction", X=X, S=S_list,
+        spec=BasisSpec(raw=raw, by=None, absorb=None),
     )]
 
 
@@ -4300,7 +4850,7 @@ def _build_sz_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         )
 
     # Base smooth: tp on non-factor terms, raw constructor output.
-    Xb, Sb_list, M, k, rank = _tp_raw(call, data, otherlist)
+    Xb, Sb_list, M, k, rank, state = _tp_raw(call, data, otherlist)
     if len(Sb_list) != 1:
         raise NotImplementedError("sz with multiply-penalized base basis not supported")
     S_base = Sb_list[0]
@@ -4379,8 +4929,18 @@ def _build_sz_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         S_out.append(S_k)
 
     label = _smooth_label(call)
+    base_raw = _TPRawBasis(
+        term=list(otherlist), shift=state["shift"], Xu=state["Xu"],
+        m=state["m"], d=state["d"], M=M, k=k, UZ=state["UZ"], w=state["w"],
+    )
+    raw = _SZRawBasis(
+        term_full=list(term), ftermlist=list(ftermlist),
+        flev=[list(lv) for lv in flev], nf=list(nf),
+        base_raw=base_raw, p0=p0,
+    )
     return [SmoothBlock(
         label=label, term=term, cls="sz.interaction", X=X_out, S=S_out,
+        spec=BasisSpec(raw=raw, by=None, absorb=None),
     )]
 
 
@@ -4591,7 +5151,13 @@ def _build_ad_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         Db = _ad_Db_1d(nk)
         V = _ad_penalty_basis_1d(nk, k_pen)
         S_list = [Db.T @ (V[:, i : i + 1] * Db) for i in range(k_pen)]
-        return _apply_by_and_absorb(call, data, X, S_list, "pspline.smooth", term)
+        raw = _ADRawBasis(
+            term=list(term), knots_per_term=[knots],
+            m0=2, k_per_term=[X.shape[1]],
+        )
+        return _apply_by_and_absorb(
+            call, data, X, S_list, "pspline.smooth", term, raw_basis=raw,
+        )
 
     # d == 2
     k_vec = _ad_default_k(call, 2)
@@ -4622,7 +5188,13 @@ def _build_ad_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
                  + Dcc.T @ (Vcc[:, i : i + 1] * Dcc)
                  + Dcr.T @ (Vcr[:, i : i + 1] * Dcr))
             S_list.append(S)
-    return _apply_by_and_absorb(call, data, X, S_list, "pspline.smooth", term)
+    raw = _ADRawBasis(
+        term=list(term), knots_per_term=[knots_i, knots_j],
+        m0=2, k_per_term=[Xi.shape[1], Xj.shape[1]],
+    )
+    return _apply_by_and_absorb(
+        call, data, X, S_list, "pspline.smooth", term, raw_basis=raw,
+    )
 
 
 # ---- te / ti / t2 (tensor-product smooths) ---------------------------------
@@ -4750,36 +5322,47 @@ def _te_make_margin_call(spec: dict) -> Call:
 
 def _te_build_margin_raw(
     spec: dict, data: pl.DataFrame,
-) -> tuple[np.ndarray, list[np.ndarray], object, bool]:
+) -> tuple[np.ndarray, list[np.ndarray], object, bool, _RawBasis]:
     """Build the bare margin (no absorb.cons) — returns
-    `(X, S_list, predict, noterp)`. `noterp=True` signals that this basis
-    is already "nicely parameterised" and the tensor constructor should
-    skip the np=TRUE SVD reparameterization (matches mgcv's `noterp`
-    attribute on cr / cc / cs).
+    `(X, S_list, predict, noterp, raw)`. `noterp=True` signals that this
+    basis is already "nicely parameterised" and the tensor constructor
+    should skip the np=TRUE SVD reparameterization (matches mgcv's
+    `noterp` attribute on cr / cc / cs). ``raw`` is the corresponding
+    `_RawBasis` for predict-time replay.
     """
     mcall = _te_make_margin_call(spec)
     bs = spec["bs"]
     term = spec["term"]
     if bs == "cr":
         X, S_list, knots = _cr_raw(mcall, data, term)
+        raw = _CRRawBasis(term=term[0], knots=knots)
         def _predict(x_new: np.ndarray) -> np.ndarray:
             return _cr_basis(np.asarray(x_new, dtype=float), knots)
-        return X, S_list, _predict, True
+        return X, S_list, _predict, True, raw
     if bs == "tp":
-        # No fixture exercises tp margins in te/ti yet — tp prediction
-        # needs the stored UZ transform and shift, which _tp_raw discards.
-        raise NotImplementedError("te/ti with bs='tp' margins not yet supported")
+        X, S_list, M, k, _rank, state = _tp_raw(mcall, data, term)
+        raw = _TPRawBasis(
+            term=list(term), shift=state["shift"], Xu=state["Xu"],
+            m=state["m"], d=state["d"], M=M, k=k,
+            UZ=state["UZ"], w=state["w"],
+        )
+        # np-reparam predict callable: only invoked when len(term) == 1.
+        def _predict(x_new: np.ndarray) -> np.ndarray:
+            df = pl.DataFrame({term[0]: np.asarray(x_new, dtype=float)})
+            return raw.eval(df)
+        return X, S_list, _predict, False, raw
     raise NotImplementedError(f"te/ti margin with bs={bs!r} not yet supported")
 
 
 def _te_build_margin_centered(
     spec: dict, data: pl.DataFrame,
-) -> tuple[np.ndarray, list[np.ndarray], object, bool]:
+) -> tuple[np.ndarray, list[np.ndarray], object, bool, _RawBasis]:
     """Build a centered margin (absorb.cons applied), returning
-    `(X, S_list, predict, noterp)`. Equivalent to
+    `(X, S_list, predict, noterp, raw)`. Equivalent to
     `smoothCon(..., absorb.cons=TRUE)[[1]]` but keeps the Z matrix so
     `predict(x_new)` evaluates the raw basis at new points and applies
-    the same sum-to-zero rotation.
+    the same sum-to-zero rotation. ``raw`` chains the bare basis with
+    the post-multiplication ``Z`` for predict-time replay.
     """
     mcall = _te_make_margin_call(spec)
     bs = spec["bs"]
@@ -4793,9 +5376,30 @@ def _te_build_margin_centered(
         Z = Q[:, 1:]
         X = X_raw @ Z
         S_list = [Z.T @ S @ Z for S in S_scaled]
+        bare = _CRRawBasis(term=term[0], knots=knots)
+        raw = _LinearTransformRawBasis(inner=bare, M=Z)
         def _predict(x_new: np.ndarray) -> np.ndarray:
             return _cr_basis(np.asarray(x_new, dtype=float), knots) @ Z
-        return X, S_list, _predict, True
+        return X, S_list, _predict, True, raw
+    if bs == "tp":
+        X_raw, S_raw, M, k, _rank, state = _tp_raw(mcall, data, term)
+        S_sym = [(S + S.T) / 2.0 for S in S_raw]
+        S_scaled = _scale_penalty(X_raw, S_sym)
+        C = X_raw.mean(axis=0)
+        Q, _ = np.linalg.qr(C.reshape(-1, 1), mode="complete")
+        Z = Q[:, 1:]
+        X = X_raw @ Z
+        S_list = [Z.T @ S @ Z for S in S_scaled]
+        bare = _TPRawBasis(
+            term=list(term), shift=state["shift"], Xu=state["Xu"],
+            m=state["m"], d=state["d"], M=M, k=k,
+            UZ=state["UZ"], w=state["w"],
+        )
+        raw = _LinearTransformRawBasis(inner=bare, M=Z)
+        def _predict(x_new: np.ndarray) -> np.ndarray:
+            df = pl.DataFrame({term[0]: np.asarray(x_new, dtype=float)})
+            return bare.eval(df) @ Z
+        return X, S_list, _predict, False, raw
     raise NotImplementedError(f"ti/t2 centered margin with bs={bs!r} not yet supported")
 
 
@@ -4884,11 +5488,12 @@ def _build_te_smooth(call: Call, data: pl.DataFrame, *, inter: bool = False,
 
     Xm: list[np.ndarray] = []
     Sm: list[np.ndarray] = []
+    margin_raws: list[_RawBasis] = []
     for i, spec in enumerate(specs):
         if mc_list[i]:
-            Xi, Si_list, predict_i, noterp_i = _te_build_margin_centered(spec, data)
+            Xi, Si_list, predict_i, noterp_i, raw_i = _te_build_margin_centered(spec, data)
         else:
-            Xi, Si_list, predict_i, noterp_i = _te_build_margin_raw(spec, data)
+            Xi, Si_list, predict_i, noterp_i, raw_i = _te_build_margin_raw(spec, data)
         if len(Si_list) != 1:
             raise ValueError(f"te margin {i} has {len(Si_list)} penalties; only one allowed")
         S_i = Si_list[0]
@@ -4897,8 +5502,10 @@ def _build_te_smooth(call: Call, data: pl.DataFrame, *, inter: bool = False,
         # noterp=TRUE — their basis is already "nicely parameterised").
         if do_np and len(spec["term"]) == 1 and not noterp_i:
             x_vals = data[spec["term"][0]].to_numpy().astype(float)
-            Xi, S_list_new, _XP = _te_reparam_margin(Xi, [S_i], x_vals, predict_i)
+            Xi, S_list_new, XP = _te_reparam_margin(Xi, [S_i], x_vals, predict_i)
             S_i = S_list_new[0]
+            if XP is not None:
+                raw_i = _LinearTransformRawBasis(inner=raw_i, M=XP)
 
         # Scale each marginal penalty by its largest eigenvalue.
         eigs = np.linalg.eigvalsh(0.5 * (S_i + S_i.T))
@@ -4908,6 +5515,7 @@ def _build_te_smooth(call: Call, data: pl.DataFrame, *, inter: bool = False,
 
         Xm.append(Xi)
         Sm.append(S_i)
+        margin_raws.append(raw_i)
 
     X = _tensor_prod_X(Xm)
     S_list = _tensor_prod_S(Sm)
@@ -4920,14 +5528,20 @@ def _build_te_smooth(call: Call, data: pl.DataFrame, *, inter: bool = False,
     cls = "tensor.smooth"
     label = _smooth_label(call)
     term_all = _smooth_term_vars(call)
+    tensor_raw = _TensorRawBasis(margins=margin_raws)
 
     if inter:
         # Skip outer absorb.cons (C = matrix(0,0,0)).
         S_list = _scale_penalty(X, S_list)
-        return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list)]
+        return [SmoothBlock(
+            label=label, term=term_all, cls=cls, X=X, S=S_list,
+            spec=BasisSpec(raw=tensor_raw, by=None, absorb=None),
+        )]
 
     # te: outer absorb.cons.
-    return _apply_by_and_absorb(call, data, X, S_list, cls, term_all)
+    return _apply_by_and_absorb(
+        call, data, X, S_list, cls, term_all, raw_basis=tensor_raw,
+    )
 
 
 def _build_ti_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
@@ -4947,23 +5561,30 @@ def _build_ti_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
 
 def _t2_margin_raw_and_rank(
     spec: dict, data: pl.DataFrame,
-) -> tuple[np.ndarray, np.ndarray, int]:
-    """Build a t2 margin (no absorb.cons) and return `(X, S, rank)`.
+) -> tuple[np.ndarray, np.ndarray, int, _RawBasis]:
+    """Build a t2 margin (no absorb.cons) and return `(X, S, rank, raw)`.
     The marginal penalty rank determines the range/null split used by
-    `t2.model.matrix`."""
+    `t2.model.matrix`. ``raw`` is the corresponding `_RawBasis` for the
+    bare margin (predict-time replay)."""
     mcall = _te_make_margin_call(spec)
     bs = spec["bs"]
     term = spec["term"]
     if bs == "cr":
-        X, S_list, _knots = _cr_raw(mcall, data, term)
+        X, S_list, knots = _cr_raw(mcall, data, term)
         S = 0.5 * (S_list[0] + S_list[0].T)
         # cr null.space.dim = 2 for un-shrunk cr.
         rank = X.shape[1] - 2
-        return X, S, rank
+        raw = _CRRawBasis(term=term[0], knots=knots)
+        return X, S, rank, raw
     if bs == "tp":
-        X, S_list, _M, _k, rank = _tp_raw(mcall, data, term)
+        X, S_list, M, k, rank, state = _tp_raw(mcall, data, term)
         S = 0.5 * (S_list[0] + S_list[0].T)
-        return X, S, rank
+        raw = _TPRawBasis(
+            term=list(term), shift=state["shift"], Xu=state["Xu"],
+            m=state["m"], d=state["d"], M=M, k=k,
+            UZ=state["UZ"], w=state["w"],
+        )
+        return X, S, rank, raw
     raise NotImplementedError(f"t2 margin with bs={bs!r} not yet supported")
 
 
@@ -5031,11 +5652,15 @@ def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
 
     Xm: list[np.ndarray] = []
     ranks: list[int] = []
+    margin_raws: list[_RawBasis] = []
+    P_per_margin: list[np.ndarray] = []
     for spec in specs:
-        Xi_raw, Si, ri = _t2_margin_raw_and_rank(spec, data)
-        Xi_np, _D, _P = _nat_param(Xi_raw, Si, rank=ri, type_=3, unit_fnorm=True)
+        Xi_raw, Si, ri, raw_i = _t2_margin_raw_and_rank(spec, data)
+        Xi_np, _D, P_i = _nat_param(Xi_raw, Si, rank=ri, type_=3, unit_fnorm=True)
         Xm.append(Xi_np)
         ranks.append(ri)
+        margin_raws.append(raw_i)
+        P_per_margin.append(P_i)
 
     X, sub_cols = _t2_model_matrix(Xm, ranks)
     nsc = len(sub_cols)
@@ -5068,7 +5693,14 @@ def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     if null_dim == 0:
         # No null space, no identifiability constraint needed.
         S_list = _scale_penalty(X, S_list)
-        return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list)]
+        t2_raw = _T2RawBasis(
+            margins=margin_raws, P_per_margin=P_per_margin,
+            ranks=ranks, null_dim=0, Zn=None,
+        )
+        return [SmoothBlock(
+            label=label, term=term_all, cls=cls, X=X, S=S_list,
+            spec=BasisSpec(raw=t2_raw, by=None, absorb=None),
+        )]
 
     if null_dim == 1:
         # Fix the single null-space parameter to zero — drop its column (smooth.r:1118).
@@ -5077,7 +5709,14 @@ def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         X = X[:, keep]
         S_list = [S[np.ix_(keep, keep)] for S in S_list]
         S_list = _scale_penalty(X, S_list)
-        return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list)]
+        t2_raw = _T2RawBasis(
+            margins=margin_raws, P_per_margin=P_per_margin,
+            ranks=ranks, null_dim=1, Zn=None,
+        )
+        return [SmoothBlock(
+            label=label, term=term_all, cls=cls, X=X, S=S_list,
+            spec=BasisSpec(raw=t2_raw, by=None, absorb=None),
+        )]
 
     # Partial absorb.cons (smooth.r:4076-4100): C has zero cols on the range
     # space, so only the null-space cols of X / S get rotated. QR is on the
@@ -5099,7 +5738,14 @@ def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         top = np.concatenate([S_RR, S_RN], axis=1)
         bot = np.concatenate([S_NR, S_NN], axis=1)
         S_list_new.append(np.concatenate([top, bot], axis=0))
-    return [SmoothBlock(label=label, term=term_all, cls=cls, X=X, S=S_list_new)]
+    t2_raw = _T2RawBasis(
+        margins=margin_raws, P_per_margin=P_per_margin,
+        ranks=ranks, null_dim=null_dim, Zn=Zn,
+    )
+    return [SmoothBlock(
+        label=label, term=term_all, cls=cls, X=X, S=S_list_new,
+        spec=BasisSpec(raw=t2_raw, by=None, absorb=None),
+    )]
 
 
 def materialize_smooths(
