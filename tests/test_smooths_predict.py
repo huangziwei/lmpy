@@ -150,9 +150,16 @@ def test_mgcv_predict_mat_matches_R(fx_id: str):
             # whose per-column signs do not match sm$X's. For those we use
             # `Xpredfit.mtx` (PredictMat at fit data), which carries the
             # predict-side sign convention and is paired with our
-            # in-sample `predict_mat(data)` output.
+            # in-sample `predict_mat(data)` output. We gate on coef_remap —
+            # only t2 needs this; for other bases sm$X already matches the
+            # predict basis (sometimes Xpredfit doesn't, e.g. random.effect).
             xpredfit_path = fx / f"smooth_{i}_{k}_Xpredfit.mtx"
-            if xpredfit_path.exists():
+            use_predfit_anchor = (
+                xpredfit_path.exists()
+                and blk.spec is not None
+                and blk.spec.coef_remap is not None
+            )
+            if use_predfit_anchor:
                 anchor_ref = np.asarray(
                     mmread(xpredfit_path).todense(), dtype=float
                 )
