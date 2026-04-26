@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from scipy.linalg import qr, solve_triangular
@@ -23,6 +24,7 @@ from scipy.stats import norm, t as student_t
 from .family import Binomial, Family, Gaussian, Link
 from .formula import _eval_atom, deparse, materialize, parse, Call, Name
 from .design import prepare_design
+from .lm import _label_top_n, _lowess, _qq_plot
 from .utils import (
     _dig_tst,
     format_df,
@@ -359,6 +361,10 @@ class glm:
 
         X = self.X.to_numpy().astype(float)
         y = _coerce_response(self.y, self.family)
+        # Numeric form of y (factor → 0/1 for Binomial, etc.) — kept so
+        # residuals_of / plots don't re-coerce self.y, which fails on
+        # string factors.
+        self._y_numeric = y
         n, p = X.shape
 
         prior_w = (np.ones(n) if weights is None
@@ -433,6 +439,24 @@ class glm:
         se = np.sqrt(np.diag(self.vcov))
         self._se_bhat_arr = se
         self.se_bhat = _row_frame(se, self.column_names)
+
+        # IRLS hat-matrix diagonal h_ii = w_i · X_i'(X'WX)⁻¹X_i and the
+        # standardized residual flavors from rstandard.glm
+        # (r / √(φ·(1−h))). Used by every diagnostic plot below.
+        keep = ~np.isnan(np.diag(self._XtWXinv))
+        if keep.any():
+            Xk = X[:, keep]
+            XtWXinv_k = self._XtWXinv[np.ix_(keep, keep)]
+            HXk = Xk @ XtWXinv_k
+            self.leverage = (HXk * Xk).sum(axis=1) * fit.w
+        else:
+            self.leverage = np.zeros(n)
+        denom = (
+            np.sqrt(self.dispersion)
+            * np.sqrt(np.clip(1.0 - self.leverage, 1e-12, None))
+        )
+        self.std_dev_residuals = self.residuals_of("deviance") / denom
+        self.std_pearson_residuals = self.residuals_of("pearson") / denom
 
         # ---- inference: t-or-z, p, CI ------------------------------------
         self._test_kind = "z" if self.family.scale_known else "t"
@@ -578,7 +602,7 @@ class glm:
         ``type`` ∈ ``{"deviance", "pearson", "working", "response"}``;
         defaults to deviance, matching ``residuals.glm``.
         """
-        y = self.y.to_numpy().astype(float).flatten()
+        y = self._y_numeric
         mu = self.fitted_values
         prior_w = self._prior_w
         link = self.family.link
@@ -731,3 +755,116 @@ class glm:
         out += f"\n\nNumber of Fisher Scoring iterations: {self.iter}"
         out += "" if self.converged else "  (did NOT converge!)"
         print(out)
+
+    # ----- diagnostic plots -----------------------------------------------
+    #
+    # Match R's plot.glm conventions:
+    # - x-axis on residual panels = η̂ (linear predictors with offset),
+    #   labeled "Predicted values" — that's what predict(model) returns.
+    # - panels 1/2/3 use deviance residuals (the residuals.glm default).
+    # - panel 5 (leverage) uses standardized Pearson residuals on y, with
+    #   Cook's-distance contours scaled by rank(X) not p.
+
+    def plot_observed_fitted(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black", label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        y = self._y_numeric
+        yhat = self.fitted_values
+        ax.scatter(yhat, y, facecolor=facecolor, edgecolor=edgecolor)
+        lo = float(min(y.min(), yhat.min()))
+        hi = float(max(y.max(), yhat.max()))
+        ax.plot([lo, hi], [lo, hi], color="black", linestyle="--")
+        _label_top_n(ax, yhat, y, scores=y - yhat, n=label_n)
+        ax.set_xlabel("Fitted (μ̂)")
+        ax.set_ylabel("Observed")
+        ax.set_title("Observed vs. Fitted")
+
+    def plot_residuals(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        eta = self.linear_predictors
+        r = self.residuals_of("deviance")
+        ax.scatter(eta, r, facecolor=facecolor, edgecolor=edgecolor)
+        ax.axhline(0, color="black", linestyle="--")
+        if smooth:
+            xs, ys = _lowess(eta, r)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, eta, r, scores=r, n=label_n)
+        ax.set_xlabel("Predicted values")
+        ax.set_ylabel("Residuals")
+        ax.set_title("Residuals vs. Fitted Plot")
+
+    def plot_qq(self, ax=None, figsize=None, label_n=3):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        _qq_plot(
+            ax, self.std_dev_residuals, label_n=label_n,
+            ylabel="Std. deviance resid.",
+        )
+
+    def plot_scale_location(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        eta = self.linear_predictors
+        s = np.sqrt(np.abs(self.std_dev_residuals))
+        ax.scatter(eta, s, facecolor=facecolor, edgecolor=edgecolor)
+        if smooth:
+            xs, ys = _lowess(eta, s)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, eta, s, scores=self.std_dev_residuals, n=label_n)
+        ax.set_xlabel("Predicted values")
+        ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ deviance\ resid.}|}$")
+        ax.set_title("Scale-Location")
+
+    def plot_leverage(
+        self, ax=None, figsize=None,
+        facecolor="none", edgecolor="black",
+        cook_levels=(0.5, 1.0),
+        smooth=True, label_n=3,
+    ):
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize)
+        h = self.leverage
+        r = self.std_pearson_residuals
+        ax.scatter(h, r, facecolor=facecolor, edgecolor=edgecolor)
+        ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
+        if smooth:
+            xs, ys = _lowess(h, r)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        # Cook's contours for GLM: D_i = (r²/k) · h/(1−h), k = rank(X).
+        # Solving for r: r = ±sqrt(c · k · (1−h)/h).
+        ymin, ymax = ax.get_ylim()
+        h_max = float(np.clip(h.max() * 1.1, 1e-3, 0.999))
+        h_grid = np.linspace(1e-3, h_max, 200)
+        for c in cook_levels:
+            rline = np.sqrt(c * self.rank * (1 - h_grid) / h_grid)
+            ax.plot(h_grid, rline, color="red", linestyle="--", linewidth=0.8)
+            ax.plot(h_grid, -rline, color="red", linestyle="--", linewidth=0.8)
+        ax.set_ylim(ymin, ymax)
+        cook = (r ** 2 / self.rank) * h / np.clip(1 - h, 1e-12, None)
+        _label_top_n(ax, h, r, scores=cook, n=label_n)
+        ax.set_xlabel("Leverage")
+        ax.set_ylabel("Std. Pearson resid.")
+        ax.set_title("Residuals vs. Leverage")
+
+    def plot(self, figsize=None, smooth=True, label_n=3):
+        """4-panel diagnostic, matching R's plot.glm default."""
+        if figsize is None:
+            figsize = (10, 8)
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        self.plot_residuals(ax=axes[0, 0], smooth=smooth, label_n=label_n)
+        self.plot_qq(ax=axes[0, 1], label_n=label_n)
+        self.plot_scale_location(ax=axes[1, 0], smooth=smooth, label_n=label_n)
+        self.plot_leverage(ax=axes[1, 1], smooth=smooth, label_n=label_n)
+        fig.tight_layout()
