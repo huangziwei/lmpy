@@ -27,6 +27,73 @@ def _row_frame(values: np.ndarray, columns: list[str]) -> pl.DataFrame:
     return pl.DataFrame({c: [float(flat[i])] for i, c in enumerate(columns)})
 
 
+def _lowess(x, y, frac=2 / 3, it=3):
+    """Cleveland's LOWESS — local linear smoother with robustness reweighting.
+
+    Matches the smoother R uses in `panel.smooth` for `plot.lm`.
+    Returns (x_sorted, y_smooth). O(n^2) memory; pass `smooth=False` if n is huge.
+    """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    n = len(x)
+    if n < 4:
+        return x, y
+    idx = np.argsort(x)
+    xs, ys = x[idx], y[idx]
+    r = max(2, int(np.ceil(frac * n)))
+
+    dists = np.abs(xs[:, None] - xs[None, :])
+    bw = np.partition(dists, r - 1, axis=1)[:, r - 1]
+    bw = np.where(bw == 0, 1.0, bw)
+    W = np.clip(dists / bw[:, None], 0, 1)
+    W = (1 - W ** 3) ** 3
+
+    yhat = ys.copy()
+    delta = np.ones(n)
+    for _ in range(it + 1):
+        Wd = W * delta[None, :]
+        S = Wd.sum(axis=1)
+        Sx = Wd @ xs
+        Sxx = Wd @ (xs * xs)
+        Sy = Wd @ ys
+        Sxy = Wd @ (xs * ys)
+        det = S * Sxx - Sx * Sx
+        ok = det > 0
+        safe_det = np.where(ok, det, 1.0)
+        safe_S = np.where(S > 0, S, 1.0)
+        a_local = (Sxx * Sy - Sx * Sxy) / safe_det
+        b_local = (S * Sxy - Sx * Sy) / safe_det
+        wmean = Sy / safe_S
+        yhat = np.where(ok, a_local + b_local * xs, wmean)
+        resid = ys - yhat
+        s = np.median(np.abs(resid))
+        if s == 0:
+            break
+        u = np.clip(resid / (6 * s), -1, 1)
+        delta = (1 - u * u) ** 2
+    return xs, yhat
+
+
+def _label_top_n(ax, xs, ys, scores, n=3, indices=None):
+    """Annotate the n points with the largest |scores|."""
+    if not n:
+        return
+    n = min(int(n), len(scores))
+    if n == 0:
+        return
+    top = np.argsort(-np.abs(np.asarray(scores)))[:n]
+    for i in top:
+        label = str(int(indices[i]) if indices is not None else int(i))
+        ax.annotate(
+            label,
+            (xs[i], ys[i]),
+            fontsize=8,
+            color="black",
+            xytext=(3, 3),
+            textcoords="offset points",
+        )
+
+
 class lm:
     def __init__(
         self,
@@ -124,6 +191,16 @@ class lm:
         self.V_bhat = V_bhat
         self._se_bhat_arr = np.asarray(se_bhat).reshape(-1)
         self.se_bhat = _row_frame(self._se_bhat_arr, self.column_names)
+
+        # hat-matrix diagonal h_ii (leverages) and internally studentized
+        # residuals — cached once so plot_qq / plot_scale_location /
+        # plot_leverage don't each recompute them.
+        HX = X @ self.XtXinv
+        h = (HX * X).sum(axis=1)
+        w = np.diag(W)
+        self.leverage = h * w
+        denom = self.sigma * np.sqrt(np.clip(1.0 - self.leverage, 1e-12, None))
+        self.std_residuals = residuals * np.sqrt(w) / denom
 
         # compute confidence interval for β̂
         self.ci_bhat = self.compute_ci_bhat()
@@ -473,22 +550,168 @@ class lm:
 
         print(docstring)
 
-    def plot_residuals(
-        self, ax=None, figsize=None, facecolor="none", edgecolor="black"
+    def plot_observed_fitted(
+        self,
+        ax=None,
+        figsize=None,
+        facecolor="none",
+        edgecolor="black",
+        label_n=3,
     ):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
-        ax.scatter(
-            self.yhat["Fitted"].to_numpy(),
-            self._residuals_arr,
-            facecolor=facecolor,
-            edgecolor=edgecolor,
-        )
+        y = self.y.to_numpy().astype(float)
+        yhat = self.yhat["Fitted"].to_numpy().astype(float)
+        ax.scatter(yhat, y, facecolor=facecolor, edgecolor=edgecolor)
+        lo = float(min(y.min(), yhat.min()))
+        hi = float(max(y.max(), yhat.max()))
+        ax.plot([lo, hi], [lo, hi], color="black", linestyle="--")
+        _label_top_n(ax, yhat, y, scores=self._residuals_arr, n=label_n)
+        ax.set_xlabel("Fitted")
+        ax.set_ylabel("Observed")
+        ax.set_title("Observed vs. Fitted")
+
+    def plot_residuals(
+        self,
+        ax=None,
+        figsize=None,
+        facecolor="none",
+        edgecolor="black",
+        smooth=True,
+        label_n=3,
+    ):
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        yhat = self.yhat["Fitted"].to_numpy().astype(float)
+        r = self._residuals_arr
+        ax.scatter(yhat, r, facecolor=facecolor, edgecolor=edgecolor)
         ax.axhline(0, color="black", linestyle="--")
+        if smooth:
+            xs, ys = _lowess(yhat, r)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, yhat, r, scores=r, n=label_n)
         ax.set_xlabel("Fitted")
         ax.set_ylabel("Residuals")
         ax.set_title("Residuals vs. Fitted Plot")
+
+    def plot_qq(
+        self,
+        ax=None,
+        figsize=None,
+        facecolor="none",
+        edgecolor="black",
+        label_n=3,
+    ):
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        r_orig = self.std_residuals
+        n = len(r_orig)
+        sort_idx = np.argsort(r_orig)
+        r = r_orig[sort_idx]
+        a = 3.0 / 8.0 if n <= 10 else 0.5
+        probs = (np.arange(1, n + 1) - a) / (n + 1 - 2 * a)
+        q = norm.ppf(probs)
+        ax.scatter(q, r, facecolor=facecolor, edgecolor=edgecolor)
+        # reference line through the 1st and 3rd quartiles, like R's qqline
+        ry1, ry3 = np.quantile(r, [0.25, 0.75])
+        qx1, qx3 = norm.ppf([0.25, 0.75])
+        slope = (ry3 - ry1) / (qx3 - qx1)
+        intercept = ry1 - slope * qx1
+        xs = np.array([q.min(), q.max()])
+        ax.plot(xs, slope * xs + intercept, color="black", linestyle="--")
+        # label by largest |std_resid|, mapping orig idx → sorted position
+        if label_n:
+            n_lab = min(int(label_n), n)
+            top_orig = np.argsort(-np.abs(r_orig))[:n_lab]
+            rank = np.empty(n, dtype=int)
+            rank[sort_idx] = np.arange(n)
+            for orig_i in top_orig:
+                pos = rank[orig_i]
+                ax.annotate(
+                    str(int(orig_i)),
+                    (q[pos], r[pos]),
+                    fontsize=8,
+                    color="black",
+                    xytext=(3, 3),
+                    textcoords="offset points",
+                )
+        ax.set_xlabel("Theoretical Quantiles")
+        ax.set_ylabel("Standardized Residuals")
+        ax.set_title("Normal Q-Q")
+
+    def plot_scale_location(
+        self,
+        ax=None,
+        figsize=None,
+        facecolor="none",
+        edgecolor="black",
+        smooth=True,
+        label_n=3,
+    ):
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        yhat = self.yhat["Fitted"].to_numpy().astype(float)
+        s = np.sqrt(np.abs(self.std_residuals))
+        ax.scatter(yhat, s, facecolor=facecolor, edgecolor=edgecolor)
+        if smooth:
+            xs, ys = _lowess(yhat, s)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        _label_top_n(ax, yhat, s, scores=self.std_residuals, n=label_n)
+        ax.set_xlabel("Fitted")
+        ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ Residuals}|}$")
+        ax.set_title("Scale-Location")
+
+    def plot_leverage(
+        self,
+        ax=None,
+        figsize=None,
+        facecolor="none",
+        edgecolor="black",
+        cook_levels=(0.5, 1.0),
+        smooth=True,
+        label_n=3,
+    ):
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        h = self.leverage
+        r = self.std_residuals
+        ax.scatter(h, r, facecolor=facecolor, edgecolor=edgecolor)
+        ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
+        if smooth:
+            xs, ys = _lowess(h, r)
+            ax.plot(xs, ys, color="red", linewidth=1.0)
+        # Cook's contours: D_i = (r_i^2 / p) · h_i / (1 - h_i)
+        # ⇒ r = ±sqrt(c · p · (1 - h) / h)
+        ymin, ymax = ax.get_ylim()
+        h_max = float(np.clip(h.max() * 1.1, 1e-3, 0.999))
+        h_grid = np.linspace(1e-3, h_max, 200)
+        for c in cook_levels:
+            rline = np.sqrt(c * self.p * (1 - h_grid) / h_grid)
+            ax.plot(h_grid, rline, color="red", linestyle="--", linewidth=0.8)
+            ax.plot(h_grid, -rline, color="red", linestyle="--", linewidth=0.8)
+        ax.set_ylim(ymin, ymax)
+        # label by Cook's distance
+        cook = (r ** 2 / self.p) * h / np.clip(1 - h, 1e-12, None)
+        _label_top_n(ax, h, r, scores=cook, n=label_n)
+        ax.set_xlabel("Leverage")
+        ax.set_ylabel("Standardized Residuals")
+        ax.set_title("Residuals vs. Leverage")
+
+    def plot(self, figsize=None, smooth=True, label_n=3):
+        """4-panel diagnostic display: Residuals, Q-Q, Scale-Location, Leverage."""
+        if figsize is None:
+            figsize = (10, 8)
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        self.plot_residuals(ax=axes[0, 0], smooth=smooth, label_n=label_n)
+        self.plot_qq(ax=axes[0, 1], label_n=label_n)
+        self.plot_scale_location(ax=axes[1, 0], smooth=smooth, label_n=label_n)
+        self.plot_leverage(ax=axes[1, 1], smooth=smooth, label_n=label_n)
+        fig.tight_layout()
 
     def plot_contrast(
         self, features=None, figsize=None, subplots=None, away_from="median"
