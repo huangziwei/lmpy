@@ -3646,6 +3646,8 @@ class VisResult:
         elev: float = 30.0,
         azim: float = -60.0,
         zlabel: str | None = None,
+        aspect: str | float | None = "square",
+        colorbar: bool = True,
     ):
         """Render the surface.
 
@@ -3653,6 +3655,12 @@ class VisResult:
         ``kind="persp"`` draws a 3D wireframe (mgcv's default). When
         ``se_mult > 0`` and ``se`` is present, persp also draws ±``se_mult``·SE
         envelopes (same convention as ``vis.gam(se=...)``).
+
+        ``aspect`` (contour only): ``"square"`` (default — square plotting
+        box, axes have the same physical length regardless of data ranges),
+        ``"equal"`` (one data-unit on x equals one on y — only useful when
+        axes share units, e.g. spatial), a float (height/width ratio), or
+        ``None`` (matplotlib default).
         """
         if kind not in ("contour", "persp"):
             raise ValueError(f"kind must be 'contour' or 'persp'; got {kind!r}")
@@ -3677,7 +3685,8 @@ class VisResult:
             cf = ax.contourf(X, Y, Z, levels=levels, cmap=cmap)
             ax.contour(X, Y, Z, levels=levels, colors="black",
                        linewidths=0.4, alpha=0.5)
-            plt.colorbar(cf, ax=ax, label=z_lab)
+            if colorbar:
+                plt.colorbar(cf, ax=ax, label=z_lab)
             ax.set_xlabel(x_lab)
             ax.set_ylabel(y_lab)
             if m1_ticks is not None:
@@ -3686,6 +3695,12 @@ class VisResult:
             if m2_ticks is not None:
                 ax.set_yticks(m2_num)
                 ax.set_yticklabels(m2_ticks)
+            if aspect == "square":
+                ax.set_box_aspect(1)
+            elif aspect == "equal":
+                ax.set_aspect("equal")
+            elif isinstance(aspect, (int, float)):
+                ax.set_box_aspect(float(aspect))
             return ax
 
         # persp: 3D wireframe
