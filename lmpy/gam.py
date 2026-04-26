@@ -2495,30 +2495,233 @@ class gam:
         dmu_deta = self.family.link.mu_eta(eta)
         return (y - mu) / dmu_deta
 
-    def predict(self, newdata: pl.DataFrame | None = None) -> np.ndarray:
-        """Return predicted response values ``ŷ = g⁻¹(X_new β̂)``.
+    def predict(
+        self,
+        newdata: pl.DataFrame | None = None,
+        type: str = "response",
+        se_fit: bool = False,
+    ):
+        """Predict from the fitted GAM — :func:`predict.gam` parity.
 
-        With ``newdata=None`` returns the in-sample ``self.fitted``. Otherwise
-        rebuilds the parametric design via ``materialize`` and replays each
-        smooth block's ``BasisSpec`` (mgcv's ``Predict.matrix.<class>``) on
-        ``newdata``, applies the link's inverse, and returns the response.
+        ``type='response'`` returns ``μ̂ = g⁻¹(X_new β̂)``; ``type='link'``
+        returns ``η̂ = X_new β̂``. With ``se_fit=True``, also returns the
+        standard error: link-scale SE is ``√diag(X · Vp · Xᵀ)``;
+        response-scale SE multiplies by ``|dμ/dη|`` (delta method, same as
+        mgcv).
+
+        ``Vp`` is the Bayesian posterior covariance (``self.Vp``) — mgcv's
+        default for ``se.fit`` since smoothing-parameter shrinkage makes the
+        frequentist ``Ve`` over-confident at the posterior mode.
         """
-        if newdata is None:
-            return self.fitted
-        from .formula import materialize  # local to avoid cycle at module load
+        if type not in ("link", "response"):
+            raise ValueError(
+                f"type must be 'link' or 'response'; got {type!r}"
+            )
 
-        X_param = materialize(self._expanded, newdata).to_numpy().astype(float)
-        cols = [X_param]
-        for b in self._blocks:
-            if b.spec is None:
-                raise RuntimeError(
-                    f"smooth block {b.label!r} (cls={b.cls!r}) has no BasisSpec; "
-                    "predict(newdata=...) requires every smooth to carry one."
+        if newdata is None:
+            X_new = self._X_full
+            eta = X_new @ self._beta
+        else:
+            from .formula import materialize  # local to avoid cycle
+
+            X_param = materialize(self._expanded, newdata).to_numpy().astype(float)
+            cols = [X_param]
+            for b in self._blocks:
+                if b.spec is None:
+                    raise RuntimeError(
+                        f"smooth block {b.label!r} (cls={b.cls!r}) has no "
+                        "BasisSpec; predict(newdata=...) requires every smooth "
+                        "to carry one."
+                    )
+                cols.append(np.asarray(b.spec.predict_mat(newdata), dtype=float))
+            X_new = np.concatenate(cols, axis=1) if len(cols) > 1 else X_param
+            eta = X_new @ self._beta
+
+        fit = eta if type == "link" else self.family.link.linkinv(eta)
+
+        if not se_fit:
+            return fit
+
+        # Var(η̂_i) = X_i · Vp · X_iᵀ; rowwise via einsum.
+        var_eta = np.einsum("ij,jk,ik->i", X_new, self.Vp, X_new)
+        se_link = np.sqrt(np.maximum(var_eta, 0.0))
+        if type == "link":
+            return fit, se_link
+        # Delta method: Var(μ̂) ≈ (dμ/dη)² · Var(η̂).
+        mu_eta_v = self.family.link.mu_eta(eta)
+        return fit, np.abs(mu_eta_v) * se_link
+
+    def vis(
+        self,
+        view: tuple[str, str] | list[str] | None = None,
+        cond: dict | None = None,
+        n_grid: int = 30,
+        type: str = "link",
+        se: bool = False,
+        too_far: float = 0.0,
+    ) -> "VisResult":
+        """2D model-surface viewer — :func:`vis.gam` parity.
+
+        Builds an ``n_grid × n_grid`` grid over two ``view`` covariates, holds
+        every other variable at its "typical" value (median for numeric, mode
+        for factor — same as mgcv's ``variable.summary``), calls
+        :meth:`predict` on the grid, and returns the surface as a
+        :class:`VisResult` (which carries a ``.plot()`` method).
+
+        Parameters
+        ----------
+        view : tuple of 2 str, optional
+            Pair of covariate names to vary. If ``None``, picks the first two
+            variables in ``self.data`` that have more than one unique value.
+        cond : dict, optional
+            Override the typical-value default for any non-view variable, e.g.
+            ``cond={"sex": "M", "age": 50}``.
+        n_grid : int
+            Grid resolution per axis (default 30, matching mgcv).
+        type : {"link", "response"}
+            Scale of the returned fit/SE — ``"link"`` is η̂, ``"response"``
+            applies the inverse link.
+        se : bool
+            If ``True``, also compute pointwise SE on the grid.
+        too_far : float
+            Mask grid points whose normalized distance to any data point
+            exceeds this threshold (replaces fit/se with ``NaN``). 0 = no
+            masking. Mirrors mgcv's ``exclude.too.far``.
+        """
+        if type not in ("link", "response"):
+            raise ValueError(
+                f"type must be 'link' or 'response'; got {type!r}"
+            )
+
+        vs = self._var_summary()
+
+        if view is None:
+            view = []
+            # Iterate RHS variables in formula order (vs is built that way) —
+            # mgcv's vis.gam picks the first two with variation, same idea.
+            for name in vs:
+                if _has_variation(self.data[name]):
+                    view.append(name)
+                    if len(view) == 2:
+                        break
+            if len(view) < 2:
+                raise ValueError(
+                    "could not auto-pick `view`: need at least two RHS "
+                    "variables with more than one unique value"
                 )
-            cols.append(np.asarray(b.spec.predict_mat(newdata), dtype=float))
-        X_new = np.concatenate(cols, axis=1) if len(cols) > 1 else X_param
-        eta = X_new @ self._beta
-        return self.family.link.linkinv(eta)
+        else:
+            view = list(view)
+            if len(view) != 2:
+                raise ValueError(
+                    f"view must be a pair of variable names; got {view!r}"
+                )
+            for v in view:
+                if v not in self.data.columns:
+                    raise ValueError(
+                        f"view variable {v!r} not in data; available: "
+                        f"{list(self.data.columns)}"
+                    )
+
+        m1 = _grid_axis(self.data[view[0]], n_grid)
+        m2 = _grid_axis(self.data[view[1]], n_grid)
+        n1, n2 = len(m1), len(m2)
+
+        # meshgrid with indexing='ij' so that reshape(n1, n2) puts m1 on axis 0
+        # and m2 on axis 1 — i.e. fit[i, j] is the prediction at (m1[i], m2[j]).
+        M1, M2 = np.meshgrid(m1, m2, indexing="ij")
+        v1 = M1.ravel()
+        v2 = M2.ravel()
+        n_pts = n1 * n2
+
+        cond = dict(cond or {})
+        cols: dict[str, object] = {}
+        for name in self.data.columns:
+            if name == view[0]:
+                cols[name] = v1
+            elif name == view[1]:
+                cols[name] = v2
+            elif name in cond:
+                cols[name] = np.repeat(cond[name], n_pts)
+            elif name in vs:
+                cols[name] = np.repeat(vs[name], n_pts)
+            else:
+                # Variable wasn't profiled by var_summary (e.g. an offset column
+                # or a non-formula column) — leave it out; predict only
+                # references columns named in the formula.
+                continue
+
+        # Re-impose the original schema (factor levels, dtypes) so PredictMat's
+        # factor matching still works on the grid frame.
+        new_df = pl.DataFrame(
+            {
+                k: (v if isinstance(v, pl.Series) else pl.Series(k, v))
+                for k, v in cols.items()
+            }
+        )
+        for name in new_df.columns:
+            src = self.data[name]
+            if src.dtype != new_df[name].dtype:
+                new_df = new_df.with_columns(new_df[name].cast(src.dtype))
+
+        if se:
+            fit, se_arr = self.predict(new_df, type=type, se_fit=True)
+        else:
+            fit = self.predict(new_df, type=type, se_fit=False)
+            se_arr = None
+
+        if too_far > 0.0:
+            mask = _too_far_mask(
+                v1, v2, self.data[view[0]], self.data[view[1]], too_far
+            )
+            fit = np.array(fit, dtype=float, copy=True)
+            fit[mask] = np.nan
+            if se_arr is not None:
+                se_arr = np.array(se_arr, dtype=float, copy=True)
+                se_arr[mask] = np.nan
+
+        fit_grid = np.asarray(fit, dtype=float).reshape(n1, n2)
+        se_grid = (
+            np.asarray(se_arr, dtype=float).reshape(n1, n2)
+            if se_arr is not None
+            else None
+        )
+        return VisResult(
+            view=(view[0], view[1]),
+            m1=np.asarray(m1),
+            m2=np.asarray(m2),
+            fit=fit_grid,
+            se=se_grid,
+            type=type,
+        )
+
+    def _var_summary(self) -> dict:
+        """mgcv ``variable.summary`` parity: typical value per variable.
+
+        Restricted to RHS variables of the formula (so we don't include the
+        response or stray data columns). Numeric → median; factor/string →
+        modal level.
+        """
+        from .formula import referenced_columns  # local to avoid cycle
+
+        rhs_vars = referenced_columns(self._expanded)
+        out: dict = {}
+        for name in self.data.columns:
+            if name not in rhs_vars:
+                continue
+            col = self.data[name]
+            if _is_factor_like_col(col):
+                vals = col.drop_nulls()
+                if len(vals) == 0:
+                    continue
+                # Mode: most frequent level. polars `.mode()` returns all ties;
+                # take the first to get a deterministic single value.
+                out[name] = vals.mode().to_list()[0]
+            else:
+                arr = col.drop_nulls().to_numpy().astype(float)
+                if arr.size == 0:
+                    continue
+                out[name] = float(np.median(arr))
+        return out
 
     # ------------- printing ------------------------------------------------
 
@@ -3318,3 +3521,204 @@ class _FitState:
         # for derivative purposes (the analytical α'(μ) is not
         # consistent with the override).
         self.is_fisher_fallback = is_fisher_fallback
+
+
+# ---------------------------------------------------------------------------
+# vis.gam helpers + result
+# ---------------------------------------------------------------------------
+
+
+def _is_factor_like_col(col: pl.Series) -> bool:
+    return col.dtype in (pl.Categorical, pl.Enum, pl.String, pl.Utf8, pl.Object)
+
+
+def _has_variation(col: pl.Series) -> bool:
+    vals = col.drop_nulls()
+    if len(vals) <= 1:
+        return False
+    return vals.n_unique() > 1
+
+
+def _grid_axis(col: pl.Series, n_grid: int) -> np.ndarray:
+    """Build a 1D grid for one ``view`` axis.
+
+    Numeric: ``linspace(min, max, n_grid)``. Factor: the levels (truncated
+    to ``n_grid`` if there are more, or each level repeated to fill the
+    grid otherwise — same shape as mgcv's ``fac.seq``)."""
+    if _is_factor_like_col(col):
+        from .formula import _factor_levels  # local import to avoid cycle
+
+        levels = list(_factor_levels(col))
+        fn = len(levels)
+        if fn >= n_grid:
+            return np.array(levels[:n_grid], dtype=object)
+        # Repeat each level ⌊n_grid/fn⌋ times then pad the tail with the
+        # last level — mirrors mgcv's fac.seq.
+        ln = n_grid // fn
+        out = np.array([lev for lev in levels for _ in range(ln)] +
+                       [levels[-1]] * (n_grid - ln * fn), dtype=object)
+        return out
+    arr = col.drop_nulls().to_numpy().astype(float)
+    return np.linspace(float(arr.min()), float(arr.max()), n_grid)
+
+
+def _too_far_mask(
+    g1: np.ndarray, g2: np.ndarray,
+    d1: pl.Series, d2: pl.Series,
+    dist: float,
+) -> np.ndarray:
+    """Port of mgcv's ``exclude.too.far``.
+
+    Normalize grid + data to the grid's [0, 1] box, compute each grid
+    point's nearest-data-point distance, return a boolean mask of grid
+    points farther than ``dist``. Factor view axes are not supported by
+    mgcv's distance metric — we return all-False for those.
+    """
+    if _is_factor_like_col(d1) or _is_factor_like_col(d2):
+        return np.zeros(g1.shape[0], dtype=bool)
+
+    g1 = np.asarray(g1, dtype=float)
+    g2 = np.asarray(g2, dtype=float)
+    d1 = d1.drop_nulls().to_numpy().astype(float)
+    d2 = d2.drop_nulls().to_numpy().astype(float)
+    # mgcv normalizes by the grid's range, then both grid + data live in
+    # the grid's [0, 1] box (data outside [0, 1] is preserved as-is).
+    g1_min, g1_max = g1.min(), g1.max()
+    g2_min, g2_max = g2.min(), g2.max()
+    g1_span = g1_max - g1_min if g1_max > g1_min else 1.0
+    g2_span = g2_max - g2_min if g2_max > g2_min else 1.0
+    g1n = (g1 - g1_min) / g1_span
+    g2n = (g2 - g2_min) / g2_span
+    d1n = (d1 - g1_min) / g1_span
+    d2n = (d2 - g2_min) / g2_span
+    # Pairwise squared distance — fine for n_grid² ≈ 900 × n data.
+    dx = g1n[:, None] - d1n[None, :]
+    dy = g2n[:, None] - d2n[None, :]
+    min_dist = np.sqrt((dx * dx + dy * dy).min(axis=1))
+    return min_dist > dist
+
+
+class VisResult:
+    """Output of :meth:`gam.vis`.
+
+    Attributes
+    ----------
+    view : (str, str)
+        The two covariate names the surface is over.
+    m1, m2 : 1D ndarray
+        Axis values, length ``n_grid`` each (numeric: linspace; factor: levels).
+    fit : (n_grid, n_grid) ndarray
+        ``fit[i, j]`` is the prediction at ``(m1[i], m2[j])``. ``NaN`` where
+        ``too_far`` masked the grid.
+    se : (n_grid, n_grid) ndarray, optional
+        Pointwise SE if ``vis(se=True)``; otherwise ``None``.
+    type : "link" | "response"
+        Scale of fit and se.
+    """
+
+    __slots__ = ("view", "m1", "m2", "fit", "se", "type")
+
+    def __init__(self, *, view, m1, m2, fit, se, type):
+        self.view = view
+        self.m1 = m1
+        self.m2 = m2
+        self.fit = fit
+        self.se = se
+        self.type = type
+
+    def __repr__(self) -> str:
+        z = self.fit
+        return (
+            f"VisResult(view={self.view}, n_grid=({len(self.m1)},{len(self.m2)}), "
+            f"type={self.type!r}, "
+            f"fit range=[{np.nanmin(z):.4g}, {np.nanmax(z):.4g}], "
+            f"se={'yes' if self.se is not None else 'no'})"
+        )
+
+    def plot(
+        self,
+        kind: str = "contour",
+        ax=None,
+        figsize: tuple | None = None,
+        cmap: str = "viridis",
+        levels: int = 20,
+        se_mult: float = 0.0,
+        elev: float = 30.0,
+        azim: float = -60.0,
+        zlabel: str | None = None,
+    ):
+        """Render the surface.
+
+        ``kind="contour"`` draws a filled contour with overlaid lines;
+        ``kind="persp"`` draws a 3D wireframe (mgcv's default). When
+        ``se_mult > 0`` and ``se`` is present, persp also draws ±``se_mult``·SE
+        envelopes (same convention as ``vis.gam(se=...)``).
+        """
+        if kind not in ("contour", "persp"):
+            raise ValueError(f"kind must be 'contour' or 'persp'; got {kind!r}")
+
+        x_lab, y_lab = self.view
+        z_lab = zlabel or (
+            "linear predictor" if self.type == "link" else "response"
+        )
+
+        # Numeric coords for plotting — factor axes get plotted at their
+        # ordinal positions with the level names as ticks.
+        m1_num, m1_ticks = _axis_for_plot(self.m1)
+        m2_num, m2_ticks = _axis_for_plot(self.m2)
+
+        if kind == "contour":
+            if ax is None:
+                _fig, ax = plt.subplots(figsize=figsize or (6, 5))
+            # M1 (rows, axis 0) → x; M2 (cols, axis 1) → y; transpose so that
+            # contourf's (x, y, Z) call has Z[j, i] for x=m1[i], y=m2[j].
+            X, Y = np.meshgrid(m1_num, m2_num, indexing="xy")
+            Z = self.fit.T
+            cf = ax.contourf(X, Y, Z, levels=levels, cmap=cmap)
+            ax.contour(X, Y, Z, levels=levels, colors="black",
+                       linewidths=0.4, alpha=0.5)
+            plt.colorbar(cf, ax=ax, label=z_lab)
+            ax.set_xlabel(x_lab)
+            ax.set_ylabel(y_lab)
+            if m1_ticks is not None:
+                ax.set_xticks(m1_num)
+                ax.set_xticklabels(m1_ticks, rotation=45, ha="right")
+            if m2_ticks is not None:
+                ax.set_yticks(m2_num)
+                ax.set_yticklabels(m2_ticks)
+            return ax
+
+        # persp: 3D wireframe
+        if ax is None:
+            fig = plt.figure(figsize=figsize or (7, 6))
+            ax = fig.add_subplot(111, projection="3d")
+        X, Y = np.meshgrid(m1_num, m2_num, indexing="ij")
+        Z = self.fit
+        ax.plot_surface(X, Y, Z, cmap=cmap, alpha=0.85,
+                        linewidth=0.3, edgecolor="black")
+        if se_mult > 0 and self.se is not None:
+            ax.plot_wireframe(X, Y, Z + se_mult * self.se,
+                              color="red", linewidth=0.3, alpha=0.5)
+            ax.plot_wireframe(X, Y, Z - se_mult * self.se,
+                              color="green", linewidth=0.3, alpha=0.5)
+        ax.set_xlabel(x_lab)
+        ax.set_ylabel(y_lab)
+        ax.set_zlabel(z_lab)
+        ax.view_init(elev=elev, azim=azim)
+        if m1_ticks is not None:
+            ax.set_xticks(m1_num)
+            ax.set_xticklabels(m1_ticks)
+        if m2_ticks is not None:
+            ax.set_yticks(m2_num)
+            ax.set_yticklabels(m2_ticks)
+        return ax
+
+
+def _axis_for_plot(m: np.ndarray):
+    """Return (numeric_positions, tick_labels_or_None) for a vis axis.
+
+    Factor axes get integer positions and string tick labels; numeric axes
+    return themselves and ``None``."""
+    if m.dtype.kind in ("U", "S", "O"):
+        return np.arange(len(m), dtype=float), [str(v) for v in m]
+    return np.asarray(m, dtype=float), None
