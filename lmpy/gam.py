@@ -3646,7 +3646,7 @@ class VisResult:
         elev: float = 30.0,
         azim: float = -60.0,
         zlabel: str | None = None,
-        aspect: str | float | None = "square",
+        aspect: str | float | None = "equal",
         colorbar: bool = True,
     ):
         """Render the surface.
@@ -3656,11 +3656,11 @@ class VisResult:
         ``se_mult > 0`` and ``se`` is present, persp also draws ±``se_mult``·SE
         envelopes (same convention as ``vis.gam(se=...)``).
 
-        ``aspect`` (contour only): ``"square"`` (default — square plotting
-        box, axes have the same physical length regardless of data ranges),
-        ``"equal"`` (one data-unit on x equals one on y — only useful when
-        axes share units, e.g. spatial), a float (height/width ratio), or
-        ``None`` (matplotlib default).
+        ``aspect`` (contour only): ``"equal"`` (default — one data-unit on
+        x takes the same screen length as one on y, so ticks are visually
+        the same size), ``"square"`` (square plotting box regardless of
+        data ranges), a float (height/width ratio), or ``None`` (matplotlib
+        default).
         """
         if kind not in ("contour", "persp"):
             raise ValueError(f"kind must be 'contour' or 'persp'; got {kind!r}")
