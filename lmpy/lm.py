@@ -8,13 +8,13 @@ from scipy.optimize import minimize
 from scipy.stats import f, norm, t
 
 from .formula import materialize
+from .design import prepare_design
 from .utils import (
     _dig_tst,
     format_df,
     format_pval,
     format_signif,
     format_signif_jointly,
-    prepare_design,
     significance_code,
 )
 

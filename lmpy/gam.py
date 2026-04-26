@@ -41,13 +41,13 @@ from scipy.stats import f as f_dist, norm, t as t_dist
 
 from .family import Family, Gaussian
 from .formula import SmoothBlock, materialize_smooths
+from .design import prepare_design
 from .utils import (
     _dig_tst,
     format_df,
     format_pval,
     format_signif,
     format_signif_jointly,
-    prepare_design,
     significance_code,
 )
 

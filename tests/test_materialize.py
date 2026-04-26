@@ -14,7 +14,7 @@ import pytest
 
 from conftest import FIXTURE_ROOT, fixture_meta, fixtures_by_kind, load_dataset
 from lmpy.formula import expand, materialize, parse, referenced_columns
-from lmpy.utils import prepare_design
+from lmpy.design import prepare_design
 
 WR_FIXTURES = fixtures_by_kind("wr")
 WR_IDS = [e["id"] for e in WR_FIXTURES]

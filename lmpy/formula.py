@@ -1874,7 +1874,7 @@ def referenced_columns(expanded: ExpandedFormula) -> set[str]:
     """Every data-column Name referenced by any term, bar, offset, or smooth.
 
     Public helper used by the NA-omit paths in ``materialize`` /
-    ``materialize_bars`` and by ``lmpy.utils.prepare_design`` (so prepare
+    ``materialize_bars`` and by ``lmpy.design.prepare_design`` (so prepare
     can align the response to the NA-cleaned X without relying on a
     shared index — polars has none). Smooths must be included so that
     ``prepare_design`` drops NAs on smooth-only variables (e.g.

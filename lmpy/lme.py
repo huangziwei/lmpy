@@ -30,7 +30,8 @@ from sksparse.cholmod import (
 )
 
 from .formula import materialize_bars
-from .utils import format_df, format_signif, format_signif_jointly, prepare_design
+from .design import prepare_design
+from .utils import format_df, format_signif, format_signif_jointly
 
 __all__ = ["lme", "Profile"]
 

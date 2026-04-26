@@ -22,13 +22,13 @@ from scipy.stats import norm, t as student_t
 
 from .family import Binomial, Family, Gaussian, Link
 from .formula import _eval_atom, deparse, materialize, parse, Call, Name
+from .design import prepare_design
 from .utils import (
     _dig_tst,
     format_df,
     format_pval,
     format_signif,
     format_signif_jointly,
-    prepare_design,
     significance_code,
 )
 
