@@ -657,6 +657,91 @@ def test_check_no_smooth_path(capsys):
     assert "Basis dimension" not in out
 
 
+# ---------------------------------------------------------------------------
+# LHS expressions — `y^0.25 ~ ...`, `log(y) ~ ...`, `I(y/100) ~ ...`
+# ---------------------------------------------------------------------------
+
+
+def test_lhs_power_brain_matches_mgcv():
+    """Wood §7.2: `gam(medFPQ^.25 ~ s(Y, X, k=100), data=brain)`.
+
+    mgcv pins on the trimmed dataset (medFPQ > 5e-5, n=1565):
+        edf_total ≈ 65.176, sigma2 ≈ 0.039541, GCV ≈ 0.041259
+    """
+    d = load_dataset("gamair", "brain").filter(pl.col("medFPQ") > 5e-5)
+    m = gam("medFPQ^.25 ~ s(Y, X, k=100)", d)
+    assert m.n == 1565
+    assert m.y.name == "medFPQ^0.25"
+    _allclose(m.edf_total,     65.1763,  atol=1e-3, name="edf_total")
+    _allclose(m.sigma_squared, 0.039541, atol=5e-6, name="sigma2")
+    _allclose(m.GCV_score,     0.041259, atol=5e-6, name="GCV")
+
+
+def test_lhs_log_matches_manual_transform():
+    """`log(y) ~ ...` should be identical to pre-computing log(y) in
+    polars and fitting `log_y ~ ...` on the same RHS."""
+    d = load_dataset("R", "trees")
+    m_lhs = gam("log(Volume) ~ s(Height) + s(Girth)", d, method="REML")
+    d2 = d.with_columns(pl.col("Volume").log().alias("log_v"))
+    m_pre = gam("log_v ~ s(Height) + s(Girth)", d2, method="REML")
+    np.testing.assert_allclose(m_lhs.fitted, m_pre.fitted, atol=1e-12)
+    np.testing.assert_allclose(m_lhs.sp,     m_pre.sp,     atol=0)
+    np.testing.assert_allclose(m_lhs._beta,  m_pre._beta,  atol=1e-12)
+    assert m_lhs.y.name == "log(Volume)"
+
+
+def test_lhs_I_div_matches_manual_transform():
+    """`I(y/100) ~ ...` is just an unwrap; should equal pre-computing
+    y/100. Also verifies the deparsed label survives I()."""
+    d = load_dataset("R", "trees")
+    m_lhs = gam("I(Volume / 100) ~ s(Height) + s(Girth)", d, method="REML")
+    d2 = d.with_columns((pl.col("Volume") / 100.0).alias("v100"))
+    m_pre = gam("v100 ~ s(Height) + s(Girth)", d2, method="REML")
+    np.testing.assert_allclose(m_lhs.fitted, m_pre.fitted, atol=1e-12)
+    # Deparser inserts spaces around `/`; mgcv shows `I(Volume/100)` instead,
+    # but both reduce to the same column transform — the visible label is
+    # the deparser's choice, which is acceptable.
+    assert "Volume" in m_lhs.y.name and "100" in m_lhs.y.name
+
+
+def test_lhs_unsupported_function_raises():
+    """An unsupported function on the LHS should error with a helpful
+    message naming the allowed transforms."""
+    d = load_dataset("R", "trees")
+    with pytest.raises(NotImplementedError, match="not supported"):
+        gam("foo(Volume) ~ s(Height)", d, method="REML")
+
+
+def test_lhs_cbind_raises():
+    """cbind() multi-column response is not implemented yet — error clearly."""
+    d = load_dataset("R", "trees")
+    with pytest.raises(NotImplementedError, match="cbind"):
+        gam("cbind(Volume, Height) ~ s(Girth)", d, method="REML")
+
+
+def test_lhs_unknown_column_raises():
+    """Reference to a non-existent column inside an LHS expression."""
+    d = load_dataset("R", "trees")
+    with pytest.raises(KeyError, match="nope"):
+        gam("log(nope) ~ s(Height)", d, method="REML")
+
+
+def test_lhs_na_omit_drops_lhs_referenced_columns():
+    """If the LHS expression touches a column that has NAs, those rows
+    must be dropped before evaluating the response — otherwise polars
+    would surface NaN through the transform."""
+    d = pl.DataFrame({
+        "a":  [1.0, 4.0, None, 16.0, 25.0, 36.0,  49.0, 64.0,  81.0, 100.0],
+        "x":  [1.0, 2.0, 3.0,   4.0,  5.0,  6.0,   7.0,  8.0,   9.0,  10.0],
+    })
+    m = gam("sqrt(a) ~ s(x, k=4)", d, method="REML")
+    # The NA row in `a` was dropped; n is 9, not 10.
+    assert m.n == 9
+    np.testing.assert_allclose(np.asarray(m.y.to_list()),
+                               np.sqrt([1, 4, 16, 25, 36, 49, 64, 81, 100]),
+                               atol=1e-12)
+
+
 def test_check_outer_info_is_populated_after_fit():
     """`_outer_info` should be filled with grad/hess/score/iter after
     a smooth fit, and remain None for the no-smooth path."""
