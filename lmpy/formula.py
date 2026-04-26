@@ -2321,16 +2321,33 @@ class BasisSpec:
 
     ``keep_cols`` is set by ``gam.side`` when overlapping smooths force the
     drop of linearly-dependent columns from this block's design (matches
-    mgcv's ``fixDependence``). All other steps run unchanged; the column
-    filter is applied last so it stays consistent with the post-drop X / S.
+    mgcv's ``fixDependence``). All other steps run unchanged.
+
+    ``predict_raw`` overrides ``raw`` at predict time when mgcv's predict
+    basis differs from the fit basis. The case is ``t2``: ``smoothCon``
+    returns the partial absorb (``sm$X``) for fit, but ``PredictMat`` applies
+    the full absorb (via ``sm$qrc`` from ``sm$Cp``). The two span different
+    24-d subspaces of the same 25-d raw column space, so no remap from one
+    to the other exists; we instead carry a separate raw evaluator for
+    predict that re-applies the full-absorb ``Z_p`` from raw.
+
+    ``coef_remap`` is set when fit and predict bases differ (also t2 only):
+    after fit, β must be transformed so ``predict_mat(new) @ β`` matches
+    ``X_fit @ β_partial`` from the partial-absorb fit. Stored as ``(M, X̄)``
+    such that ``X_fit = 1·X̄ + X_predict @ M`` exactly (both in- and
+    out-of-sample). Mirrors mgcv's ``G$P`` post-fit transform in
+    ``estimate.gam`` (smooth.r:264-267).
     """
     raw: _RawBasis
     by: Optional[_ByMask] = None
     absorb: Optional[_AbsorbTransform] = None
     keep_cols: Optional[np.ndarray] = None
+    predict_raw: Optional[_RawBasis] = None
+    coef_remap: Optional[tuple[np.ndarray, np.ndarray]] = None
 
     def predict_mat(self, data: pl.DataFrame) -> np.ndarray:
-        X = self.raw.eval(data)
+        raw = self.predict_raw if self.predict_raw is not None else self.raw
+        X = raw.eval(data)
         if self.by is not None:
             X = self.by.apply(X, data)
         if self.absorb is not None:
@@ -2472,6 +2489,22 @@ class _TPRawBasis(_RawBasis):
 
 
 @dataclass(slots=True)
+class _TPDropNullRawBasis(_RawBasis):
+    """tp with `m = c(m, 0)` (null space dropped). Wraps a full tp basis,
+    keeps the first ``keep`` columns, and subtracts the fit-time column
+    means — the centering mgcv applies in this branch (mgcv: smooth.r,
+    `if (object$m[2]==0)`).
+    """
+    inner: _RawBasis
+    keep: int
+    col_means: np.ndarray  # fit-time column means, shape (keep,)
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        X = self.inner.eval(data)
+        return X[:, : self.keep] - self.col_means[None, :]
+
+
+@dataclass(slots=True)
 class _ADRawBasis(_RawBasis):
     """`smooth.construct.ad.smooth.spec` — adaptive P-spline (1D or 2D).
 
@@ -2505,22 +2538,25 @@ class _ADRawBasis(_RawBasis):
 class _RERawBasis(_RawBasis):
     """`smooth.construct.re.smooth.spec` — random-effect indicator basis.
 
-    Predict re-runs the same `model.matrix(~ term1:term2:...-1)` on new data.
-    Storing the original training columns and levels would let us validate
-    that new-data factor levels are a subset of fit-time levels (mgcv errors
-    on unseen levels); for now we just rebuild via materialize().
+    Predict reproduces mgcv's PredictMat output: one column per fit-time
+    column even if new data exercises fewer levels (those columns are
+    all-zero on rows that don't match any fit-time combo). ``combos[j]`` is
+    the tuple of factor values defining column j (single-element tuple for
+    1D re; multi-element for `s(f1, f2, bs="re")`-style interactions).
     """
     term: list[str]
+    combos: list[tuple]
 
     def eval(self, data: pl.DataFrame) -> np.ndarray:
-        rhs = None
-        for v in self.term:
-            node = Name(v)
-            rhs = node if rhs is None else BinOp(":", rhs, node)
-        fake = Formula(lhs=None, rhs=rhs)
-        ef = expand(fake)
-        ef.intercept = False
-        return materialize(ef, data).to_numpy().astype(float)
+        n = data.shape[0]
+        cols = [data[t].to_numpy() for t in self.term]
+        out = np.zeros((n, len(self.combos)))
+        for j, combo in enumerate(self.combos):
+            mask = np.ones(n, dtype=bool)
+            for ci, lev in zip(cols, combo):
+                mask &= (ci == lev)
+            out[:, j] = mask.astype(float)
+        return out
 
 
 @dataclass(slots=True)
@@ -2636,6 +2672,31 @@ class _T2RawBasis(_RawBasis):
         X_R = X[:, :nup]
         X_N = X[:, nup:]
         return np.concatenate([X_R, X_N @ self.Zn], axis=1)
+
+
+@dataclass(slots=True)
+class _T2PredictRawBasis(_RawBasis):
+    """`Predict.matrix.t2.smooth` — full absorb.cons via ``sm$qrc``.
+
+    Where ``_T2RawBasis`` mirrors ``smoothCon``'s partial-absorb output
+    (``sm$X`` keeps a constant component in the range cols), this mirrors
+    ``PredictMat``: re-evaluate the raw t2 design at new data and apply
+    ``Z_p`` from ``qr.qy(qrc, [0; I_q])`` — i.e. drop the 1-d constant
+    direction from the *full* tensor column span. ``Z_p`` is computed at
+    fit time from ``colSums(X_raw_full)`` so it is independent of new data.
+    """
+    margins: list[_RawBasis]
+    P_per_margin: list[np.ndarray]
+    ranks: list[int]
+    Z_p: np.ndarray
+
+    def eval(self, data: pl.DataFrame) -> np.ndarray:
+        Xm_np = [
+            m.eval(data) @ P
+            for m, P in zip(self.margins, self.P_per_margin)
+        ]
+        X, _ = _t2_model_matrix(Xm_np, self.ranks)
+        return X @ self.Z_p
 
 
 @dataclass(slots=True)
@@ -2967,7 +3028,21 @@ def _build_re_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     # factor by → one block per level; numeric by → multiply X by by.
     base_label = _smooth_label(call)
     by_expr = _smooth_by_expr(call)
-    raw = _RERawBasis(term=list(term_vars))
+
+    # Derive the (term-value tuple) per X column so predict reconstructs the
+    # same column set on new data — first row where X[:,j]==1 names the combo.
+    fac_arrs = [data[t].to_numpy() for t in term_vars]
+    combos: list[tuple] = []
+    for j in range(X.shape[1]):
+        nz = np.where(X[:, j] > 0)[0]
+        if len(nz) == 0:
+            # No row matches this column — happens only for pathological
+            # designs; record an unmatchable sentinel so predict yields zeros.
+            combos.append((object(),) * len(term_vars))
+        else:
+            r = int(nz[0])
+            combos.append(tuple(arr[r] for arr in fac_arrs))
+    raw = _RERawBasis(term=list(term_vars), combos=combos)
     if by_expr is None:
         return [SmoothBlock(label=base_label, term=term_vars,
                             cls="re.smooth.spec", X=X, S=S_list,
@@ -4520,14 +4595,22 @@ def _build_tp_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         # `m=c(m, 0)`: drop the last M (null-space) columns, center remaining,
         # and skip absorb.cons entirely.
         keep = k - M
+        full_raw = _TPRawBasis(
+            term=list(term), shift=state["shift"], Xu=state["Xu"],
+            m=state["m"], d=state["d"], M=M, k=k,
+            UZ=state["UZ"], w=state["w"],
+        )
         X_raw = X_raw[:, :keep]
-        X_raw = X_raw - X_raw.mean(axis=0, keepdims=True)
+        col_means = X_raw.mean(axis=0)
+        X_raw = X_raw - col_means[None, :]
         S_list = [S[:keep, :keep] for S in S_list]
         S_list = [(S + S.T) / 2.0 for S in S_list]
         S_list = _scale_penalty(X_raw, S_list)
+        raw = _TPDropNullRawBasis(inner=full_raw, keep=keep, col_means=col_means)
         return [SmoothBlock(
             label=_smooth_label(call), term=term,
             cls="tprs.smooth", X=X_raw, S=S_list,
+            spec=BasisSpec(raw=raw, by=None, absorb=None),
         )]
 
     raw = _TPRawBasis(
@@ -5662,9 +5745,9 @@ def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         margin_raws.append(raw_i)
         P_per_margin.append(P_i)
 
-    X, sub_cols = _t2_model_matrix(Xm, ranks)
+    X_raw_full, sub_cols = _t2_model_matrix(Xm, ranks)
     nsc = len(sub_cols)
-    p = X.shape[1]
+    p = X_raw_full.shape[1]
 
     # Penalties: simple ridge on each sub-block.
     cx = [0]
@@ -5691,40 +5774,58 @@ def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     term_all = _smooth_term_vars(call)
 
     if null_dim == 0:
-        # No null space, no identifiability constraint needed.
-        S_list = _scale_penalty(X, S_list)
+        # No null space, no identifiability constraint needed; sm$Cp is NULL,
+        # so fit basis == predict basis.
+        S_list = _scale_penalty(X_raw_full, S_list)
         t2_raw = _T2RawBasis(
             margins=margin_raws, P_per_margin=P_per_margin,
             ranks=ranks, null_dim=0, Zn=None,
         )
         return [SmoothBlock(
-            label=label, term=term_all, cls=cls, X=X, S=S_list,
+            label=label, term=term_all, cls=cls, X=X_raw_full, S=S_list,
             spec=BasisSpec(raw=t2_raw, by=None, absorb=None),
         )]
+
+    # Predict-time basis (mgcv's full absorb.cons via sm$Cp = colSums(X_raw_full)):
+    # `Predict.matrix.t2.smooth` applies Z_p = qr.qy(qrc, [0; I_q]) — equivalent
+    # to Q_p[:, 1:] from the complete QR of colSums(X_raw_full).T — to the raw
+    # t2 design. Z_p only depends on fit-time X_raw_full (not on new data), so
+    # we cache it here and replay it via _T2PredictRawBasis.
+    cP = X_raw_full.sum(axis=0).reshape(-1, 1)
+    Q_p, _ = np.linalg.qr(cP, mode="complete")
+    Z_p = Q_p[:, 1:]
+    t2_predict = _T2PredictRawBasis(
+        margins=margin_raws, P_per_margin=P_per_margin,
+        ranks=ranks, Z_p=Z_p,
+    )
 
     if null_dim == 1:
         # Fix the single null-space parameter to zero — drop its column (smooth.r:1118).
         keep = np.ones(p, dtype=bool)
         keep[-1] = False
-        X = X[:, keep]
+        X = X_raw_full[:, keep]
         S_list = [S[np.ix_(keep, keep)] for S in S_list]
         S_list = _scale_penalty(X, S_list)
         t2_raw = _T2RawBasis(
             margins=margin_raws, P_per_margin=P_per_margin,
             ranks=ranks, null_dim=1, Zn=None,
         )
+        Xp_in = X_raw_full @ Z_p
+        X_bar = X.mean(axis=0)
+        M = np.linalg.lstsq(Xp_in, X - X_bar, rcond=None)[0]
         return [SmoothBlock(
             label=label, term=term_all, cls=cls, X=X, S=S_list,
-            spec=BasisSpec(raw=t2_raw, by=None, absorb=None),
+            spec=BasisSpec(raw=t2_raw, by=None, absorb=None,
+                           predict_raw=t2_predict, coef_remap=(M, X_bar)),
         )]
 
     # Partial absorb.cons (smooth.r:4076-4100): C has zero cols on the range
     # space, so only the null-space cols of X / S get rotated. QR is on the
     # nx×1 slice cN = colSums(X_N); Z' = Q[:, 1:] spans the null of cN within
     # the null-space coordinates. Range-space cols pass through unchanged.
-    S_list = _scale_penalty(X, S_list)
-    X_R = X[:, :nup]
-    X_N = X[:, nup:]
+    S_list = _scale_penalty(X_raw_full, S_list)
+    X_R = X_raw_full[:, :nup]
+    X_N = X_raw_full[:, nup:]
     cN = X_N.sum(axis=0).reshape(-1, 1)
     Qn, _ = np.linalg.qr(cN, mode="complete")
     Zn = Qn[:, 1:]
@@ -5742,9 +5843,13 @@ def _build_t2_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
         margins=margin_raws, P_per_margin=P_per_margin,
         ranks=ranks, null_dim=null_dim, Zn=Zn,
     )
+    Xp_in = X_raw_full @ Z_p
+    X_bar = X.mean(axis=0)
+    M = np.linalg.lstsq(Xp_in, X - X_bar, rcond=None)[0]
     return [SmoothBlock(
         label=label, term=term_all, cls=cls, X=X, S=S_list_new,
-        spec=BasisSpec(raw=t2_raw, by=None, absorb=None),
+        spec=BasisSpec(raw=t2_raw, by=None, absorb=None,
+                       predict_raw=t2_predict, coef_remap=(M, X_bar)),
     )]
 
 

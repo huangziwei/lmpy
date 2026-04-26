@@ -359,6 +359,18 @@ make_mgcv_fixture <- function(case, data, out_dir) {
   # Use full data (not just mf) since smoothCon may need vars outside the
   # parametric part
   full_data <- na.omit(data[, unique(c(all.vars(f))), drop = FALSE])
+
+  # Predict-time test data: deterministic 1-in-4 subsample (capped at 30 rows).
+  # Sourced from `full_data` so every factor level / range constraint is honored
+  # — mgcv's PredictMat balks on unseen levels and clamps tp's polynomial part
+  # at out-of-range x, so a known-valid subset is the cleanest oracle.
+  step <- max(1L, as.integer(floor(nrow(full_data) / 30L)))
+  pred_idx <- seq(1L, nrow(full_data), by = step)
+  if (length(pred_idx) > 30L) pred_idx <- pred_idx[seq_len(30L)]
+  predict_data <- full_data[pred_idx, , drop = FALSE]
+  write.csv(predict_data, file.path(out_dir, "predict_data.csv"),
+            row.names = FALSE, na = "NA")
+
   for (i in seq_along(ig$smooth.spec)) {
     sp <- ig$smooth.spec[[i]]
     sm <- tryCatch(
@@ -379,6 +391,25 @@ make_mgcv_fixture <- function(case, data, out_dir) {
       for (j in seq_along(s$S)) {
         write_mm(Matrix::Matrix(s$S[[j]], sparse = TRUE),
                  file.path(out_dir, sprintf("%s_S_%d.mtx", prefix, j)))
+      }
+      # Predict.matrix output on `predict_data` — what predict.gam invokes
+      # internally per smooth block. lmpy's BasisSpec.predict_mat targets
+      # this exact matrix.
+      Xpred <- tryCatch(mgcv::PredictMat(s, data = predict_data),
+                        error = function(e) NULL)
+      if (!is.null(Xpred)) {
+        write_mm(Matrix::Matrix(Xpred, sparse = TRUE),
+                 file.path(out_dir, paste0(prefix, "_Xpred.mtx")))
+      }
+      # Predict.matrix at *fit* data — needed as a sign-convention anchor for
+      # the predict comparison. For most bases sm$X already serves; but t2's
+      # sm$X is a partial absorb whose per-column sign convention differs from
+      # PredictMat's full absorb, so we dump the full-absorb in-sample basis.
+      Xpredfit <- tryCatch(mgcv::PredictMat(s, data = data),
+                           error = function(e) NULL)
+      if (!is.null(Xpredfit)) {
+        write_mm(Matrix::Matrix(Xpredfit, sparse = TRUE),
+                 file.path(out_dir, paste0(prefix, "_Xpredfit.mtx")))
       }
     }
     sm_summaries[[i]] <- list(

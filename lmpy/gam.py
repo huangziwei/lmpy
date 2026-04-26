@@ -421,6 +421,35 @@ class gam:
         Vp = sigma_squared * A_inv
         Ve = sigma_squared * A_inv_XtWX @ A_inv
 
+        # ------------- coefficient basis change (G_P) -----------------------
+        # When a smooth's predict basis differs from its fit basis (today
+        # only ``t2`` with null_dim ≥ 1), β was fit in a basis that doesn't
+        # match what ``predict_mat`` returns. ``estimate.gam`` (mgcv,
+        # smooth.r:264-267) handles this with a single ``coefficients <-
+        # G$P %*% coefficients`` (and ``Vp <- G$P Vp G$P^T``) post-fit.
+        # ``G_P`` is identity except: each remapped block's columns rotate
+        # by ``M`` and contribute ``X̄ · β_block`` into the intercept row,
+        # encoding ``X_fit = 1·X̄ + X_predict @ M`` exactly. With this in
+        # place ``X_fit @ β_partial = X_predict @ (M β_partial) + (X̄ ·
+        # β_partial)·1`` — so the in-sample η is unchanged and out-of-sample
+        # ``predict_mat(new) @ G_P @ β_partial`` equals what the fit basis
+        # would have produced.
+        intercept_idx: Optional[int] = (
+            column_names.index("(Intercept)") if has_intercept else None
+        )
+        if any(b.spec is not None and b.spec.coef_remap is not None for b in blocks):
+            G_P = np.eye(p)
+            for b, (a_col, b_col) in zip(blocks, block_col_ranges):
+                if b.spec is None or b.spec.coef_remap is None:
+                    continue
+                M_b, X_bar_b = b.spec.coef_remap
+                G_P[a_col:b_col, a_col:b_col] = M_b
+                if intercept_idx is not None:
+                    G_P[intercept_idx, a_col:b_col] = X_bar_b
+            beta = G_P @ beta
+            Vp = G_P @ Vp @ G_P.T
+            Ve = G_P @ Ve @ G_P.T
+
         # ------------- attribute assembly ----------------------------------
         self.bhat = _row_frame(beta, column_names)
         self._beta = beta
