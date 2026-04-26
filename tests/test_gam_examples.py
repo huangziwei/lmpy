@@ -587,3 +587,95 @@ def test_reml_finite_for_trees_gamma_log():
     log_phi = float(np.log(m.scale))
     v = m._reml(m._rho_hat, log_phi)
     assert np.isfinite(v)
+
+
+# ---------------------------------------------------------------------------
+# gam.check() — port of mgcv::gam.check / mgcv::k.check
+# ---------------------------------------------------------------------------
+
+
+def test_kcheck_mcycle_matches_mgcv():
+    """k.check on `accel ~ s(times)` (1D smooth, REML).
+
+    mgcv pin (n.rep=10000, see development log):
+        s(times)  k'=9   edf=8.62469100  k-index=1.14736165
+    edf and k-index are deterministic in the residuals + covariate; we
+    pin them tightly. The p-value is a permutation tail and depends on
+    the RNG draw — pin it to a wide-enough band that the test stays
+    robust across RNG seeds.
+    """
+    d = load_dataset("MASS", "mcycle")
+    m = gam("accel ~ s(times)", d, method="REML")
+    ktab = m._k_check(seed=0, n_rep=2000)
+    assert ktab[""].to_list() == ["s(times)"]
+    np.testing.assert_allclose(ktab["k'"].to_list(),     [9.0],          atol=0)
+    np.testing.assert_allclose(ktab["edf"].to_list(),    [8.62469100],   atol=5e-5)
+    np.testing.assert_allclose(ktab["k-index"].to_list(),[1.14736165],   atol=5e-5)
+    # mgcv reports ~0.95 with 10k reps; permutation noise widens the band.
+    assert 0.85 < ktab["p-value"][0] <= 1.0
+
+
+def test_kcheck_handles_no_smooths_returns_none():
+    """k.check is undefined when there are no smooth blocks. Mirrors
+    mgcv: `k.check` returns NULL → `gam.check` skips the table."""
+    d = load_dataset("R", "trees")
+    m = gam("Volume ~ Height + Girth", d, method="REML")
+    assert m._k_check() is None
+
+
+def test_check_prints_convergence_block(capsys):
+    """`gam.check()` runs end-to-end and emits the mgcv-style header.
+
+    The exact gradient/eigenvalue numbers are not pinned (those are
+    determined by the converged ρ̂ and would shift if the optimizer is
+    re-tuned later); we only verify the structural lines are there.
+    """
+    d = load_dataset("MASS", "mcycle")
+    m = gam("accel ~ s(times)", d, method="REML")
+    m.check(seed=0, k_rep=200)
+    out = capsys.readouterr().out
+    assert "Method: REML" in out
+    assert "Optimizer: outer newton" in out
+    assert "iteration" in out
+    assert "Gradient range" in out
+    assert "score " in out and "scale " in out
+    assert "Hessian" in out and "eigenvalue range" in out
+    assert "Model rank = " in out
+    assert "Basis dimension (k) checking" in out
+    assert "s(times)" in out
+
+
+def test_check_no_smooth_path(capsys):
+    """When the model has no smooths, the convergence block reports
+    `Model required no smoothing parameter selection` (mgcv text) and
+    the k-check table is omitted."""
+    d = load_dataset("R", "trees")
+    m = gam("Volume ~ Height + Girth", d, method="REML")
+    m.check()
+    out = capsys.readouterr().out
+    assert "Model required no smoothing parameter selection" in out
+    assert "Basis dimension" not in out
+
+
+def test_check_outer_info_is_populated_after_fit():
+    """`_outer_info` should be filled with grad/hess/score/iter after
+    a smooth fit, and remain None for the no-smooth path."""
+    d = load_dataset("MASS", "mcycle")
+    m = gam("accel ~ s(times)", d, method="REML")
+    info = m._outer_info
+    assert info is not None
+    assert info["iter"] >= 1
+    # Gaussian REML puts (ρ, log φ) on the outer vector — for one smooth
+    # that's length 2; known-scale families would be length 1.
+    g = info["grad"]
+    H = info["hess"]
+    assert g.size >= len(m.sp)
+    assert H.shape == (g.size, g.size)
+    assert np.isfinite(info["score"])
+    # mcycle's REML surface is well-behaved → Hessian PD at optimum.
+    ev = np.linalg.eigvalsh(0.5 * (info["hess"] + info["hess"].T))
+    assert ev.min() > 0
+
+    d2 = load_dataset("R", "trees")
+    m2 = gam("Volume ~ Height + Girth", d2, method="REML")
+    assert m2._outer_info is None

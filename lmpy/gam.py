@@ -266,6 +266,10 @@ class gam:
         # profiled (Gaussian-identity strict-additive) or fixed at 1
         # (scale-known families) — i.e., off the outer-vec.
         self._log_phi_hat: float | None = None
+        # Set by `_outer_newton` when the optimizer runs. None for the
+        # no-smooth and fixed-`sp` paths — `gam.check()` skips the
+        # convergence block in those cases.
+        self._outer_info: dict | None = None
         if n_sp == 0:
             # No smooths — degenerate to unpenalized least squares. This is
             # the lm path; we still go through it so all the mgcv-style
@@ -1284,13 +1288,23 @@ class gam:
 
         f_prev, fit = _eval(theta)
         if fit is None:
+            self._outer_info = {
+                "conv": "initial fit failed", "iter": 0,
+                "grad": np.zeros_like(theta), "hess": np.zeros((theta.size, theta.size)),
+                "score": float(f_prev), "score_scale": float("nan"),
+            }
             return theta
 
+        conv_text = "iteration limit reached"
+        last_grad = np.zeros_like(theta)
+        last_hess = np.zeros((theta.size, theta.size))
+        it_done = 0
         for it in range(max_iter):
             rho, log_phi = _split(theta)
             grad = _grad(rho, log_phi, fit)
             H = _hess(rho, log_phi, fit)
             H = 0.5 * (H + H.T)
+            last_grad, last_hess = grad, H
 
             # Eigen-clamp to PD: |w| with a tiny floor so the quadratic
             # model is positive-definite even on saddle/flat regions.
@@ -1315,12 +1329,15 @@ class gam:
                 alpha *= 0.5
 
             if not descent:
+                conv_text = "step failed"
+                it_done = it + 1
                 break
             theta = theta_try
             df = abs(f_try - f_prev)
             f_old = f_prev
             f_prev = f_try
             fit = fit_try
+            it_done = it + 1
 
             # mgcv's two-part stopping test (Newton.r):
             #   max(|grad|) ≤ score_scale·conv_tol·5
@@ -1330,10 +1347,27 @@ class gam:
                 float(np.abs(grad).max()) <= score_scale * conv_tol * 5.0
                 and df <= score_scale * conv_tol
             ):
+                conv_text = "full convergence"
                 break
             if df < 1e-12 * (1.0 + abs(f_prev)):
+                conv_text = "full convergence"
                 break
 
+        # Recompute final grad/hess at the converged θ so the diagnostics
+        # reflect the *accepted* step (last_grad above is from the iter's
+        # entry θ, which after a successful step is one back from final).
+        rho_f, log_phi_f = _split(theta)
+        last_grad = _grad(rho_f, log_phi_f, fit)
+        last_hess = _hess(rho_f, log_phi_f, fit)
+        last_hess = 0.5 * (last_hess + last_hess.T)
+        self._outer_info = {
+            "conv": conv_text,
+            "iter": it_done,
+            "grad": last_grad,
+            "hess": last_hess,
+            "score": float(f_prev),
+            "score_scale": float(_score_scale(fit, f_prev)),
+        }
         return theta
 
     def _S_pinv(self, S_full: np.ndarray) -> np.ndarray:
@@ -2565,6 +2599,220 @@ class gam:
                 f"GCV = {self.GCV_score:.5g}  "
                 f"Scale est. = {self.sigma_squared:.5g}  n = {self.n}"
             )
+        print("\n".join(out))
+
+    def _k_check(
+        self,
+        type: str = "deviance",
+        subsample: int = 5000,
+        n_rep: int = 200,
+        seed: int | None = None,
+    ) -> pl.DataFrame | None:
+        """Port of mgcv's ``k.check`` — basis-dimension test per smooth.
+
+        For each smooth block, pair each residual with neighbours in
+        covariate space and compare the mean squared first difference
+        against a permutation null. A small ``k-index`` (≪ 1) and small
+        p-value indicate the basis is too small to absorb the signal.
+
+        1-D smooths: sort residuals by the covariate, take ``diff``.
+        Multi-D smooths: average over the 3 nearest neighbours by
+        Euclidean distance in raw covariate space. mgcv additionally
+        rescales axes for tensor smooths via ``PredictMat`` gradient
+        norms; lmpy has no PredictMat yet, so tensor (``te``/``ti``/
+        ``t2``) k-indexes are not on mgcv's rescaled axes — the
+        qualitative "k-index < 1" warning still applies.
+
+        Returns a polars DataFrame with columns ``""``, ``"k'"``,
+        ``"edf"``, ``"k-index"``, ``"p-value"`` (one row per smooth
+        block), or ``None`` if there are no smooths.
+        """
+        if not self._blocks:
+            return None
+
+        rsd = self.residuals_of(type=type)
+        n_full = len(rsd)
+        rng = np.random.default_rng(seed)
+
+        # Optional subsample (mgcv's `k.sample`). The same row indices
+        # subset both residuals and the per-smooth covariate columns so
+        # the neighbour graph stays consistent.
+        if n_full > subsample:
+            idx = rng.choice(n_full, size=subsample, replace=False)
+            rsd = rsd[idx]
+        else:
+            idx = np.arange(n_full)
+        nr = len(rsd)
+        rsd_sq_mean = float(np.mean(rsd ** 2))
+        if rsd_sq_mean <= 0:
+            rsd_sq_mean = 1.0
+
+        rows: list[tuple[str, float, float, float, float]] = []
+        for b, (a, bcol) in zip(self._blocks, self._block_col_ranges):
+            kc = float(bcol - a)
+            edf_b = float(self.edf[a:bcol].sum())
+            var_names = list(b.term)
+
+            ok = bool(var_names)
+            cols: list[np.ndarray] = []
+            for v in var_names:
+                if v not in self.data.columns:
+                    ok = False
+                    break
+                s = self.data[v]
+                if not s.dtype.is_numeric():
+                    ok = False
+                    break
+                cols.append(s.to_numpy().astype(float)[idx])
+            if not ok:
+                rows.append((b.label, kc, edf_b, float("nan"), float("nan")))
+                continue
+
+            if len(cols) == 1:
+                order = np.argsort(cols[0], kind="stable")
+                rsd_o = rsd[order]
+                v_obs = float(np.mean(np.diff(rsd_o) ** 2) / 2)
+                ve = np.empty(n_rep)
+                for i in range(n_rep):
+                    shuf = rng.permutation(rsd)
+                    ve[i] = np.mean(np.diff(shuf) ** 2) / 2
+            else:
+                from scipy.spatial import cKDTree
+                Xnn = np.column_stack(cols)
+                nn = 3
+                # k=nn+1, skip column 0 (self at distance 0).
+                tree = cKDTree(Xnn)
+                _, ni = tree.query(Xnn, k=nn + 1)
+                ni = ni[:, 1:]
+                e_parts = [rsd - rsd[ni[:, j]] for j in range(nn)]
+                v_obs = float(np.mean(np.concatenate(e_parts) ** 2) / 2)
+                ve = np.empty(n_rep)
+                for i in range(n_rep):
+                    shuf = rng.permutation(rsd)
+                    parts = [shuf - shuf[ni[:, j]] for j in range(nn)]
+                    ve[i] = np.mean(np.concatenate(parts) ** 2) / 2
+
+            p_val = float(np.mean(ve < v_obs))
+            k_index = v_obs / rsd_sq_mean
+            rows.append((b.label, kc, edf_b, float(k_index), p_val))
+
+        return pl.DataFrame({
+            "":        [r[0] for r in rows],
+            "k'":      [r[1] for r in rows],
+            "edf":     [r[2] for r in rows],
+            "k-index": [r[3] for r in rows],
+            "p-value": [r[4] for r in rows],
+        })
+
+    def check(
+        self,
+        type: str = "deviance",
+        k_sample: int = 5000,
+        k_rep: int = 200,
+        seed: int | None = None,
+    ) -> None:
+        """mgcv-style ``gam.check``: convergence diagnostics + ``k.check`` table.
+
+        Prints (no plotting — this is a non-graphical port):
+
+        - Method / optimizer line.
+        - Convergence status, iterations, gradient range.
+        - Score and scale at the optimum.
+        - Hessian positive-definiteness and eigenvalue range.
+        - Per-smooth basis-dimension check table from ``_k_check``.
+
+        Parameters
+        ----------
+        type : {"deviance", "pearson", "response"}
+            Residual type passed to ``_k_check``. Default matches mgcv.
+        k_sample : int
+            Maximum residuals to use for the basis check
+            (mgcv's ``k.sample``).
+        k_rep : int
+            Permutation reps for the k-check p-value
+            (mgcv's ``k.rep``).
+        seed : int | None
+            Seeds the permutations and subsample for reproducibility.
+            ``None`` uses fresh randomness each call.
+        """
+        out: list[str] = []
+
+        # --- method / optimizer header ---
+        method_label = self.method
+        out.append(f"Method: {method_label}   Optimizer: outer newton")
+
+        # --- convergence info from _outer_newton ---
+        info = self._outer_info
+        if info is None:
+            if not self._blocks:
+                out.append("Model required no smoothing parameter selection")
+            else:
+                out.append(
+                    "Smoothing parameters fixed by user — no outer optimization."
+                )
+        else:
+            iters = info["iter"]
+            plural = "" if iters == 1 else "s"
+            out.append(f"{info['conv']} after {iters} iteration{plural}.")
+            grad = np.asarray(info["grad"])
+            if grad.size > 0:
+                out.append(
+                    f"Gradient range [{float(grad.min()):.7g},"
+                    f"{float(grad.max()):.7g}]"
+                )
+            score = info["score"]
+            scale = self.sigma_squared
+            out.append(f"(score {score:.7g} & scale {scale:.7g}).")
+            H = np.asarray(info["hess"])
+            if H.size > 0:
+                ev = np.linalg.eigvalsh(0.5 * (H + H.T))
+                ev_min, ev_max = float(ev.min()), float(ev.max())
+                pd_text = (
+                    "Hessian positive definite, "
+                    if ev_min > 0
+                    else "Hessian not positive definite, "
+                )
+                out.append(
+                    f"{pd_text}eigenvalue range [{ev_min:.7g},{ev_max:.7g}]."
+                )
+        out.append(f"Model rank = {self.p} / {self.p}")
+        out.append("")
+
+        # --- basis dimension check ---
+        ktab = self._k_check(
+            type=type, subsample=k_sample, n_rep=k_rep, seed=seed,
+        )
+        if ktab is not None:
+            out.append(
+                "Basis dimension (k) checking results. Low p-value "
+                "(k-index<1) may"
+            )
+            out.append(
+                "indicate that k is too low, especially if edf is close to k'."
+            )
+            out.append("")
+            kc_vals  = ktab["k'"].to_list()
+            edf_vals = ktab["edf"].to_list()
+            ki_vals  = ktab["k-index"].to_list()
+            pv_vals  = ktab["p-value"].to_list()
+            sig = significance_code(pv_vals)
+            disp = pl.DataFrame({
+                "":        ktab[""].to_list(),
+                "k'":      format_signif(kc_vals,  digits=3, min_decimals=2),
+                "edf":     format_signif(edf_vals, digits=3, min_decimals=2),
+                "k-index": format_signif(ki_vals,  digits=3, min_decimals=2),
+                "p-value": format_pval(pv_vals,    digits=2),
+                " ":       sig,
+            })
+            out.append(format_df(
+                disp,
+                align={c: "right" for c in ("k'", "edf", "k-index", "p-value")},
+            ))
+            out.append("---")
+            out.append(
+                "Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
+            )
+
         print("\n".join(out))
 
 
