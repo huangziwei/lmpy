@@ -7,7 +7,7 @@ from scipy.linalg import cholesky, lu, qr, solve_triangular
 from scipy.optimize import minimize
 from scipy.stats import f, norm, t
 
-from .formula import materialize
+from .formula import _eval_atom, materialize
 from .design import prepare_design
 from .utils import (
     _dig_tst,
@@ -156,6 +156,7 @@ class lm:
 
         d = prepare_design(formula, data)
         self._expanded = d.expanded
+        self._design_data = d.data
         self.X = d.X
         self.y = d.y  # pl.Series
 
@@ -193,18 +194,27 @@ class lm:
         # generic AIC() comparison table and AIC/BIC formulas below.
         self.npar = self.p + 1
 
+        # Sum any `offset(...)` atoms from the formula. R's lm() solves
+        # (y - offset) ~ X, then adds the offset back to ŷ — so β̂ has the
+        # same df as without offset. expanded.offsets holds the inner ASTs.
+        off = np.zeros(n)
+        for off_node in d.expanded.offsets:
+            off = off + _eval_atom(off_node, d.data).values.flatten().astype(float)
+        self._offset = off
+        y_solve = y - off
+
         ##############
         # Estimation #
         ##############
 
         if method == "nll":
             bhat, self.sigma, self.XtX, self.Xty, self.loss = self.compute_bhat(
-                X, y, W, "nll"
+                X, y_solve, W, "nll"
             )
         elif method == "sse":
-            bhat, self.XtX, self.Xty, self.loss = self.compute_bhat(X, y, W, "sse")
+            bhat, self.XtX, self.Xty, self.loss = self.compute_bhat(X, y_solve, W, "sse")
         else:
-            bhat, self.XtX, self.Xty = self.compute_bhat(X, y, W, method)
+            bhat, self.XtX, self.Xty = self.compute_bhat(X, y_solve, W, method)
 
         self._bhat_arr = np.asarray(bhat).reshape(-1)
         self.bhat = _row_frame(self._bhat_arr, self.column_names)
@@ -389,11 +399,17 @@ class lm:
     def compute_yhat(self, Xnew=None, interval=None, alpha=0.05):
         if Xnew is None:
             X = self.X.to_numpy().astype(float)
+            off = self._offset
         else:
             X = materialize(self._expanded, Xnew).to_numpy().astype(float)
-        # compute predicted or fitted values ŷ = Xβ̂
+            # Re-evaluate formula offsets against newdata, mirroring R's
+            # predict.lm. Offsets are zero unless the formula uses offset(...).
+            off = np.zeros(X.shape[0])
+            for off_node in self._expanded.offsets:
+                off = off + _eval_atom(off_node, Xnew).values.flatten().astype(float)
+        # compute predicted or fitted values ŷ = Xβ̂ + offset
         bhat = self._bhat_arr[:, None]
-        yhat_vals = (X @ bhat).flatten()
+        yhat_vals = (X @ bhat).flatten() + off
         yhat = pl.DataFrame({"Fitted": yhat_vals})
 
         match interval:
