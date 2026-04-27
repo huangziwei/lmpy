@@ -26,3 +26,4 @@ from .stats import (
     wilcox_test,
 )
 from .data import data, factor
+from . import plot
