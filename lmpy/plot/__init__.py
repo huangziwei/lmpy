@@ -38,5 +38,10 @@ long tail (``matplot``/``stripchart``/``interaction_plot``/``r_expr``).
 
 from .annotate import abline, legend, lines, points, qqline, segments
 from .dispatch import plot
+from .helpers import halfnorm, qqnorm, termplot
 
-__all__ = ["plot", "abline", "points", "lines", "legend", "segments", "qqline"]
+__all__ = [
+    "plot",
+    "abline", "points", "lines", "legend", "segments", "qqline",
+    "qqnorm", "halfnorm", "termplot",
+]

@@ -293,3 +293,129 @@ def test_qqline_through_quartiles():
     # for ~N(0,1) data the qqline should be near slope 1
     assert 0.7 < slope < 1.3
     plt.close("all")
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Faraway helpers — qqnorm, halfnorm, termplot
+# ---------------------------------------------------------------------------
+
+
+def test_qqnorm_pairs_with_qqline():
+    """qqnorm draws a Q-Q scatter; chaining qqline adds the reference line."""
+    rng = np.random.RandomState(0)
+    vals = rng.randn(100)
+    ax = lmplot.qqnorm(vals)
+    assert ax.get_xlabel() == "Theoretical Quantiles"
+    assert ax.get_ylabel() == "Sample Quantiles"
+    assert ax.get_title() == "Normal Q-Q"
+    n_lines_before = len(ax.lines)
+    lmplot.qqline(vals, ax=ax)
+    assert len(ax.lines) == n_lines_before + 1
+    plt.close("all")
+
+
+def test_qqnorm_handles_nans():
+    """NaNs are dropped before computing quantiles — no crash, no warning."""
+    vals = np.array([1.0, np.nan, 2.0, 3.0, np.nan, -1.0])
+    ax = lmplot.qqnorm(vals)
+    # 4 finite values plotted as a single PathCollection
+    assert len(ax.collections) == 1
+    assert ax.collections[0].get_offsets().shape[0] == 4
+    plt.close("all")
+
+
+def test_halfnorm_labels_top_nlab():
+    """halfnorm with nlab=3 labels the 3 largest |x|; smaller points scattered."""
+    vals = np.array([0.1, -0.2, 0.3, 5.0, -6.0, 7.0])  # last 3 are biggest
+    ax = lmplot.halfnorm(vals, 3)
+    # 3 annotations placed
+    texts = [t.get_text() for t in ax.texts]
+    assert len(texts) == 3
+    # default labels are 1-based indices of the input order; biggest |x| at indices 4, 5, 6
+    assert set(texts) == {"4", "5", "6"}
+    # remaining 3 points scattered
+    assert ax.collections[0].get_offsets().shape[0] == 3
+    plt.close("all")
+
+
+def test_halfnorm_custom_labs():
+    """`labs=` overrides default integer indices."""
+    vals = np.array([0.1, 5.0, 0.2, 6.0])
+    ax = lmplot.halfnorm(vals, 2, labs=["a", "b", "c", "d"])
+    texts = sorted(t.get_text() for t in ax.texts)
+    # biggest |x| at indices 1, 3 → labels "b", "d"
+    assert texts == ["b", "d"]
+    plt.close("all")
+
+
+def test_halfnorm_labs_length_mismatch():
+    with pytest.raises(ValueError, match="halfnorm"):
+        lmplot.halfnorm(np.array([1.0, 2.0, 3.0]), labs=["a", "b"])
+
+
+def test_termplot_single_term(numeric_df):
+    """`termplot(lmod)` on a one-term fit returns a bare Axes with the term name."""
+    m = lm("y ~ x", numeric_df)
+    ax = lmplot.termplot(m)
+    assert isinstance(ax, matplotlib.axes.Axes)
+    assert ax.get_xlabel() == "x"
+    assert ax.get_ylabel() == "Partial for x"
+    # one line drawn (the centered contribution)
+    assert len(ax.lines) == 1
+    plt.close("all")
+
+
+def test_termplot_multi_term(numeric_df):
+    """Multi-term fit returns a list of axes, one per term."""
+    m = lm("y ~ x + z", numeric_df)
+    axes = lmplot.termplot(m)
+    assert len(axes) == 2
+    assert [a.get_xlabel() for a in axes] == ["x", "z"]
+    plt.close("all")
+
+
+def test_termplot_terms_selection_by_name(numeric_df):
+    """`terms='z'` picks just that term."""
+    m = lm("y ~ x + z", numeric_df)
+    ax = lmplot.termplot(m, terms="z")
+    assert isinstance(ax, matplotlib.axes.Axes)
+    assert ax.get_xlabel() == "z"
+    plt.close("all")
+
+
+def test_termplot_terms_selection_by_index(numeric_df):
+    """1-based int (R style) picks term by position."""
+    m = lm("y ~ x + z", numeric_df)
+    ax = lmplot.termplot(m, terms=2)
+    assert ax.get_xlabel() == "z"
+    plt.close("all")
+
+
+def test_termplot_partial_residuals(numeric_df):
+    """`partial_resid=True` overlays a scatter of residuals + b*(x - mean(x))."""
+    m = lm("y ~ x", numeric_df)
+    ax = lmplot.termplot(m, partial_resid=True)
+    # one line + one scatter PathCollection
+    assert len(ax.lines) == 1
+    assert len(ax.collections) == 1
+    plt.close("all")
+
+
+def test_termplot_factor_dummy_errors(factor_df):
+    """v1 rejects factor dummies (binary 0/1 columns)."""
+    m = lm("y ~ g", factor_df)
+    with pytest.raises(ValueError, match="factor dummy|continuous"):
+        lmplot.termplot(m)
+    plt.close("all")
+
+
+def test_termplot_unknown_term_errors(numeric_df):
+    m = lm("y ~ x", numeric_df)
+    with pytest.raises(ValueError, match="not in"):
+        lmplot.termplot(m, terms="nope")
+    plt.close("all")
+
+
+def test_termplot_non_lm_input():
+    with pytest.raises(TypeError, match="lm/glm"):
+        lmplot.termplot("not a model")
