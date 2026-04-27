@@ -480,12 +480,57 @@ class lme:
         )
         return float(res.fun), res.x
 
+    def _post_refit_state(
+        self, theta: np.ndarray, *,
+        sigma_fix: float | None = None,
+        y: np.ndarray | None = None, X: np.ndarray | None = None,
+        XtX: np.ndarray | None = None, Xty: np.ndarray | None = None,
+        yty: float | None = None,
+    ) -> tuple[float, np.ndarray]:
+        """At a fixed θ, recover (σ̂, β̂) at the just-found optimum.
+
+        ``profile()`` calls this after each inner θ-refit so each grid
+        point carries the full optimized state — needed for ``plot_pairs``
+        traces. Cost is one sparse Cholesky + one tri-solve per call.
+        ``sigma_fix=None`` profiles σ out (σ̂² = rss/n); pass it explicitly
+        when σ was either pinned or optimized as a free variable upstream.
+        """
+        y_ = self.y if y is None else y
+        X_ = self.X.to_numpy().astype(float) if X is None else X
+        XtX_ = self._XtX if XtX is None else XtX
+        Xty_ = self._Xty if Xty is None else Xty
+        yty_ = self._yty if yty is None else yty
+        n = len(y_)
+        Lt = self._build_Lt_sparse(theta)
+        ZL = self._Z_sp @ Lt.T
+        M = (ZL.T @ ZL + self._eye_q_sp).tocsc()
+        self._chol_factor.factorize(M)
+        F = self._chol_factor
+        ZLty = np.asarray(ZL.T @ y_).ravel()
+        M_inv_ZLty = F.solve(ZLty)
+        cu_sq = float(np.einsum("i,i->", ZLty, M_inv_ZLty))
+        if X_.shape[1] == 0:
+            rss = yty_ - cu_sq
+            beta = np.zeros(0)
+        else:
+            ZLtX = np.asarray(ZL.T @ X_)
+            M_inv_ZLtX = F.solve(ZLtX)
+            XtX_eff = XtX_ - np.einsum("ij,ik->jk", ZLtX, M_inv_ZLtX)
+            Rx = np.linalg.cholesky(XtX_eff)
+            rhs = Xty_ - np.einsum("ij,i->j", ZLtX, M_inv_ZLty)
+            cb = solve_triangular(Rx, rhs, lower=True)
+            beta = solve_triangular(Rx.T, cb, lower=False)
+            rss = yty_ - cu_sq - float(np.einsum("i,i->", cb, cb))
+        sigma = sigma_fix if sigma_fix is not None else float(np.sqrt(max(rss, 0.0) / n))
+        return sigma, beta
+
     def _dev_with_beta_fixed(
         self, j: int, beta_j_tgt: float, theta_start: np.ndarray,
-    ) -> tuple[float, np.ndarray]:
+    ) -> tuple[float, np.ndarray, float, np.ndarray]:
         """Min ML deviance with β_j = ``beta_j_tgt``. Trick: subtract
         ``x_j · β_j_tgt`` from y and drop column j — the remaining fit has
-        the same functional form."""
+        the same functional form. Returns ``(dev, θ̂, σ̂, β̂)`` where β̂ is
+        in the full original column order with ``β_j = beta_j_tgt``."""
         X_full = self.X.to_numpy().astype(float)
         x_j = X_full[:, j]
         X_rest = np.delete(X_full, j, axis=1)
@@ -493,32 +538,45 @@ class lme:
         XtX_rest = X_rest.T @ X_rest
         Xty_rest = X_rest.T @ y_adj
         yty_adj = float(y_adj @ y_adj)
-        return self._refit_theta(
+        dev, theta_opt = self._refit_theta(
             lambda th: self._ml_deviance(
                 th, y=y_adj, X=X_rest,
                 XtX=XtX_rest, Xty=Xty_rest, yty=yty_adj,
             ),
             theta_start,
         )
+        sigma_opt, beta_rest = self._post_refit_state(
+            theta_opt, y=y_adj, X=X_rest,
+            XtX=XtX_rest, Xty=Xty_rest, yty=yty_adj,
+        )
+        beta_opt = np.empty(self.p)
+        beta_opt[j] = beta_j_tgt
+        rest_idx = [k for k in range(self.p) if k != j]
+        beta_opt[rest_idx] = beta_rest
+        return dev, theta_opt, sigma_opt, beta_opt
 
     def _dev_with_sigma_fixed(
         self, sigma_tgt: float, theta_start: np.ndarray,
-    ) -> tuple[float, np.ndarray]:
-        """Min ML deviance with σ = ``sigma_tgt`` (β profiles out)."""
-        return self._refit_theta(
+    ) -> tuple[float, np.ndarray, float, np.ndarray]:
+        """Min ML deviance with σ = ``sigma_tgt`` (β profiles out).
+        Returns ``(dev, θ̂, σ_tgt, β̂)``."""
+        dev, theta_opt = self._refit_theta(
             lambda th: self._ml_deviance(th, sigma_fix=sigma_tgt),
             theta_start,
         )
+        _, beta_opt = self._post_refit_state(theta_opt, sigma_fix=sigma_tgt)
+        return dev, theta_opt, float(sigma_tgt), beta_opt
 
     def _dev_with_sd_fixed(
         self, slot_i: int, sd_tgt: float,
         sigma_start: float, theta_start: np.ndarray,
-    ) -> tuple[float, np.ndarray]:
+    ) -> tuple[float, np.ndarray, float, np.ndarray]:
         """Min ML deviance with σ_i = σ · θ[slot_i] pinned at ``sd_tgt``.
 
         Scalar-bar case: the bar has one θ entry, so pinning ``σ · θ[slot_i]
         = sd_tgt`` is a single nonlinear constraint. We re-parameterize as
-        ``(σ, θ_rest)`` with ``θ[slot_i] = sd_tgt / σ`` and minimize jointly."""
+        ``(σ, θ_rest)`` with ``θ[slot_i] = sd_tgt / σ`` and minimize jointly.
+        Returns ``(dev, θ̂, σ̂, β̂)``."""
         other = [k for k in range(len(self._theta_bounds)) if k != slot_i]
         theta_rest0 = np.array([theta_start[k] for k in other])
 
@@ -540,11 +598,12 @@ class lme:
         )
         # Reconstruct θ at the optimum for warm-start of neighboring points.
         theta_opt = np.zeros(len(self._theta_bounds))
-        sigma_opt = res.x[0]
+        sigma_opt = float(res.x[0])
         theta_opt[slot_i] = sd_tgt / sigma_opt
         for k, slot in enumerate(other):
             theta_opt[slot] = res.x[1 + k]
-        return float(res.fun), theta_opt
+        _, beta_opt = self._post_refit_state(theta_opt, sigma_fix=sigma_opt)
+        return float(res.fun), theta_opt, sigma_opt, beta_opt
 
     def profile(self, n_grid: int = 41) -> "Profile":
         """Compute profile-likelihood curves for σ_i, σ, and each β_j.
@@ -570,54 +629,75 @@ class lme:
         theta_hat = self.theta.copy()
         sigma_hat = self.sigma
 
-        data: dict[str, pl.DataFrame] = {}
+        bar_keys = list(self.sd_re.keys())
+        bar_labels = [f".sig{i + 1:02d}" for i in range(len(bar_keys))]
+        slot_offsets = list(np.cumsum([0] + self._bar_sizes[:-1]))
+        bar_slots = [int(s) for s in slot_offsets]
+        # Column order, also used as the iteration order for profiled params.
+        param_names: list[str] = bar_labels + [".sigma"] + list(self.column_names)
+
         estimate: dict[str, float] = {}
+        for lbl, key in zip(bar_labels, bar_keys):
+            estimate[lbl] = float(self.sd_re[key][0])
+        estimate[".sigma"] = sigma_hat
+        for j, name in enumerate(self.column_names):
+            estimate[name] = float(self._beta[j])
+
+        def _state_to_row(theta_opt, sigma_opt, beta_opt) -> dict[str, float]:
+            """Map (θ̂, σ̂, β̂) at a grid point into the per-parameter row."""
+            row: dict[str, float] = {}
+            for lbl, slot in zip(bar_labels, bar_slots):
+                row[lbl] = float(sigma_opt * theta_opt[slot])
+            row[".sigma"] = float(sigma_opt)
+            for j, name in enumerate(self.column_names):
+                row[name] = float(beta_opt[j])
+            return row
 
         # Grid widths are picked to comfortably cover |ζ| ≤ 3 (so the
         # 99% CI cutoff at ±2.576 is inside the grid). β uses Wald SE as a
-        # scale; σ and σ_i get multiplicative ranges.
+        # scale; σ and σ_i get multiplicative ranges. Each grid point also
+        # records the full optimized state — needed for plot_pairs traces.
+        rows_by_param: dict[str, list[dict[str, float]]] = {p: [] for p in param_names}
+        zetas_by_param: dict[str, np.ndarray] = {p: np.empty(n_grid) for p in param_names}
 
         # -- σ_i (one per scalar bar) ---------------------------------------
-        slot_offsets = np.cumsum([0] + self._bar_sizes[:-1])
-        for i, bar_key in enumerate(self.sd_re):
-            sd_i = float(self.sd_re[bar_key][0])
-            label = f".sig{i + 1:02d}"
-            estimate[label] = sd_i
+        for i, (lbl, slot_i) in enumerate(zip(bar_labels, bar_slots)):
+            sd_i = estimate[lbl]
             grid = np.linspace(1e-3 * sd_i, 3.5 * sd_i, n_grid)
-            slot_i = int(slot_offsets[i])
-            zetas = np.empty(n_grid)
             theta_warm = theta_hat.copy()
             sigma_warm = sigma_hat
             for k, v in enumerate(grid):
-                d_k, theta_warm = self._dev_with_sd_fixed(
+                d_k, theta_warm, sigma_warm, beta_opt = self._dev_with_sd_fixed(
                     slot_i, v, sigma_warm, theta_warm,
                 )
-                zetas[k] = np.sign(v - sd_i) * np.sqrt(max(0.0, d_k - d_hat))
-            data[label] = pl.DataFrame({"value": grid, "zeta": zetas})
+                zetas_by_param[lbl][k] = np.sign(v - sd_i) * np.sqrt(max(0.0, d_k - d_hat))
+                rows_by_param[lbl].append(_state_to_row(theta_warm, sigma_warm, beta_opt))
 
         # -- σ ----------------------------------------------------------------
-        estimate[".sigma"] = sigma_hat
         log_grid = np.linspace(-0.6, 0.6, n_grid) + np.log(sigma_hat)
         sigma_grid = np.exp(log_grid)
-        zetas = np.empty(n_grid)
         theta_warm = theta_hat.copy()
         for k, s in enumerate(sigma_grid):
-            d_k, theta_warm = self._dev_with_sigma_fixed(s, theta_warm)
-            zetas[k] = np.sign(s - sigma_hat) * np.sqrt(max(0.0, d_k - d_hat))
-        data[".sigma"] = pl.DataFrame({"value": sigma_grid, "zeta": zetas})
+            d_k, theta_warm, sigma_opt, beta_opt = self._dev_with_sigma_fixed(s, theta_warm)
+            zetas_by_param[".sigma"][k] = np.sign(s - sigma_hat) * np.sqrt(max(0.0, d_k - d_hat))
+            rows_by_param[".sigma"].append(_state_to_row(theta_warm, sigma_opt, beta_opt))
 
         # -- β_j --------------------------------------------------------------
         for j, name in enumerate(self.column_names):
-            beta_j = float(self._beta[j])
+            beta_j = estimate[name]
             se_j = float(self._se_beta[j])
-            estimate[name] = beta_j
             grid = np.linspace(beta_j - 4 * se_j, beta_j + 4 * se_j, n_grid)
-            zetas = np.empty(n_grid)
             theta_warm = theta_hat.copy()
             for k, b in enumerate(grid):
-                d_k, theta_warm = self._dev_with_beta_fixed(j, b, theta_warm)
-                zetas[k] = np.sign(b - beta_j) * np.sqrt(max(0.0, d_k - d_hat))
-            data[name] = pl.DataFrame({"value": grid, "zeta": zetas})
+                d_k, theta_warm, sigma_opt, beta_opt = self._dev_with_beta_fixed(j, b, theta_warm)
+                zetas_by_param[name][k] = np.sign(b - beta_j) * np.sqrt(max(0.0, d_k - d_hat))
+                rows_by_param[name].append(_state_to_row(theta_warm, sigma_opt, beta_opt))
+
+        data: dict[str, pl.DataFrame] = {}
+        for p in param_names:
+            cols: dict[str, list[float]] = {q: [r[q] for r in rows_by_param[p]] for q in param_names}
+            cols["zeta"] = list(zetas_by_param[p])
+            data[p] = pl.DataFrame(cols)
 
         return Profile(data, estimate)
 
@@ -1102,7 +1182,7 @@ class Profile:
         lo: list[float] = []
         hi: list[float] = []
         for name, df in self.data.items():
-            v = df["value"].to_numpy()
+            v = df[name].to_numpy()
             s = df["zeta"].to_numpy()
             names.append(name)
             lo_fb = 0.0 if name.startswith(".sig") else float("nan")
@@ -1169,7 +1249,7 @@ class Profile:
 
         for ax_i, name in zip(axes, names):
             df = self.data[name]
-            v = df["value"].to_numpy()
+            v = df[name].to_numpy()
             s = df["zeta"].to_numpy()
             x = fwd(v)
             y = np.abs(s) if absolute else s
@@ -1221,7 +1301,7 @@ class Profile:
         z_max = float(norm.ppf(upper))
         for ax, name in zip(axes, names):
             df = self.data[name]
-            v = df["value"].to_numpy()
+            v = df[name].to_numpy()
             s = df["zeta"].to_numpy()
             order = np.argsort(v)
             v_s, s_s = v[order], s[order]
@@ -1241,6 +1321,252 @@ class Profile:
             ax.set_title(name)
             ax.set_xlabel(name)
         axes[0].set_ylabel("density")
+        fig.tight_layout()
+        return fig
+
+    def plot_pairs(
+        self, *,
+        which: list[str] | None = None,
+        levels: tuple[float, ...] = (0.50, 0.80, 0.90, 0.95, 0.99),
+        figsize: tuple[float, float] | None = None,
+    ):
+        """Profile pairs plot — port of lme4's ``splom(profile(...))`` (Fig 2.6).
+
+        Lower triangle: bivariate ζ-deviance contours and the two profile
+        traces in *ζ-coordinates* ``(ζⱼ, ζᵢ)``, axes clamped to ±max(level).
+        Upper triangle: same contours/traces mapped through each
+        parameter's backward spline ``v(ζ)`` into *original* parameter
+        space ``(vⱼ, vᵢ)``. Diagonal: parameter labels.
+
+        The contour at confidence level α is built (Bates, lme4 § 1.5)
+        from four anchor points where the level-α curve crosses the
+        profile traces. A periodic cubic spline through ``(θ_mean,
+        θ_diff)`` gives an angular parameterization; the curve closes
+        smoothly via ``(ζᵢ, ζⱼ) = lev · (cos(θ_mean − θ_diff/2),
+        cos(θ_mean + θ_diff/2))``. Contour levels default to the lme4
+        defaults: √χ²₂(α) for α ∈ {0.50, 0.80, 0.90, 0.95, 0.99}.
+        """
+        import matplotlib.pyplot as plt
+        from scipy.interpolate import CubicSpline, PchipInterpolator
+        from scipy.stats import chi2
+
+        if which is None:
+            names = list(self.data.keys())
+        else:
+            names = list(which)
+            unknown = [n for n in names if n not in self.data]
+            if unknown:
+                raise KeyError(
+                    f"unknown parameter(s) {unknown!r}; available: {list(self.data)!r}"
+                )
+        n = len(names)
+        if n < 2:
+            raise ValueError("plot_pairs needs at least 2 parameters")
+
+        zeta_levels = np.sqrt(chi2.ppf(np.asarray(levels), 2))
+        mlev = float(zeta_levels.max())
+
+        fwd: dict[str, PchipInterpolator] = {}
+        bwd: dict[str, PchipInterpolator] = {}
+        v_lim: dict[str, tuple[float, float]] = {}
+        for name in names:
+            df = self.data[name]
+            v = df[name].to_numpy()
+            s = df["zeta"].to_numpy()
+            order = np.argsort(v)
+            v_s, s_s = v[order], s[order]
+            fwd[name] = PchipInterpolator(v_s, s_s, extrapolate=False)
+            order_z = np.argsort(s_s)
+            bwd[name] = PchipInterpolator(s_s[order_z], v_s[order_z], extrapolate=False)
+            # v-axis limits — match R splom.thpr: backward-spline at ±mlev,
+            # then clip to the profile grid range so we never advertise an
+            # axis range we don't actually have data for.
+            v_lo = bwd[name](-mlev)
+            v_hi = bwd[name](+mlev)
+            v_lo = float(v_s[0])  if not np.isfinite(v_lo) else float(max(v_lo, v_s[0]))
+            v_hi = float(v_s[-1]) if not np.isfinite(v_hi) else float(min(v_hi, v_s[-1]))
+            v_lim[name] = (v_lo, v_hi)
+
+        def _trace_zeta(prof_name: str, other_name: str) -> tuple[np.ndarray, np.ndarray]:
+            """Return (ζ_prof, ζ_other) along the trace of profile(prof_name).
+
+            ζ_prof is read directly from the ``zeta`` column; ζ_other is
+            obtained by sending the optimum v_other through the forward
+            spline of ``other_name`` and dropping NaNs (off-grid points).
+            """
+            df = self.data[prof_name]
+            zp = df["zeta"].to_numpy()
+            zo = fwd[other_name](df[other_name].to_numpy())
+            keep = ~np.isnan(zo)
+            return zp[keep], zo[keep]
+
+        def _sacos(x):
+            return np.arccos(np.clip(x, -0.999, 0.999))
+
+        def _ad(xc, yc):
+            a = (xc + yc) / 2.0
+            d = xc - yc
+            return np.sign(d) * a, np.abs(d)
+
+        def _contour_pts(sij, sji, level: float, nseg: int = 101):
+            """Generate one bivariate-ζ contour at radius ``level``.
+
+            Returns (n+1, 2) array of (ζ_i, ζ_j) points on the closed curve;
+            ``None`` if any anchor falls outside the trace splines' domain.
+            """
+            try:
+                yc1 = _sacos(float(sij(+level)) / level)
+                xc2 = _sacos(float(sji(+level)) / level)
+                yc3 = _sacos(float(sij(-level)) / level)
+                xc4 = _sacos(float(sji(-level)) / level)
+            except Exception:
+                return None
+            if any(np.isnan(v) for v in (yc1, xc2, yc3, xc4)):
+                return None
+            xs = np.empty(4)
+            ys = np.empty(4)
+            xs[0], ys[0] = _ad(0.0, yc1)
+            xs[1], ys[1] = _ad(xc2, 0.0)
+            xs[2], ys[2] = _ad(np.pi, yc3)
+            xs[3], ys[3] = _ad(xc4, np.pi)
+            order = np.argsort(xs)
+            xs_s = xs[order]
+            ys_s = ys[order]
+            # Close the ring for ``bc_type='periodic'``: append the first
+            # knot shifted by one period, with the same y value, so that
+            # ``y[0] == y[-1]`` (CubicSpline's periodic precondition).
+            xs_p = np.concatenate([xs_s, [xs_s[0] + 2 * np.pi]])
+            ys_p = np.concatenate([ys_s, [ys_s[0]]])
+            try:
+                spl = CubicSpline(xs_p, ys_p, bc_type="periodic")
+            except ValueError:
+                return None
+            theta = np.linspace(xs_s[0], xs_s[0] + 2 * np.pi, nseg + 1)
+            tdiff = spl(theta)
+            zi = level * np.cos(theta - tdiff / 2.0)
+            zj = level * np.cos(theta + tdiff / 2.0)
+            return np.column_stack([zi, zj])
+
+        # Pre-compute contour data for each (i, j) pair, i < j.
+        contours: dict[tuple[int, int], dict] = {}
+        for jj in range(1, n):
+            for ii in range(jj):
+                ni, nj = names[ii], names[jj]
+                zi_i, zj_i = _trace_zeta(ni, nj)   # along trace of i
+                zj_j, zi_j = _trace_zeta(nj, ni)   # along trace of j
+                if len(zi_i) < 4 or len(zj_j) < 4:
+                    contours[(ii, jj)] = {}
+                    continue
+                o_i = np.argsort(zi_i)
+                o_j = np.argsort(zj_j)
+                sij = PchipInterpolator(zi_i[o_i], zj_i[o_i], extrapolate=False)
+                sji = PchipInterpolator(zj_j[o_j], zi_j[o_j], extrapolate=False)
+                pts_per_level = []
+                for lev in zeta_levels:
+                    pts = _contour_pts(sij, sji, float(lev))
+                    pts_per_level.append(pts)
+                contours[(ii, jj)] = dict(
+                    sij=sij, sji=sji,
+                    trace_i=(zi_i[o_i], zj_i[o_i]),
+                    trace_j=(zi_j[o_j], zj_j[o_j]),
+                    pts=pts_per_level,
+                )
+
+        fig, axes = plt.subplots(
+            n, n, figsize=figsize or (2.4 * n, 2.4 * n), squeeze=False,
+        )
+
+        def _draw_zeta_panel(ax, info, x_is_i: bool):
+            """ζ-space panel. ``x_is_i`` controls which axis is ζ_i."""
+            zi_grid_i, zj_at_i = info["trace_i"]
+            zi_at_j, zj_grid_j = info["trace_j"]
+            if x_is_i:
+                ax.plot(zi_grid_i, zj_at_i, "-", lw=0.5, color="black")
+                ax.plot(zi_at_j, zj_grid_j, "-", lw=0.5, color="black")
+            else:
+                ax.plot(zj_at_i, zi_grid_i, "-", lw=0.5, color="black")
+                ax.plot(zj_grid_j, zi_at_j, "-", lw=0.5, color="black")
+            for pts in info["pts"]:
+                if pts is None:
+                    continue
+                if x_is_i:
+                    ax.plot(pts[:, 0], pts[:, 1], "-", lw=0.5, color="black")
+                else:
+                    ax.plot(pts[:, 1], pts[:, 0], "-", lw=0.5, color="black")
+            ax.set_xlim(-1.05 * mlev, 1.05 * mlev)
+            ax.set_ylim(-1.05 * mlev, 1.05 * mlev)
+
+        def _draw_v_panel(ax, info, ni, nj, x_is_i: bool):
+            """v-space panel. Maps each ζ-coordinate through its backward
+            spline to recover v.  ``x_is_i`` controls which axis is v_i."""
+            zi_grid_i, zj_at_i = info["trace_i"]
+            zi_at_j, zj_grid_j = info["trace_j"]
+            vi_i = bwd[ni](zi_grid_i)
+            vj_i = bwd[nj](zj_at_i)
+            vi_j = bwd[ni](zi_at_j)
+            vj_j = bwd[nj](zj_grid_j)
+            if x_is_i:
+                ax.plot(vi_i, vj_i, "-", lw=0.5, color="black")
+                ax.plot(vi_j, vj_j, "-", lw=0.5, color="black")
+            else:
+                ax.plot(vj_i, vi_i, "-", lw=0.5, color="black")
+                ax.plot(vj_j, vi_j, "-", lw=0.5, color="black")
+            for pts in info["pts"]:
+                if pts is None:
+                    continue
+                vc_i = bwd[ni](pts[:, 0])
+                vc_j = bwd[nj](pts[:, 1])
+                ok = ~(np.isnan(vc_i) | np.isnan(vc_j))
+                if not ok.any():
+                    continue
+                if x_is_i:
+                    ax.plot(vc_i[ok], vc_j[ok], "-", lw=0.5, color="black")
+                else:
+                    ax.plot(vc_j[ok], vc_i[ok], "-", lw=0.5, color="black")
+            ax.set_xlim(*(v_lim[ni] if x_is_i else v_lim[nj]))
+            ax.set_ylim(*(v_lim[nj] if x_is_i else v_lim[ni]))
+
+        # Lattice-splom layout: origin at lower-left, so the parameter
+        # at display row ``r`` (matplotlib top-down) is ``names[n-1-r]``
+        # and at display column ``c`` is ``names[c]``. The diagonal runs
+        # from bottom-left (.sig01) to top-right ((Intercept)).
+        for r in range(n):
+            for c in range(n):
+                ax = axes[r, c]
+                ax.tick_params(labelsize=8)
+                ax.grid(True, color="lightgray", lw=0.3)
+                vid_row = n - 1 - r
+                vid_col = c
+                if vid_row == vid_col:
+                    ax.text(
+                        0.5, 0.5, names[vid_row], ha="center", va="center",
+                        transform=ax.transAxes, fontsize=12,
+                    )
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+                    ax.grid(False)
+                    for s in ("top", "right", "bottom", "left"):
+                        ax.spines[s].set_visible(True)
+                    continue
+                ii = min(vid_row, vid_col)
+                jj = max(vid_row, vid_col)
+                info = contours.get((ii, jj), {})
+                if not info:
+                    continue
+                ni, nj = names[ii], names[jj]
+                x_is_i = (vid_col == ii)
+                # Lower triangle in display (closer to bottom-left,
+                # vid_row < vid_col): ζ-space, per lme4 splom.
+                # Upper triangle in display: v-space.
+                if vid_row < vid_col:
+                    _draw_zeta_panel(ax, info, x_is_i=x_is_i)
+                else:
+                    _draw_v_panel(ax, info, ni, nj, x_is_i=x_is_i)
+                if c == 0:
+                    ax.set_ylabel(names[vid_row])
+                if r == n - 1:
+                    ax.set_xlabel(names[vid_col])
+
         fig.tight_layout()
         return fig
 

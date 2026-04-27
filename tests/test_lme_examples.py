@@ -272,6 +272,76 @@ def test_bates_2_1_penicillin_fm03_REML():
     _assert_fixed(m, "(Intercept)", 22.9722, se=0.8086, tval=28.41)
 
 
+def test_bates_2_6_penicillin_fm03_ML_profile_pairs():
+    """plot_pairs (Bates Fig 2.6): each profile row carries the full
+    optimum, traces are pinned to lme4 ``profile(fm03ML)`` output.
+
+    Profile of σ₁ (.sig01): as σ₁ varies, the optimal (σ₂, σ, β₀) at
+    each grid point should match what lme4 records. Same for profile of
+    σ₂. The intercept stays orthogonal to the variance components in
+    this model, so its row is essentially constant.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    from scipy.interpolate import PchipInterpolator
+
+    data = load_dataset("lme4", "Penicillin")
+    m = lme("diameter ~ 1 + (1|plate) + (1|sample)", data, REML=False)
+    pr = m.profile(n_grid=41)
+
+    # Per-row schema: every parameter has a column, plus zeta.
+    assert list(pr.data[".sig01"].columns) == [
+        ".sig01", ".sig02", ".sigma", "(Intercept)", "zeta",
+    ]
+
+    def _interps(name):
+        df = pr.data[name]
+        v = df[name].to_numpy()
+        o = np.argsort(v)
+        return {
+            col: PchipInterpolator(v[o], df[col].to_numpy()[o])
+            for col in df.columns if col not in (name, "zeta")
+        }
+
+    # Profile of .sig01 — pinned to lme4 rows ζ ≈ -3.0 / 0 / +2.5.
+    sp = _interps(".sig01")
+    for sig01, refs in [
+        (0.5501273, {".sig02": 1.766020, ".sigma": 0.5595737, "(Intercept)": 22.97222}),
+        (1.3197227, {".sig02": 1.780696, ".sigma": 0.5490436, "(Intercept)": 22.97222}),
+    ]:
+        for col, ref in refs.items():
+            np.testing.assert_allclose(float(sp[col](sig01)), ref, atol=1e-2)
+
+    # Profile of .sig02 — pinned to lme4 rows ζ ≈ -2.6 / +2.5.
+    sp = _interps(".sig02")
+    for sig02, refs in [
+        (0.9584949, {".sig01": 0.8435989, ".sigma": 0.5503961, "(Intercept)": 22.97222}),
+        (4.6831540, {".sig01": 0.8463784, ".sigma": 0.5499141, "(Intercept)": 22.97222}),
+    ]:
+        for col, ref in refs.items():
+            np.testing.assert_allclose(float(sp[col](sig02)), ref, atol=1e-2)
+
+    # Render and check the splom layout (Bates Fig 2.6 / lme4 splom.thpr):
+    # origin at lower-left so the diagonal runs from the bottom-left cell
+    # (.sig01) to the top-right cell ((Intercept)). Cells *above* the
+    # display diagonal (display_row + display_col < n-1) are v-space; cells
+    # *below* (display_row + display_col > n-1) are ζ-space, axis-clamped
+    # to ±1.05·√χ²₂(0.99).
+    from scipy.stats import chi2 as _chi2
+    fig = pr.plot_pairs()
+    assert len(fig.axes) == 16
+    # Diagonal cells (r + c == n-1) carry parameter labels.
+    diag_axes_in_order = [fig.axes[r * 4 + (3 - r)] for r in range(4)]
+    diag_labels = [ax.texts[0].get_text() for ax in diag_axes_in_order]
+    assert diag_labels == ["(Intercept)", ".sigma", ".sig02", ".sig01"]
+    # ζ-space cell (e.g., bottom-row .sig02 column at r=3, c=1, both
+    # vid_row=0 and vid_col=1, vid_row<vid_col so ζ-space).
+    mlev = float(np.sqrt(_chi2.ppf(0.99, 2)))
+    ax_zeta = fig.axes[3 * 4 + 1]
+    np.testing.assert_allclose(ax_zeta.get_xlim(), (-1.05 * mlev, 1.05 * mlev))
+    np.testing.assert_allclose(ax_zeta.get_ylim(), (-1.05 * mlev, 1.05 * mlev))
+
+
 def test_bates_2_2_pastes_fm04_ML():
     """fm04 <- lmer(strength ~ 1 + (1|sample) + (1|batch), Pastes, REML=FALSE)"""
     data = load_dataset("lme4", "Pastes")
