@@ -663,7 +663,7 @@ class lme:
         # -- σ_i (one per scalar bar) ---------------------------------------
         for i, (lbl, slot_i) in enumerate(zip(bar_labels, bar_slots)):
             sd_i = estimate[lbl]
-            grid = np.linspace(1e-3 * sd_i, 3.5 * sd_i, n_grid)
+            grid = np.linspace(1e-3 * sd_i, 5.0 * sd_i, n_grid)
             theta_warm = theta_hat.copy()
             sigma_warm = sigma_hat
             for k, v in enumerate(grid):
@@ -683,10 +683,15 @@ class lme:
             rows_by_param[".sigma"].append(_state_to_row(theta_warm, sigma_opt, beta_opt))
 
         # -- β_j --------------------------------------------------------------
+        # Range matches lme4's cutoff = √χ²(0.99, nptot); using 6·SE so that
+        # |ζ| ≥ cutoff at the boundary even when β-vs-ζ is sub-linear (lme4
+        # does this iteratively in profile.merMod). splom needs |ζ| ≥ mlev =
+        # √χ²₂(0.99) ≈ 3.03 in the trace-spline domain so the 99% contour
+        # anchors don't have to extrapolate.
         for j, name in enumerate(self.column_names):
             beta_j = estimate[name]
             se_j = float(self._se_beta[j])
-            grid = np.linspace(beta_j - 4 * se_j, beta_j + 4 * se_j, n_grid)
+            grid = np.linspace(beta_j - 6 * se_j, beta_j + 6 * se_j, n_grid)
             theta_warm = theta_hat.copy()
             for k, b in enumerate(grid):
                 d_k, theta_warm, sigma_opt, beta_opt = self._dev_with_beta_fixed(j, b, theta_warm)
@@ -1443,8 +1448,13 @@ class Profile:
                 return None
             theta = np.linspace(xs_s[0], xs_s[0] + 2 * np.pi, nseg + 1)
             tdiff = spl(theta)
-            zi = level * np.cos(theta - tdiff / 2.0)
-            zj = level * np.cos(theta + tdiff / 2.0)
+            # tauij in lme4:::cont returns (col1, col2) where col1 = lev *
+            # cos(θ_mean - θ_diff/2) = ζ_j and col2 = lev * cos(θ_mean +
+            # θ_diff/2) = ζ_i. Verify at anchor 1 (θ_m = -θ/2, θ_d = θ):
+            # col1 = lev·cos(-θ) = sij(+lev) (the j-coord), col2 = lev =
+            # zeta_i at +lev. Stack as (ζ_i, ζ_j) to match downstream.
+            zj = level * np.cos(theta - tdiff / 2.0)
+            zi = level * np.cos(theta + tdiff / 2.0)
             return np.column_stack([zi, zj])
 
         # Pre-compute contour data for each (i, j) pair, i < j.
@@ -1459,8 +1469,13 @@ class Profile:
                     continue
                 o_i = np.argsort(zi_i)
                 o_j = np.argsort(zj_j)
-                sij = PchipInterpolator(zi_i[o_i], zj_i[o_i], extrapolate=False)
-                sji = PchipInterpolator(zj_j[o_j], zi_j[o_j], extrapolate=False)
+                # Trace splines extrapolate, matching R's interpSpline + predy
+                # in lme4:::cont — splom always renders all length(levels)
+                # contours, even when one parameter's profile range stops
+                # short of mlev = √χ²₂(0.99) (e.g. an Intercept that's
+                # orthogonal to the variance components).
+                sij = PchipInterpolator(zi_i[o_i], zj_i[o_i], extrapolate=True)
+                sji = PchipInterpolator(zj_j[o_j], zi_j[o_j], extrapolate=True)
                 pts_per_level = []
                 for lev in zeta_levels:
                     pts = _contour_pts(sij, sji, float(lev))
