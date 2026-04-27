@@ -112,6 +112,27 @@ def test_bates_1_4_dyestuff_fm01_ML():
     _assert_fixed(m, "(Intercept)", 1527.5, se=17.6938, tval=86.33)
 
 
+def test_bates_1_4_dyestuff_fm01_ML_profile_confint():
+    """confint(profile(fm01ML), level=...) — pinned to lme4 4.5/R 4.5.
+
+    The 99% lower bound for .sig01 is the regression: lme4 reports 0
+    (the natural σ ≥ 0 boundary) when the profile flattens to an
+    asymptote above the −2.576 threshold. Lmpy used to return NaN.
+    """
+    data = load_dataset("lme4", "Dyestuff")
+    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
+    pr = m.profile()
+
+    ci99 = pr.confint(level=0.99).to_dict(as_series=False)
+    assert ci99["parameter"] == [".sig01", ".sigma", "(Intercept)"]
+    np.testing.assert_allclose(ci99["0.5%"], [0.0, 35.5632, 1465.874], atol=0.1)
+    np.testing.assert_allclose(ci99["99.5%"], [113.6877, 75.6680, 1589.126], atol=0.1)
+
+    ci95 = pr.confint(level=0.95).to_dict(as_series=False)
+    np.testing.assert_allclose(ci95["2.5%"], [12.1985, 38.2300, 1486.452], atol=0.1)
+    np.testing.assert_allclose(ci95["97.5%"], [84.0631, 67.6577, 1568.548], atol=0.1)
+
+
 def test_bates_1_4_dyestuff2_fm02_REML():
     """fm02 <- lmer(Yield ~ 1 + (1|Batch), Dyestuff2)  -- singular fit, σ₁=0"""
     data = load_dataset("lme4", "Dyestuff2")

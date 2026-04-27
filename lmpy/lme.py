@@ -997,16 +997,20 @@ class lme:
         fig.tight_layout()
 
 
-def _invert_zeta(vals: np.ndarray, zetas: np.ndarray, target: float) -> float:
+def _invert_zeta(
+    vals: np.ndarray, zetas: np.ndarray, target: float,
+    *, fallback: float = float("nan"),
+) -> float:
     """Linearly interpolate the ζ-curve to find where ζ(v) = target.
 
-    Returns ``NaN`` if ``target`` falls outside the observed ζ range — we
-    prefer a missing bound to an extrapolated one. Sorts by ζ first so the
-    interpolation works even when the curve isn't evaluated on a
-    monotone-in-v grid.
+    Returns ``fallback`` if ``target`` falls outside the observed ζ range —
+    callers pass 0 for variance-component SDs (natural lower bound; matches
+    lme4 when the profile flattens to an asymptote above the threshold) and
+    NaN for unbounded parameters. Sorts by ζ first so the interpolation
+    works even when the curve isn't evaluated on a monotone-in-v grid.
     """
     if target < np.nanmin(zetas) or target > np.nanmax(zetas):
-        return float("nan")
+        return fallback
     order = np.argsort(zetas)
     return float(np.interp(target, zetas[order], vals[order]))
 
@@ -1032,10 +1036,12 @@ class Profile:
     def confint(self, level: float = 0.95) -> pl.DataFrame:
         """Profile-based confidence intervals at ``level`` (default 95%).
 
-        Inverts each ζ-curve at ±Φ⁻¹((1+level)/2). A bound is ``NaN`` when
-        the curve doesn't cross the threshold within the grid — this
-        typically happens for variance components near zero (see book
-        Fig. 1.8's flattening on the left of σ₁)."""
+        Inverts each ζ-curve at ±Φ⁻¹((1+level)/2). For variance-component
+        SDs (``.sig01``, ``.sig02``, …, ``.sigma``) the lower bound clips
+        to 0 when the profile flattens to an asymptote above the threshold
+        (matches lme4; see book Fig. 1.8). Unbounded parameters return
+        ``NaN`` if the curve doesn't cross the threshold within the grid.
+        """
         from scipy.stats import norm
 
         z = float(norm.ppf(0.5 + level / 2))
@@ -1048,7 +1054,8 @@ class Profile:
             v = df["value"].to_numpy()
             s = df["zeta"].to_numpy()
             names.append(name)
-            lo.append(_invert_zeta(v, s, -z))
+            lo_fb = 0.0 if name.startswith(".sig") else float("nan")
+            lo.append(_invert_zeta(v, s, -z, fallback=lo_fb))
             hi.append(_invert_zeta(v, s, +z))
         return pl.DataFrame({"parameter": names, lo_lbl: lo, hi_lbl: hi})
 
