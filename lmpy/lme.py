@@ -274,6 +274,14 @@ class lme:
             self._chol_factor.factorize(M)
         F = self._chol_factor
 
+        # Snapshot Λ and L at the MLE as dense ndarrays (matches m.Z's
+        # convention). profile()/_ranef() re-factorize _chol_factor at
+        # non-MLE θ, so freezing copies here detaches us from those.
+        # L is in CHOLMOD's permuted ordering — lower triangular by
+        # construction; that's also the ordering Bates' Fig 2.4 shows.
+        self.Lambda = Lt.T.toarray()
+        self.L = F.L.toarray()
+
         ZLty = np.asarray(ZL.T @ y).ravel()
         ZLtX = np.asarray(ZL.T @ X)
         M_inv_ZLty = F.solve(ZLty)
