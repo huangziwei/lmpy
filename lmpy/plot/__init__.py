@@ -36,6 +36,7 @@ Phase 2+: annotations (``abline``/``points``/``lines``/``legend``/``segments``/
 long tail (``matplot``/``stripchart``/``interaction_plot``/``r_expr``).
 """
 
+from .annotate import abline, legend, lines, points, qqline, segments
 from .dispatch import plot
 
-__all__ = ["plot"]
+__all__ = ["plot", "abline", "points", "lines", "legend", "segments", "qqline"]
