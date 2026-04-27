@@ -29,15 +29,11 @@ from .formula import set_ordered_cols
 __all__ = ["data", "factor"]
 
 
-# Map our package label → rdatasets package label. R's built-in ``datasets``
-# package is exposed as ``"R"`` in lmpy (mirrors the ``datasets/R/`` folder
-# convention used to avoid ``datasets/datasets/`` path duplication).
-_RDATASETS_PKG_MAP = {
-    "R": "datasets",
-    "MASS": "MASS",
-    "lme4": "lme4",
-    "nlme": "nlme",
-}
+# Our only label rewrite for rdatasets: ``"R"`` (lmpy's name for R's
+# built-in ``datasets`` package — mirrors our ``datasets/R/`` folder, which
+# avoids the ``datasets/datasets/`` path duplication). Every other package
+# label is passed straight through to rdatasets.
+_RDATASETS_PKG_ALIAS = {"R": "datasets"}
 
 
 def factor(
@@ -144,17 +140,18 @@ def _find_schema(package: str, name: str) -> Path | None:
 def _try_load_rdatasets(package: str, name: str) -> pl.DataFrame | None:
     """Load ``(package, name)`` from the ``rdatasets`` package, or None if missing.
 
-    Returns None if ``package`` isn't in ``_RDATASETS_PKG_MAP`` or if the
-    item simply isn't carried by rdatasets (e.g. ``lme4::ergoStool``). The
-    spurious ``rownames`` column rdatasets injects is dropped to match the
-    column shape of our bundled CSVs.
+    Tries ``package`` (after the ``R`` → ``datasets`` alias) against the
+    rdatasets package list, then against its item list. Returns None if
+    either lookup fails — caller falls back to bundled CSV / download.
+    The spurious ``rownames`` column rdatasets injects is dropped to match
+    the column shape of our bundled CSVs.
     """
-    rd_pkg = _RDATASETS_PKG_MAP.get(package)
-    if rd_pkg is None:
-        return None
     try:
         import rdatasets
     except ImportError:
+        return None
+    rd_pkg = _RDATASETS_PKG_ALIAS.get(package, package)
+    if rd_pkg not in rdatasets.packages():
         return None
     items = {it.removesuffix(".pkl") for it in rdatasets.items(rd_pkg)}
     if name not in items:
@@ -216,14 +213,16 @@ def data(name: str, package: str = "R", save_to: str = "./data",
 
     Resolution order:
 
-    1. ``rdatasets`` — used whenever ``package`` is one of ``R`` (R's
-       built-in ``datasets``), ``MASS``, ``lme4``, ``nlme`` AND the item
-       is carried there. Offline, deterministic, ships with the package.
-       The ``rownames`` column rdatasets injects is dropped.
+    1. ``rdatasets`` — tried for any package it carries (``MASS``,
+       ``lme4``, ``nlme``, ``HistData``, ``ggplot2``, ``palmerpenguins``,
+       …75 packages — see ``rdatasets.packages()``). The label ``"R"`` is
+       aliased to rdatasets's ``"datasets"`` (R's built-in data). Offline,
+       deterministic, ships with the package. The ``rownames`` column
+       rdatasets injects is dropped.
     2. Bundled ``datasets/{package}/{name}.csv`` walked up from CWD —
        used for ``faraway``/``gamair``/``mgcv``/``rstanarm``/``synthetic``
-       and for the few items rdatasets doesn't carry (e.g.
-       ``lme4::ergoStool``).
+       (not in rdatasets) and the few items rdatasets doesn't carry
+       (e.g. ``lme4::ergoStool``).
     3. CSV download into ``save_to/{package}/{name}.csv`` — last resort,
        used when ``lmpy`` is installed outside the source repo and no
        bundled CSV exists. Pass ``overwrite=True`` to force a re-fetch.
