@@ -322,6 +322,7 @@ class lme:
         self.bhat = pl.DataFrame(
             {c: [float(beta[i])] for i, c in enumerate(self.column_names)}
         )
+        self.fixef = self.bhat                            # R-canonical alias
         self.se_bhat = pl.DataFrame(
             {c: [float(se_beta[i])] for i, c in enumerate(self.column_names)}
         )
@@ -938,6 +939,29 @@ class lme:
         self._ranef_cache = out
         return out
 
+    @property
+    def ranef(self) -> dict[str, pl.DataFrame]:
+        """BLUPs per random-effect bar — lme4's ``ranef(m)`` shape.
+
+        Returns one polars DataFrame per bar (keyed by bar name, e.g.
+        ``"Subject"``, or ``"Subject.1"`` when the same grouping factor
+        appears twice). First column carries the level labels under the
+        grouping factor's name; remaining columns are the BLUPs, one per
+        random-effect component (``(Intercept)``, slope names, …).
+        """
+        out: dict[str, pl.DataFrame] = {}
+        for key, levels, cnames, b_mat, _se in self._ranef():
+            gname = key
+            if gname not in self.n_groups:
+                base, _, tail = key.rpartition(".")
+                if tail.isdigit() and base in self.n_groups:
+                    gname = base
+            cols: dict[str, list] = {gname: list(levels)}
+            for j, cn in enumerate(cnames):
+                cols[cn] = b_mat[:, j].tolist()
+            out[key] = pl.DataFrame(cols)
+        return out
+
     def _pooled_std_blups(self) -> np.ndarray:
         """All BLUPs concatenated, each component scaled by its model SD.
 
@@ -1332,6 +1356,7 @@ class Profile:
     def plot_pairs(
         self, *,
         which: list[str] | None = None,
+        transform: str | None = None,
         levels: tuple[float, ...] = (0.50, 0.80, 0.90, 0.95, 0.99),
         figsize: tuple[float, float] | None = None,
     ):
@@ -1342,6 +1367,13 @@ class Profile:
         Upper triangle: same contours/traces mapped through each
         parameter's backward spline ``v(ζ)`` into *original* parameter
         space ``(vⱼ, vᵢ)``. Diagonal: parameter labels.
+
+        Pass ``transform="log"`` to reproduce Bates Fig 2.7 — the
+        equivalent of R's ``splom(log(profile(fm)))``. ζ is invariant
+        under monotone reparameterization, so only the upper-triangle
+        v-space panels and the diagonal/axis labels change; log is
+        applied to variance-component SDs (``.sig*``, ``.sigma``) only,
+        leaving fixed-effect parameters on their natural scale.
 
         The contour at confidence level α is built (Bates, lme4 § 1.5)
         from four anchor points where the level-α curve crosses the
@@ -1371,6 +1403,28 @@ class Profile:
         zeta_levels = np.sqrt(chi2.ppf(np.asarray(levels), 2))
         mlev = float(zeta_levels.max())
 
+        # Per-parameter v-transform. Matches R's log.thpr / logProf:
+        # log applies to .sig* and .sigma only; fixed effects keep
+        # natural scale.
+        if transform is None:
+            tx_fn: dict[str, "Callable[[np.ndarray], np.ndarray]"] = {
+                name: (lambda x: np.asarray(x)) for name in names
+            }
+            tx_label = {name: name for name in names}
+        elif transform == "log":
+            tx_fn = {
+                name: (np.log if name.startswith(".sig") else (lambda x: np.asarray(x)))
+                for name in names
+            }
+            tx_label = {
+                name: (f"log({name})" if name.startswith(".sig") else name)
+                for name in names
+            }
+        else:
+            raise ValueError(
+                f"unknown transform {transform!r}; use 'log' or None"
+            )
+
         fwd: dict[str, PchipInterpolator] = {}
         bwd: dict[str, PchipInterpolator] = {}
         v_lim: dict[str, tuple[float, float]] = {}
@@ -1382,14 +1436,16 @@ class Profile:
             v_s, s_s = v[order], s[order]
             fwd[name] = PchipInterpolator(v_s, s_s, extrapolate=False)
             order_z = np.argsort(s_s)
-            bwd[name] = PchipInterpolator(s_s[order_z], v_s[order_z], extrapolate=False)
+            v_t = tx_fn[name](v_s)
+            bwd[name] = PchipInterpolator(s_s[order_z], v_t[order_z], extrapolate=False)
             # v-axis limits — match R splom.thpr: backward-spline at ±mlev,
             # then clip to the profile grid range so we never advertise an
             # axis range we don't actually have data for.
             v_lo = bwd[name](-mlev)
             v_hi = bwd[name](+mlev)
-            v_lo = float(v_s[0])  if not np.isfinite(v_lo) else float(max(v_lo, v_s[0]))
-            v_hi = float(v_s[-1]) if not np.isfinite(v_hi) else float(min(v_hi, v_s[-1]))
+            v_t_min, v_t_max = float(v_t.min()), float(v_t.max())
+            v_lo = v_t_min if not np.isfinite(v_lo) else float(max(v_lo, v_t_min))
+            v_hi = v_t_max if not np.isfinite(v_hi) else float(min(v_hi, v_t_max))
             v_lim[name] = (v_lo, v_hi)
 
         def _trace_zeta(prof_name: str, other_name: str) -> tuple[np.ndarray, np.ndarray]:
@@ -1554,7 +1610,7 @@ class Profile:
                 vid_col = c
                 if vid_row == vid_col:
                     ax.text(
-                        0.5, 0.5, names[vid_row], ha="center", va="center",
+                        0.5, 0.5, tx_label[names[vid_row]], ha="center", va="center",
                         transform=ax.transAxes, fontsize=12,
                     )
                     ax.set_xticks([])
@@ -1578,9 +1634,9 @@ class Profile:
                 else:
                     _draw_v_panel(ax, info, ni, nj, x_is_i=x_is_i)
                 if c == 0:
-                    ax.set_ylabel(names[vid_row])
+                    ax.set_ylabel(tx_label[names[vid_row]])
                 if r == n - 1:
-                    ax.set_xlabel(names[vid_col])
+                    ax.set_xlabel(tx_label[names[vid_col]])
 
         fig.tight_layout()
         return fig

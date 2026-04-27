@@ -342,6 +342,60 @@ def test_bates_2_6_penicillin_fm03_ML_profile_pairs():
     np.testing.assert_allclose(ax_zeta.get_ylim(), (-1.05 * mlev, 1.05 * mlev))
 
 
+def test_bates_2_7_penicillin_fm03_ML_profile_pairs_log():
+    """plot_pairs(transform="log") (Bates Fig 2.7): the log-scale variant
+    of the splom, R's ``splom(log(profile(fm03)))``.
+
+    ζ is invariant under monotone v-reparameterization, so the
+    zeta-space lower triangle is bit-identical to Fig 2.6; only the
+    upper-triangle v-space axis limits change (log applied to .sig*,
+    .sigma) and diagonal labels become ``log(.sigXX)``. Reference
+    bwd-spline values come from R's
+    ``predict(attr(log(profile(fm03)),"backward")[[nm]], ±mlev)$y``.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    from scipy.stats import chi2 as _chi2
+
+    data = load_dataset("lme4", "Penicillin")
+    m = lme("diameter ~ 1 + (1|plate) + (1|sample)", data, REML=False)
+    pr = m.profile(n_grid=41)
+
+    fig = pr.plot_pairs(transform="log")
+    n = 4
+    assert len(fig.axes) == n * n
+
+    # Diagonal labels: log() wraps variance components only; (Intercept)
+    # stays on natural scale (matches R's logProf with signames=FALSE).
+    diag_axes = [fig.axes[r * n + (n - 1 - r)] for r in range(n)]
+    diag_labels = [ax.texts[0].get_text() for ax in diag_axes]
+    assert diag_labels == ["(Intercept)", "log(.sigma)", "log(.sig02)", "log(.sig01)"]
+
+    # Zeta-space lower triangle: still ±1.05·mlev — log on v doesn't move ζ.
+    mlev = float(np.sqrt(_chi2.ppf(0.99, 2)))
+    ax_zeta = fig.axes[3 * n + 1]
+    np.testing.assert_allclose(ax_zeta.get_xlim(), (-1.05 * mlev, 1.05 * mlev))
+    np.testing.assert_allclose(ax_zeta.get_ylim(), (-1.05 * mlev, 1.05 * mlev))
+
+    # v-space upper triangle: each parameter's axis runs from
+    # bwd[name](-mlev) to bwd[name](+mlev), in log space for .sig*.
+    # Top row of the splom (r=0) is the (Intercept) row across all cols.
+    # axis layout: at r=0,c=k the cell is (vid_row=3=(Intercept), vid_col=k).
+    # x-axis = column parameter, y-axis = (Intercept).
+    # R reference (predict(bwd[[name]], ±mlev)$y from log(profile)):
+    r_ref = {
+        ".sig01":     (-0.601424,  0.377905),
+        ".sig02":     (-0.114746,  1.797648),
+        ".sigma":     (-0.785579, -0.383550),
+        "(Intercept)": (19.565139, 26.379308),
+    }
+    col_names = [".sig01", ".sig02", ".sigma"]  # cols 0..2 in display
+    for c, name in enumerate(col_names):
+        ax = fig.axes[0 * n + c]
+        np.testing.assert_allclose(ax.get_xlim(), r_ref[name], atol=1e-3)
+        np.testing.assert_allclose(ax.get_ylim(), r_ref["(Intercept)"], atol=1e-3)
+
+
 def test_bates_2_2_pastes_fm04_ML():
     """fm04 <- lmer(strength ~ 1 + (1|sample) + (1|batch), Pastes, REML=FALSE)"""
     data = load_dataset("lme4", "Pastes")
