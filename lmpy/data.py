@@ -137,14 +137,30 @@ def _find_schema(package: str, name: str) -> Path | None:
     return None
 
 
+def _normalize_rownames(df: pl.DataFrame) -> pl.DataFrame:
+    """Standardize the row-id column rdatasets injects.
+
+    rdatasets always adds a ``rownames`` column; we rename it to
+    ``rowname`` (singular — tibble convention, matches what
+    ``export_data.R`` writes for bundled CSVs) and drop it entirely when
+    the values are just sequential ``1..n``, which carries no information.
+    """
+    if "rownames" not in df.columns:
+        return df
+    rn = df["rownames"]
+    if rn.dtype.is_integer() and rn.to_list() == list(range(1, df.height + 1)):
+        return df.drop("rownames")
+    return df.rename({"rownames": "rowname"})
+
+
 def _try_load_rdatasets(package: str, name: str) -> pl.DataFrame | None:
     """Load ``(package, name)`` from the ``rdatasets`` package, or None if missing.
 
     Tries ``package`` (after the ``R`` → ``datasets`` alias) against the
     rdatasets package list, then against its item list. Returns None if
     either lookup fails — caller falls back to bundled CSV / download.
-    The spurious ``rownames`` column rdatasets injects is dropped to match
-    the column shape of our bundled CSVs.
+    The injected ``rownames`` column is normalized via
+    ``_normalize_rownames``.
     """
     try:
         import rdatasets
@@ -157,9 +173,7 @@ def _try_load_rdatasets(package: str, name: str) -> pl.DataFrame | None:
     if name not in items:
         return None
     df = pl.from_pandas(rdatasets.data(rd_pkg, name))
-    if "rownames" in df.columns:
-        df = df.drop("rownames")
-    return df
+    return _normalize_rownames(df)
 
 
 # Accumulator for ordered-factor columns across data() calls within a session,

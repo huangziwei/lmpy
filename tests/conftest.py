@@ -65,11 +65,22 @@ _current_ordered_cols: "set[str]" = set()
 def load_dataset(pkg: str, name: str) -> pl.DataFrame:
     """Test-side dataset loader. Delegates to ``lmpy.data.data`` (which
     routes to ``rdatasets`` when covered, bundled CSV otherwise) and caches
-    the result so repeated fixture loads are cheap."""
+    the result so repeated fixture loads are cheap.
+
+    Drops the ``rowname`` column (R's row.names preserved on the bundled-CSV
+    side, ``rownames`` injected on the rdatasets side). All R-side fixtures
+    were generated without it, so ``y ~ .`` expansions and column lists
+    would mismatch otherwise. User-facing ``lmpy.data.data`` keeps the
+    column — that's the whole point of preserving meaningful row names
+    like the Galápagos island IDs in ``faraway::gala``.
+    """
     from lmpy.data import data as _data
     key = (pkg, name)
     if key not in _data_cache:
-        _data_cache[key] = _data(name, _pkg_subdir(pkg))
+        df = _data(name, _pkg_subdir(pkg))
+        if "rowname" in df.columns:
+            df = df.drop("rowname")
+        _data_cache[key] = df
     # `lmpy.data` already registers ordered-factor columns globally, but the
     # autouse `_reset_ordered_cols` fixture clears them per-test. Re-register
     # here so the contextvar accumulates across multiple loads inside one test.

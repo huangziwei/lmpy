@@ -13,8 +13,14 @@ suppressPackageStartupMessages({
 })
 
 OUT_ROOT <- "datasets"
-PKGS <- c("datasets", "MASS", "nlme", "lme4", "mgcv", "faraway", "gamair",
-          "splines", "stats")
+# Packages we still bundle as CSVs because rdatasets doesn't carry them.
+# MASS, nlme, datasets, and most of lme4 are sourced from rdatasets at runtime
+# (see lmpy/data.py and the cleanup in /Users/ziweih/Works/lmpy/datasets/),
+# so re-exporting them here would just re-fill slots we just deleted.
+PKGS <- c("mgcv", "faraway", "gamair", "splines", "stats")
+# A few lme4 datasets aren't carried by rdatasets — keep these bundled.
+LME4_KEEP <- c("InstEval_sample", "cbpp2", "culcitalogreg", "culcitalvolume",
+               "ergoStool", "gopherdat2", "salamander", "schizophrenia", "toenail")
 
 dir.create(OUT_ROOT, showWarnings = FALSE, recursive = TRUE)
 
@@ -41,11 +47,23 @@ special <- list(
 # `datasets/R/` to avoid `datasets/datasets/` path duplication.
 pkg_dir <- function(pkg) if (pkg == "datasets") "R" else pkg
 
+# True when row.names are just sequential "1".."n" — i.e. R's default and
+# carry no actual information. Anything else (character names like the
+# Galápagos islands in faraway::gala, or non-sequential integer IDs from
+# subsetted frames in gamair) is a row identifier worth preserving.
+trivial_rownames <- function(df) {
+  rn <- rownames(df)
+  is.null(rn) || identical(rn, as.character(seq_len(nrow(df))))
+}
+
 write_csv <- function(df, pkg, name) {
   sub <- pkg_dir(pkg)
   dir.create(file.path(OUT_ROOT, sub), showWarnings = FALSE, recursive = TRUE)
   path <- file.path(OUT_ROOT, sub, paste0(name, ".csv"))
   if (file.exists(path)) return(FALSE)
+  if (!trivial_rownames(df)) {
+    df <- cbind(rowname = rownames(df), df, stringsAsFactors = FALSE)
+  }
   write.csv(df, path, row.names = FALSE, na = "NA")
   write_schema(df, pkg, name)
   TRUE
@@ -108,6 +126,23 @@ for (pkg in PKGS) {
     if (nrow(df) < 3 || ncol(df) < 1) { non_df <- non_df + 1; next }
 
     if (write_csv(df, pkg, name)) ok <- ok + 1 else skipped <- skipped + 1
+  }
+}
+
+# 1b. lme4 — only the items rdatasets doesn't carry. Most of lme4 is sourced
+# from rdatasets at runtime (see _RDATASETS_PKG_ALIAS in lmpy/data.py).
+if (requireNamespace("lme4", quietly = TRUE)) {
+  for (name in LME4_KEEP) {
+    path <- file.path(OUT_ROOT, "lme4", paste0(name, ".csv"))
+    if (file.exists(path)) { skipped <- skipped + 1; next }
+    df <- tryCatch({
+      e <- new.env()
+      data(list = name, package = "lme4", envir = e)
+      get(name, envir = e)
+    }, error = function(err) err, warning = function(w) w)
+    if (inherits(df, "error") || inherits(df, "warning")) { err <- err + 1; next }
+    if (!is.data.frame(df)) { non_df <- non_df + 1; next }
+    if (write_csv(df, "lme4", name)) ok <- ok + 1
   }
 }
 
