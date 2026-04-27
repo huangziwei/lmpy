@@ -133,6 +133,31 @@ def test_bates_1_4_dyestuff_fm01_ML_profile_confint():
     np.testing.assert_allclose(ci95["97.5%"], [84.0631, 67.6577, 1568.548], atol=0.1)
 
 
+def test_bates_1_4_dyestuff_fm01_ML_plot_density():
+    """plot_density() — profile-implied density peaks pinned to lme4:::dens."""
+    import matplotlib
+    matplotlib.use("Agg")
+    data = load_dataset("lme4", "Dyestuff")
+    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
+    pr = m.profile()
+    fig = pr.plot_density()
+    peaks = {}
+    for ax in fig.axes:
+        x, y = ax.get_lines()[0].get_xdata(), ax.get_lines()[0].get_ydata()
+        peaks[ax.get_title()] = (float(y.max()), float(x[np.argmax(y)]))
+    # lme4:::dens reference, npts=201, upper=0.999. Peak heights agree to
+    # ~1e-3; peak x can differ a bit (lme4 uses cubic spline, lmpy uses
+    # monotone PCHIP) so widen the location tolerance.
+    for name, (h_ref, x_ref), x_atol in [
+        (".sig01",      (0.0287, 33.095),  1.0),
+        (".sigma",      (0.0574, 47.817),  1.0),
+        ("(Intercept)", (0.0225, 1527.5),  2.0),
+    ]:
+        h, x = peaks[name]
+        np.testing.assert_allclose(h, h_ref, atol=2e-3)
+        np.testing.assert_allclose(x, x_ref, atol=x_atol)
+
+
 def test_bates_1_4_dyestuff2_fm02_REML():
     """fm02 <- lmer(Yield ~ 1 + (1|Batch), Dyestuff2)  -- singular fit, σ₁=0"""
     data = load_dataset("lme4", "Dyestuff2")

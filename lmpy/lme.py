@@ -1099,5 +1099,56 @@ class Profile:
         fig.tight_layout()
         return fig
 
+    def plot_density(
+        self, npts: int = 201, upper: float = 0.999,
+        figsize: tuple[float, float] | None = None,
+    ):
+        """Profile-implied density plot — Pythonic ``densityplot(profile(...))``.
+
+        For each parameter, plots φ(ζ(v))·|dζ/dv| against v: the Jacobian
+        transform of N(0,1) in ζ to a density on the parameter scale.
+        ζ(v) is interpolated with a PCHIP spline (monotone-preserving) and
+        differentiated analytically. The x-range is restricted to ζ within
+        ±Φ⁻¹(``upper``); for variance-component SDs the lower bound is
+        clipped to 0.
+        """
+        import matplotlib.pyplot as plt
+        from scipy.interpolate import PchipInterpolator
+        from scipy.stats import norm
+
+        names = list(self.data.keys())
+        n = len(names)
+        fig, axes = plt.subplots(
+            1, n, figsize=figsize or (3.2 * n, 3.0), sharey=False,
+        )
+        if n == 1:
+            axes = [axes]
+
+        z_max = float(norm.ppf(upper))
+        for ax, name in zip(axes, names):
+            df = self.data[name]
+            v = df["value"].to_numpy()
+            s = df["zeta"].to_numpy()
+            order = np.argsort(v)
+            v_s, s_s = v[order], s[order]
+            spl = PchipInterpolator(v_s, s_s, extrapolate=True)
+            lo_fb = 0.0 if name.startswith(".sig") else float("nan")
+            v_lo = _invert_zeta(v, s, -z_max, fallback=lo_fb)
+            v_hi = _invert_zeta(v, s, +z_max)
+            if not np.isfinite(v_lo):
+                v_lo = float(v_s[0])
+            if not np.isfinite(v_hi):
+                v_hi = float(v_s[-1])
+            grid = np.linspace(v_lo, v_hi, npts)
+            zeta_g = spl(grid)
+            dz_dv = spl.derivative()(grid)
+            density = norm.pdf(zeta_g) * np.abs(dz_dv)
+            ax.plot(grid, density, lw=1)
+            ax.set_title(name)
+            ax.set_xlabel(name)
+        axes[0].set_ylabel("density")
+        fig.tight_layout()
+        return fig
+
     def __repr__(self) -> str:
         return f"Profile({list(self.data)})"
