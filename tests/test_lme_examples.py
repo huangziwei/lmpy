@@ -133,6 +133,45 @@ def test_bates_1_4_dyestuff_fm01_ML_profile_confint():
     np.testing.assert_allclose(ci95["97.5%"], [84.0631, 67.6577, 1568.548], atol=0.1)
 
 
+def test_bates_1_4_dyestuff_fm01_ML_plot_fig17():
+    """plot(which=, transform=, ax=) building blocks for Bates Fig. 1.7."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    data = load_dataset("lme4", "Dyestuff")
+    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
+    pr = m.profile()
+
+    fig, axes = plt.subplots(1, 3, sharey=True)
+    pr.plot(which=".sigma", transform="log",    ax=axes[0])
+    pr.plot(which=".sigma",                     ax=axes[1])
+    pr.plot(which=".sigma", transform="square", ax=axes[2])
+
+    x_log = axes[0].get_lines()[0].get_xdata()
+    x_id  = axes[1].get_lines()[0].get_xdata()
+    x_sq  = axes[2].get_lines()[0].get_xdata()
+    np.testing.assert_allclose(x_log, np.log(x_id))
+    np.testing.assert_allclose(x_sq, x_id ** 2)
+    assert axes[0].get_title() == "log(.sigma)"
+    assert axes[1].get_title() == ".sigma"
+    assert axes[2].get_title() == ".sigma²"
+    assert all(ax.get_xlabel() == ".sigma" for ax in axes)
+
+    # Single-parameter via which= without ax= still builds its own figure.
+    fig2 = pr.plot(which=".sigma")
+    assert [a.get_title() for a in fig2.axes] == [".sigma"]
+
+    # ax= with multiple parameters is rejected.
+    fig3, ax3 = plt.subplots()
+    try:
+        pr.plot(ax=ax3)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("ax= with all-params should raise")
+
+
 def test_bates_1_4_dyestuff_fm01_ML_plot_density():
     """plot_density() — profile-implied density peaks pinned to lme4:::dens."""
     import matplotlib

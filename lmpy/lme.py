@@ -997,6 +997,19 @@ class lme:
         fig.tight_layout()
 
 
+def _resolve_transform(t):
+    """Map a ``transform=`` argument to a (forward-fn, title-format) pair."""
+    if t is None:
+        return (lambda x: np.asarray(x)), "{}"
+    if callable(t):
+        return t, "{}"
+    if t == "log":
+        return np.log, "log({})"
+    if t in ("square", "sq"):
+        return np.square, "{}²"
+    raise ValueError(f"unknown transform {t!r}; use 'log', 'square', or a callable")
+
+
 def _invert_zeta(
     vals: np.ndarray, zetas: np.ndarray, target: float,
     *, fallback: float = float("nan"),
@@ -1062,41 +1075,84 @@ class Profile:
     def plot(
         self, absolute: bool = False, figsize: tuple[float, float] | None = None,
         levels: tuple[float, ...] = (0.50, 0.80, 0.90, 0.95, 0.99),
+        *,
+        which: str | list[str] | None = None,
+        transform: str | "Callable[[np.ndarray], np.ndarray]" | None = None,
+        ax=None,
     ):
         """Profile zeta plot — the Pythonic replacement for R's
         ``xyplot(profile(...))``. One subplot per parameter; vertical
         gray lines mark the CI cutoffs for each level in ``levels``.
 
-        With ``absolute=True`` plots ``|ζ|`` (matches book Fig. 1.6)."""
+        With ``absolute=True`` plots ``|ζ|`` (matches book Fig. 1.6).
+
+        ``which`` restricts to one parameter (str) or a subset (list).
+        ``transform`` re-scales the x-axis: ``"log"`` for log(v),
+        ``"square"`` for v², or any callable. CI cutoff verticals are
+        forward-transformed too.
+
+        Pass ``ax`` to draw into a pre-existing Axes (requires ``which`` to
+        resolve to a single parameter). Useful for Bates Fig. 1.7-style
+        layouts::
+
+            fig, axes = plt.subplots(1, 3, sharey=True)
+            pr.plot(which=".sigma", transform="log",    ax=axes[0])
+            pr.plot(which=".sigma",                     ax=axes[1])
+            pr.plot(which=".sigma", transform="square", ax=axes[2])
+        """
         import matplotlib.pyplot as plt
         from scipy.stats import norm
 
-        names = list(self.data.keys())
-        n = len(names)
-        fig, axes = plt.subplots(
-            1, n, figsize=figsize or (3.2 * n, 3.0), sharey=False,
-        )
-        if n == 1:
-            axes = [axes]
+        if which is None:
+            names = list(self.data.keys())
+        elif isinstance(which, str):
+            names = [which]
+        else:
+            names = list(which)
+        unknown = [n for n in names if n not in self.data]
+        if unknown:
+            raise KeyError(
+                f"unknown parameter(s) {unknown!r}; available: {list(self.data)!r}"
+            )
+        if ax is not None and len(names) != 1:
+            raise ValueError("ax= requires a single parameter via which='...'")
 
-        for ax, name in zip(axes, names):
+        fwd, title_fmt = _resolve_transform(transform)
+
+        if ax is not None:
+            axes = [ax]
+            fig = ax.figure
+        else:
+            n = len(names)
+            fig, axes_obj = plt.subplots(
+                1, n, figsize=figsize or (3.2 * n, 3.0), sharey=False,
+            )
+            axes = [axes_obj] if n == 1 else list(axes_obj)
+
+        for ax_i, name in zip(axes, names):
             df = self.data[name]
             v = df["value"].to_numpy()
             s = df["zeta"].to_numpy()
+            x = fwd(v)
             y = np.abs(s) if absolute else s
-            ax.plot(v, y, "o-", ms=3, lw=1)
+            ax_i.plot(x, y, "o-", ms=3, lw=1)
             if not absolute:
-                ax.axhline(0, color="k", lw=0.4)
+                ax_i.axhline(0, color="k", lw=0.4)
+            lo_fb = 0.0 if name.startswith(".sig") else float("nan")
             for lvl in levels:
                 z = float(norm.ppf(0.5 + lvl / 2))
                 for tgt in (-z, z):
-                    x0 = _invert_zeta(v, s, tgt)
-                    if np.isfinite(x0):
-                        ax.axvline(x0, color="gray", alpha=0.4, lw=0.5)
-            ax.set_title(name)
-            ax.set_xlabel(name)
-        axes[0].set_ylabel("|ζ|" if absolute else "ζ")
-        fig.tight_layout()
+                    fb = lo_fb if tgt < 0 else float("nan")
+                    v_at = _invert_zeta(v, s, tgt, fallback=fb)
+                    if np.isfinite(v_at):
+                        x_at = fwd(np.asarray(v_at)).item()
+                        if np.isfinite(x_at):
+                            ax_i.axvline(x_at, color="gray", alpha=0.4, lw=0.5)
+            ax_i.set_title(title_fmt.format(name))
+            ax_i.set_xlabel(name)
+        if ax is None:
+            axes[0].set_ylabel("|ζ|" if absolute else "ζ")
+            fig.tight_layout()
         return fig
 
     def plot_density(
