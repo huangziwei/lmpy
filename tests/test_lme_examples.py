@@ -172,6 +172,51 @@ def test_bates_1_4_dyestuff_fm01_ML_plot_fig17():
         raise AssertionError("ax= with all-params should raise")
 
 
+def test_bates_1_4_dyestuff_fm01_ML_plot_ranef_qqranef():
+    """Caterpillar (Fig 1.11) and qqmath (Fig 1.12) of ranef(., condVar=TRUE).
+
+    BLUPs and condSDs pinned to R lme4 4.5; bars use level=0.95 default
+    (±qnorm(0.975)·SE ≈ ±1.96·SE).
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from scipy.stats import norm
+
+    data = load_dataset("lme4", "Dyestuff")
+    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
+
+    # Numerical ranef + condSD pinned to R.
+    [(_, _, _, b_mat, se_mat)] = m._ranef()
+    b_ref  = [-16.628222, 0.369516, 26.974671, -21.801446, 53.579825, -42.494344]
+    sd_ref = [19.03445] * 6
+    np.testing.assert_allclose(b_mat.ravel(),  b_ref,  atol=5e-3)
+    np.testing.assert_allclose(se_mat.ravel(), sd_ref, atol=5e-3)
+
+    # Caterpillar (Fig 1.11): BLUP on x, sorted by BLUP, level index on y.
+    m.plot_ranef(strip=False)
+    ax = plt.gcf().axes[0]
+    assert ax.get_title() == ""
+    ec = ax.containers[0]  # ErrorbarContainer
+    x_dots = ec[0].get_xdata()
+    np.testing.assert_allclose(np.sort(x_dots), np.sort(b_ref), atol=5e-3)
+    plt.close("all")
+
+    # qqmath (Fig 1.12): BLUP on x, normal quantiles (Hazen) on y.
+    m.plot_qq_ranef(strip=False)
+    ax = plt.gcf().axes[0]
+    assert ax.get_title() == ""
+    assert ax.get_ylabel() == "Standard normal quantiles"
+    ec = ax.containers[0]
+    x_dots = ec[0].get_xdata()
+    y_dots = ec[0].get_ydata()
+    n = 6
+    q_expect = norm.ppf((np.arange(1, n + 1) - 0.5) / n)
+    np.testing.assert_allclose(x_dots, np.sort(b_ref), atol=5e-3)
+    np.testing.assert_allclose(y_dots, q_expect, atol=1e-10)
+    plt.close("all")
+
+
 def test_bates_1_4_dyestuff_fm01_ML_plot_density():
     """plot_density() — profile-implied density peaks pinned to lme4:::dens."""
     import matplotlib

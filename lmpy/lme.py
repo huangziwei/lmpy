@@ -919,29 +919,57 @@ class lme:
         ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ Residuals}|}$")
         ax.set_title("Scale-Location")
 
-    def plot_qq_ranef(self, figsize=None, label_n=3):
-        """Per-bar-component Q-Q of BLUPs — checks RE normality."""
+    def plot_qq_ranef(
+        self, figsize=None,
+        *, level: float = 0.95, strip: bool = True,
+    ):
+        """qqmath of BLUPs with conditional-variance bars (Bates Fig. 1.12).
+
+        Pythonic ``qqmath(ranef(., condVar=TRUE), strip=...)``. BLUPs on the
+        x-axis at y = Φ⁻¹((i−0.5)/n) (Hazen plotting position, matches
+        lme4); horizontal bars of half-width Φ⁻¹((1+level)/2)·SE (default
+        95%); vertical line at x=0. ``strip=False`` suppresses per-panel
+        titles.
+        """
+        from scipy.stats import norm
+        z = float(norm.ppf(0.5 + level / 2))
         panels = []
-        for key, levels, cnames, b_mat, _se in self._ranef():
+        for key, _levels, cnames, b_mat, se_mat in self._ranef():
             for j, cname in enumerate(cnames):
-                panels.append((f"{key}: {cname}", b_mat[:, j], levels))
+                panels.append((f"{key}: {cname}", b_mat[:, j], se_mat[:, j]))
         n_panels = len(panels)
         if figsize is None:
             figsize = (3.2 * n_panels, 3.0)
         fig, axes = plt.subplots(1, n_panels, figsize=figsize, squeeze=False)
         axes = axes.ravel()
-        for ax, (title, vals, lvls) in zip(axes, panels):
-            _qq_plot(
-                ax, vals,
-                labels=[str(x) for x in lvls],
-                label_n=label_n,
-                ylabel="Random Effect",
-                title=title,
+        for ax, (title, b, se) in zip(axes, panels):
+            order = np.argsort(b)
+            b_s = b[order]
+            se_s = se[order]
+            n = len(b_s)
+            q = norm.ppf((np.arange(1, n + 1) - 0.5) / n)
+            ax.grid(True, color="lightgray", linewidth=0.4)
+            ax.axvline(0, color="black", linewidth=0.8)
+            ax.errorbar(
+                b_s, q, xerr=z * se_s, fmt="o", color="black",
+                ecolor="black", markersize=3, linewidth=0.8, capsize=0,
             )
+            ax.set_ylabel("Standard normal quantiles")
+            ax.set_title(title if strip else "")
         fig.tight_layout()
 
-    def plot_ranef(self, figsize=None):
-        """Caterpillar plot — BLUP ± posterior SE per level, sorted."""
+    def plot_ranef(
+        self, figsize=None,
+        *, level: float = 0.95, strip: bool = True,
+    ):
+        """Caterpillar plot — BLUP ± Φ⁻¹((1+level)/2)·SE per level, sorted.
+
+        Pythonic ``dotplot(ranef(., condVar=TRUE))``: defaults to 95%
+        prediction intervals to match lme4. ``strip=False`` suppresses
+        per-panel titles (Bates Fig. 1.5 convention).
+        """
+        from scipy.stats import norm
+        z = float(norm.ppf(0.5 + level / 2))
         panels = []
         for key, levels, cnames, b_mat, se_mat in self._ranef():
             for j, cname in enumerate(cnames):
@@ -962,10 +990,12 @@ class lme:
             labels_sorted = [str(levels[i]) for i in order]
             n = len(b)
             y_pos = np.arange(n)
+            for y in y_pos:
+                ax.axhline(y, color="lightgray", linewidth=0.4, zorder=0)
             ax.errorbar(
-                b_sorted, y_pos, xerr=se_sorted,
-                fmt="o", color="black", ecolor="gray",
-                markersize=3, capsize=2, linewidth=0.8,
+                b_sorted, y_pos, xerr=z * se_sorted,
+                fmt="o", color="black", ecolor="black",
+                markersize=3, capsize=0, linewidth=0.8,
             )
             ax.axvline(0, color="black", linestyle="--", linewidth=0.8)
             ax.set_yticks(y_pos)
@@ -974,7 +1004,7 @@ class lme:
             else:
                 ax.set_yticklabels([])
             ax.set_xlabel("Random Effect")
-            ax.set_title(title)
+            ax.set_title(title if strip else "")
         fig.tight_layout()
 
     def plot(self, figsize=None, smooth=True, label_n=3):
