@@ -169,14 +169,14 @@ def test_faraway_4_2_fat_predict():
     # Prediction at the per-feature median (notebook 4.2 cells 1cae/ee3a).
     x0 = m.X.median()
     pred_pi = m.predict(new=x0, interval="prediction")
-    np.testing.assert_allclose(pred_pi["Fitted"][0],    17.49322,  atol=5e-4)
-    np.testing.assert_allclose(pred_pi["PI[2.5%]"][0],   9.337654, atol=5e-4)
-    np.testing.assert_allclose(pred_pi["PI[97.5]%"][0], 25.648786, atol=5e-4)
+    np.testing.assert_allclose(pred_pi["Fitted"][0],    17.49322, atol=5e-4)
+    np.testing.assert_allclose(pred_pi["PI[2.5%]"][0],    9.61783, atol=5e-4)
+    np.testing.assert_allclose(pred_pi["PI[97.5]%"][0],  25.36861, atol=5e-4)
 
     pred_ci = m.predict(new=x0, interval="confidence")
-    np.testing.assert_allclose(pred_ci["Fitted"][0],    17.49322,  atol=5e-4)
-    np.testing.assert_allclose(pred_ci["CI[2.5%]"][0],  15.303962, atol=5e-4)
-    np.testing.assert_allclose(pred_ci["CI[97.5]%"][0], 19.682478, atol=5e-4)
+    np.testing.assert_allclose(pred_ci["Fitted"][0],    17.49322, atol=5e-4)
+    np.testing.assert_allclose(pred_ci["CI[2.5%]"][0],  16.94426, atol=5e-4)
+    np.testing.assert_allclose(pred_ci["CI[97.5]%"][0], 18.04219, atol=5e-4)
 
 
 # ---------------------------------------------------------------------------

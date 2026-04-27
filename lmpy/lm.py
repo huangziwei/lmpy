@@ -437,12 +437,9 @@ class lm:
         else:
             X = materialize(self._expanded, Xnew).to_numpy().astype(float)
 
-        sigma = self.sigma
-        sigma_squared = self.sigma_squared
-
-        V_yhat = X @ self.XtXinv @ X.T * sigma_squared
-
-        se_yhat_mean = np.sqrt(np.diag(V_yhat)) * sigma
+        # Var(ŷ) = σ² · x'(X'X)⁻¹x  ⇒  se = √diag(σ² · X(X'X)⁻¹Xᵀ).
+        var_mean = np.einsum("ij,jk,ik->i", X, self.XtXinv, X) * self.sigma_squared
+        se_yhat_mean = np.sqrt(np.maximum(var_mean, 0.0))
         yhat_vals = yhat["Fitted"].to_numpy().astype(float)[:, None]
         ci = (
             t.ppf(1 - alpha / 2, self.df_residuals)
@@ -464,12 +461,9 @@ class lm:
         else:
             X = materialize(self._expanded, Xnew).to_numpy().astype(float)
 
-        sigma = self.sigma
-        sigma_squared = self.sigma_squared
-
-        V_yhat = X @ self.XtXinv @ X.T * sigma_squared
-
-        se_yhat = np.sqrt(1 + np.diag(V_yhat)) * sigma
+        # Var(y_new − ŷ) = σ²·(1 + x'(X'X)⁻¹x).
+        var_mean = np.einsum("ij,jk,ik->i", X, self.XtXinv, X) * self.sigma_squared
+        se_yhat = np.sqrt(self.sigma_squared + np.maximum(var_mean, 0.0))
         yhat_vals = yhat["Fitted"].to_numpy().astype(float)[:, None]
         pi = (
             t.ppf(1 - alpha / 2, self.df_residuals)
