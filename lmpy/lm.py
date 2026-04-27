@@ -538,6 +538,39 @@ class lm:
         row = " ".join(v.rjust(w) for v, w in zip(vals, widths))
         return ["Residuals:", hdr, row]
 
+    def _correlation_block(self) -> str:
+        # cov2cor(vcov(m)) — correlation between coefficient estimates,
+        # including the intercept. Layout mirrors R's print.summary.lm:
+        # strict lower triangle, first row and last column dropped.
+        sd = np.sqrt(np.diag(self.V_bhat))
+        corr = self.V_bhat / np.outer(sd, sd)
+        names = self.column_names
+        rows, cols = names[1:], names[:-1]
+        # R's format() pads non-negatives with a leading space iff the
+        # displayed values contain any negative (so signs line up).
+        tri_vals = [corr[i + 1, j] for i in range(len(rows)) for j in range(i + 1)]
+        pad_pos = any(v < 0 for v in tri_vals)
+        def fmt(v: float) -> str:
+            s = f"{v:.2f}"
+            return s if s.startswith("-") or not pad_pos else " " + s
+        cells = [
+            [fmt(corr[i + 1, j]) if j <= i else "" for j in range(len(cols))]
+            for i in range(len(rows))
+        ]
+        col_w = [
+            max(len(cols[j]), max(len(cells[i][j]) for i in range(len(rows))))
+            for j in range(len(cols))
+        ]
+        row_w = max(len(r) for r in rows)
+        hdr = " " * row_w + " " + " ".join(c.ljust(w) for c, w in zip(cols, col_w))
+        lines = [hdr.rstrip()]
+        for i, r in enumerate(rows):
+            line = r.ljust(row_w) + " " + " ".join(
+                cells[i][j].ljust(col_w[j]) for j in range(len(cols))
+            )
+            lines.append(line.rstrip())
+        return "\n".join(lines)
+
     def summary(self, digits=4, cor=False):
 
         docstring = f"""Formula: {self.formula}\n\n"""
@@ -589,19 +622,9 @@ class lm:
 
         docstring += f"Log Likelihood = {self.loglike:.4f}, AIC = {self.AIC:.4f}, BIC = {self.BIC:.4f}"
 
-        if cor is True:
+        if cor is True and self.V_bhat.shape[0] >= 2:
             docstring += "\n\nCorrelation of Coefficients:\n"
-            if "(Intercept)" in self.column_names:
-                corr_df = self.X.drop("(Intercept)").corr()
-            else:
-                corr_df = self.X.corr()
-            corr_rounded = corr_df.with_columns(
-                [pl.col(c).round(2) for c in corr_df.columns]
-            )
-            labeled = corr_rounded.insert_column(
-                0, pl.Series("", corr_df.columns)
-            )
-            docstring += format_df(labeled)
+            docstring += self._correlation_block()
 
         print(docstring)
 
