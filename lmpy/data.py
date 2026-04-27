@@ -26,7 +26,12 @@ from .formula import set_ordered_cols
 __all__ = ["data", "factor"]
 
 
-def factor(series: pl.Series, levels=None, ordered: bool = False) -> pl.Series:
+def factor(
+    series: pl.Series,
+    levels=None,
+    labels: dict | None = None,
+    ordered: bool = False,
+) -> pl.Series:
     """Polars equivalent of R's ``factor()`` — cast a Series to ``pl.Enum``.
 
     Use with ``df.with_columns(factor(df["col"]))``. The returned Series
@@ -38,11 +43,20 @@ def factor(series: pl.Series, levels=None, ordered: bool = False) -> pl.Series:
         Column to convert. Int64 inputs route through Utf8 (``pl.Enum``
         can't accept integers directly).
     levels : list | None, optional
-        Level order. If None, auto-detected via ``unique().sort()`` on the
-        string-cast values — that's Unicode collation, which can diverge
-        from R's locale-aware ``factor()`` default for non-ASCII or
-        punctuation-heavy levels. For poly contrasts on ordered factors,
-        pass levels explicitly to control the order.
+        Level order, no relabel. If None, auto-detected via
+        ``unique().sort()`` on the string-cast values — that's Unicode
+        collation, which can diverge from R's locale-aware ``factor()``
+        default for non-ASCII or punctuation-heavy levels. For poly
+        contrasts on ordered factors, pass levels explicitly to control
+        the order. Mutually exclusive with ``labels``.
+    labels : dict | None, optional
+        ``{level: label}`` mapping that combines R's ``factor(x, levels=,
+        labels=)`` into one argument: keys are the expected raw values
+        (insertion order = level order), values are the displayed labels.
+        Errors if the column contains a value not in ``labels.keys()``
+        (via ``replace_strict``). Use this for coded integer columns —
+        e.g. ``factor(s, labels={0: "no", 1: "yes"})`` collapses cast +
+        rename into one pass. Mutually exclusive with ``levels``.
     ordered : bool, optional
         If True, also register the series's name in lmpy's ordered-cols
         contextvar so subsequent ``gam``/``lm``/``lme`` calls in this
@@ -51,12 +65,30 @@ def factor(series: pl.Series, levels=None, ordered: bool = False) -> pl.Series:
         ``ordered=False`` does NOT remove an already-registered name —
         call ``set_ordered_cols(frozenset())`` to clear.
     """
+    if levels is not None and labels is not None:
+        raise ValueError(
+            "factor(): pass either `levels=` (list, reorder only) or "
+            "`labels=` (dict {level: label}, reorder + rename), not both."
+        )
+    if isinstance(levels, dict):
+        raise TypeError(
+            "factor(): `levels=` expects a list/sequence, not a dict. "
+            "For {level: label} mapping, pass it as `labels=` instead."
+        )
+
     s = series.cast(pl.Utf8)
-    if levels is None:
-        levels_list = s.drop_nulls().unique().sort().to_list()
+
+    if labels is not None:
+        old = [str(k) for k in labels.keys()]
+        new = [str(v) for v in labels.values()]
+        out = s.replace_strict(old, new, return_dtype=pl.Enum(new))
     else:
-        levels_list = [str(v) for v in levels]
-    out = s.cast(pl.Enum(levels_list))
+        if levels is None:
+            levels_list = s.drop_nulls().unique().sort().to_list()
+        else:
+            levels_list = [str(v) for v in levels]
+        out = s.cast(pl.Enum(levels_list))
+
     if ordered and series.name:
         from .formula import _ORDERED_COLS_CV
         set_ordered_cols(_ORDERED_COLS_CV.get() | frozenset({series.name}))

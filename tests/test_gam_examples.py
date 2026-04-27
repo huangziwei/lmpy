@@ -384,6 +384,29 @@ def test_factor_helper():
     factor(df["Worker"], ordered=False)
     assert "Worker" in _ORDERED_COLS_CV.get(), "ordered=False shouldn't unregister"
 
+    # labels= dict: reorder + rename in one pass (R's factor(x, levels=, labels=))
+    test = pl.Series("test", [0, 1, 1, 0, 1])
+    out_l = factor(test, labels={0: "negative", 1: "positive"})
+    assert out_l.dtype.categories.to_list() == ["negative", "positive"]
+    assert out_l.to_list() == ["negative", "positive", "positive", "negative", "positive"]
+    assert out_l.name == "test"
+
+    # dict insertion order controls level order (= reference level)
+    out_rev = factor(test, labels={1: "positive", 0: "negative"})
+    assert out_rev.dtype.categories.to_list() == ["positive", "negative"]
+
+    # column value missing from labels keys → replace_strict errors
+    with pytest.raises(pl.exceptions.InvalidOperationError):
+        factor(pl.Series([0, 1, 2]), labels={0: "a", 1: "b"})
+
+    # labels and levels together is a usage error
+    with pytest.raises(ValueError, match="not both"):
+        factor(test, levels=[0, 1], labels={0: "a", 1: "b"})
+
+    # passing a dict to levels= is the easy typo — fail loudly, not silently
+    with pytest.raises(TypeError, match="not a dict"):
+        factor(test, levels={0: "negative", 1: "positive"})
+
 
 # ---------------------------------------------------------------------------
 # Cross-cutting: sp passthrough reproduces a fixed-sp fit
