@@ -34,41 +34,21 @@ def _pkg_subdir(pkg: str) -> str:
 def _apply_schema(df: pl.DataFrame, pkg: str, name: str) -> pl.DataFrame:
     """Re-cast factor columns from the sidecar schema into pl.Enum.
 
-    CSV round-trip erases R's factor type — quoted numeric levels come back
-    as Int64, character levels as String. Without this step, fs/sz/by=factor
-    smooths silently take the non-factor fallthrough path, so the R ground
-    truth and lmpy's output agree only on that degraded path.
-
-    Polars 1.40+ makes pl.Categorical process-global (shared string cache
-    across DataFrames), which merges sibling columns' level pools and
-    reorders levels by first-appearance. pl.Enum keeps its declared levels
-    per-column, so we use Enum for every factor here regardless of the
-    schema's `ordered` flag. Ordered vs. unordered contrasts are driven by
-    `ordered_cols` passed through lmpy's public API (e.g. via `ORDERED_COLS`
-    below), not by dtype.
+    Used by ``load_dataset`` (above) and by ``test_smooths_predict`` to
+    re-attach factor types to ``predict_data.csv`` fixtures, which lose them
+    on CSV round-trip just like the source datasets do.
     """
-    path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
-    if not path.exists():
-        return df
-    sch = json.loads(path.read_text())
-    factors = sch.get("factors", {})
-    if not factors:
-        return df
-    exprs = []
-    for col, spec in factors.items():
-        if col not in df.columns:
-            continue
-        levels = [str(v) for v in spec["levels"]]
-        exprs.append(pl.col(col).cast(pl.Utf8).cast(pl.Enum(levels)))
-    return df.with_columns(exprs) if exprs else df
+    from lmpy.data import _apply_dataset_schema
+    schema_path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
+    return _apply_dataset_schema(df, schema_path)
 
 
 def ordered_schema_cols(pkg: str, name: str) -> frozenset[str]:
     """Columns marked `ordered: true` in the dataset's schema sidecar.
 
-    Since pl.Enum carries level-order for both ordered and unordered factors
-    (see `_apply_schema`), the ordered flag is plumbed separately via
-    `lmpy.formula.with_ordered_cols(...)`.
+    The ``ordered`` flag is plumbed separately from level order — pl.Enum
+    carries levels for both ordered and unordered factors, so this is what
+    drives `lmpy.formula.with_ordered_cols(...)` for poly contrasts.
     """
     path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
     if not path.exists():
@@ -83,14 +63,16 @@ _current_ordered_cols: "set[str]" = set()
 
 
 def load_dataset(pkg: str, name: str) -> pl.DataFrame:
+    """Test-side dataset loader. Delegates to ``lmpy.data.data`` (which
+    routes to ``rdatasets`` when covered, bundled CSV otherwise) and caches
+    the result so repeated fixture loads are cheap."""
+    from lmpy.data import data as _data
     key = (pkg, name)
     if key not in _data_cache:
-        df = pl.read_csv(DATA_ROOT / _pkg_subdir(pkg) / f"{name}.csv", null_values="NA")
-        _data_cache[key] = _apply_schema(df, pkg, name)
-    # Register any ordered factor columns with lmpy's contextvar so the
-    # formula machinery can apply poly contrasts / ordered-by handling.
-    # Accumulates across calls within a test (some fixtures touch multiple
-    # datasets); `_reset_ordered_cols` autouse fixture clears between tests.
+        _data_cache[key] = _data(name, _pkg_subdir(pkg))
+    # `lmpy.data` already registers ordered-factor columns globally, but the
+    # autouse `_reset_ordered_cols` fixture clears them per-test. Re-register
+    # here so the contextvar accumulates across multiple loads inside one test.
     ordered = ordered_schema_cols(pkg, name)
     if ordered:
         _current_ordered_cols.update(ordered)

@@ -1,8 +1,11 @@
 """User-facing data prep: dataset loader and ``factor()``.
 
-* ``data`` — fetch a CSV from this repo's ``datasets/`` tree (downloading
-  on first access), restoring R's factor type from a JSON schema sidecar
-  when one is present.
+* ``data`` — fetch a named dataset. Pulls from the bundled ``rdatasets``
+  Python package when the ``(package, name)`` pair is covered there
+  (``R``/``datasets``, ``MASS``, ``lme4``, ``nlme``); otherwise reads a
+  CSV from this repo's ``datasets/`` tree (downloading on first access).
+  In both cases, R's factor type is restored from a JSON schema sidecar
+  next to the corresponding CSV path.
 * ``factor`` — polars equivalent of R's ``factor()``: cast a Series to
   ``pl.Enum`` and (optionally) register it as an ordered factor for poly
   contrasts.
@@ -24,6 +27,17 @@ import polars as pl
 from .formula import set_ordered_cols
 
 __all__ = ["data", "factor"]
+
+
+# Map our package label → rdatasets package label. R's built-in ``datasets``
+# package is exposed as ``"R"`` in lmpy (mirrors the ``datasets/R/`` folder
+# convention used to avoid ``datasets/datasets/`` path duplication).
+_RDATASETS_PKG_MAP = {
+    "R": "datasets",
+    "MASS": "MASS",
+    "lme4": "lme4",
+    "nlme": "nlme",
+}
 
 
 def factor(
@@ -111,6 +125,46 @@ def _find_bundled_dataset(package: str, name: str) -> Path | None:
     return None
 
 
+def _find_schema(package: str, name: str) -> Path | None:
+    """Walk up from CWD looking for ``datasets/{package}/{name}.schema.json``.
+
+    Schema sidecars carry R factor info (levels + ordered flag) that CSV
+    round-trip and ``rdatasets`` both erase. They are kept locally even when
+    the data itself is sourced from ``rdatasets``.
+    """
+    rel = Path("datasets") / package / f"{name}.schema.json"
+    cwd = Path.cwd()
+    for ancestor in (cwd, *cwd.parents):
+        candidate = ancestor / rel
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _try_load_rdatasets(package: str, name: str) -> pl.DataFrame | None:
+    """Load ``(package, name)`` from the ``rdatasets`` package, or None if missing.
+
+    Returns None if ``package`` isn't in ``_RDATASETS_PKG_MAP`` or if the
+    item simply isn't carried by rdatasets (e.g. ``lme4::ergoStool``). The
+    spurious ``rownames`` column rdatasets injects is dropped to match the
+    column shape of our bundled CSVs.
+    """
+    rd_pkg = _RDATASETS_PKG_MAP.get(package)
+    if rd_pkg is None:
+        return None
+    try:
+        import rdatasets
+    except ImportError:
+        return None
+    items = {it.removesuffix(".pkl") for it in rdatasets.items(rd_pkg)}
+    if name not in items:
+        return None
+    df = pl.from_pandas(rdatasets.data(rd_pkg, name))
+    if "rownames" in df.columns:
+        df = df.drop("rownames")
+    return df
+
+
 # Accumulator for ordered-factor columns across data() calls within a session,
 # mirroring tests/conftest.py. Polars has no per-column "ordered" flag, so
 # ordered factors are tracked via a contextvar that lmpy.formula consults when
@@ -119,17 +173,16 @@ def _find_bundled_dataset(package: str, name: str) -> Path | None:
 _data_ordered_cols: set[str] = set()
 
 
-def _apply_dataset_schema(df: pl.DataFrame, csv_path: Path) -> pl.DataFrame:
-    """Apply the JSON schema sidecar next to ``csv_path``, if present.
+def _apply_dataset_schema(df: pl.DataFrame, schema_path: Path | None) -> pl.DataFrame:
+    """Apply the JSON schema sidecar at ``schema_path``, if present.
 
     Cast factor columns to ``pl.Enum`` and register ordered factors with the
     formula machinery. Without this, R's factor type erased by CSV round-trip
-    silently degrades ``s(...,bs='re')``, ``by=factor``, ``fs``, ``sz``, and
-    ordered-contrast paths. Sidecar format mirrors tests/conftest.py:
-    ``{"factors": {col: {"levels": [...], "ordered": bool}}}``.
+    (or stripped by ``rdatasets``) silently degrades ``s(...,bs='re')``,
+    ``by=factor``, ``fs``, ``sz``, and ordered-contrast paths. Sidecar format
+    mirrors tests/conftest.py: ``{"factors": {col: {"levels": [...], "ordered": bool}}}``.
     """
-    schema_path = csv_path.with_suffix(".schema.json")
-    if not schema_path.is_file():
+    if schema_path is None or not schema_path.is_file():
         return df
     try:
         sch = json.loads(schema_path.read_text())
@@ -159,44 +212,53 @@ def _apply_dataset_schema(df: pl.DataFrame, csv_path: Path) -> pl.DataFrame:
 
 def data(name: str, package: str = "R", save_to: str = "./data",
          overwrite: bool = False) -> pl.DataFrame:
-    """Load a named dataset from this repo's published ``datasets/`` tree.
+    """Load a named dataset.
 
-    Looks first for a bundled ``datasets/{package}/{name}.csv`` by
-    walking up from the current working directory — so in-repo callers
-    (notebooks under ``example/``, dev scripts) read the checked-in copy
-    directly and never download. If no bundled copy is found, caches the
-    CSV under ``save_to/{package}/{name}.csv`` on first access. Pass
-    ``overwrite=True`` to bypass both lookups and re-download.
+    Resolution order:
 
-    A JSON schema sidecar (``{name}.schema.json``) is loaded alongside the CSV
-    and used to restore R's factor type — columns listed under ``factors``
-    are cast to ``pl.Enum`` with their declared levels, and ones marked
-    ``ordered: true`` are registered for poly contrasts. This is essential
-    for ``bs='re'`` / ``by=factor`` / ``fs`` / ``sz`` smooths, which silently
-    take a non-factor fallthrough path when factor columns come back as
-    Int64/Utf8 from raw CSV.
+    1. ``rdatasets`` — used whenever ``package`` is one of ``R`` (R's
+       built-in ``datasets``), ``MASS``, ``lme4``, ``nlme`` AND the item
+       is carried there. Offline, deterministic, ships with the package.
+       The ``rownames`` column rdatasets injects is dropped.
+    2. Bundled ``datasets/{package}/{name}.csv`` walked up from CWD —
+       used for ``faraway``/``gamair``/``mgcv``/``rstanarm``/``synthetic``
+       and for the few items rdatasets doesn't carry (e.g.
+       ``lme4::ergoStool``).
+    3. CSV download into ``save_to/{package}/{name}.csv`` — last resort,
+       used when ``lmpy`` is installed outside the source repo and no
+       bundled CSV exists. Pass ``overwrite=True`` to force a re-fetch.
+
+    A JSON schema sidecar (``datasets/{package}/{name}.schema.json``) is
+    loaded next and used to restore R's factor type — columns listed
+    under ``factors`` are cast to ``pl.Enum``, and ones with
+    ``ordered: true`` are registered for poly contrasts. The sidecar is
+    looked up via the same CWD-walk as the bundled CSV, so it applies
+    even when the data itself came from rdatasets (which strips factor
+    info on the way out of pandas).
     """
-    if not overwrite:
-        bundled = _find_bundled_dataset(package, name)
-        if bundled is not None:
-            df = pl.read_csv(bundled, null_values="NA")
-            return _apply_dataset_schema(df, bundled)
+    df: pl.DataFrame | None = None
 
-    datapath = os.path.join(save_to, package)
-    os.makedirs(datapath, exist_ok=True)
-    csv_path = Path(datapath) / f"{name}.csv"
-    if not csv_path.exists() or overwrite:
-        print(f"Downloading {name} (from {package})...")
-        base = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}"
-        urllib.request.urlretrieve(f"{base}.csv", csv_path)
-        # Best-effort: pull the schema sidecar too. Not all bundled datasets
-        # ship one, so a 404 is silently OK — _apply_dataset_schema then
-        # no-ops on the missing file.
-        try:
-            urllib.request.urlretrieve(
-                f"{base}.schema.json", csv_path.with_suffix(".schema.json")
-            )
-        except urllib.error.HTTPError:
-            pass
-    df = pl.read_csv(csv_path, null_values="NA")
-    return _apply_dataset_schema(df, csv_path)
+    if not overwrite:
+        df = _try_load_rdatasets(package, name)
+        if df is None:
+            bundled = _find_bundled_dataset(package, name)
+            if bundled is not None:
+                df = pl.read_csv(bundled, null_values="NA")
+
+    if df is None:
+        datapath = os.path.join(save_to, package)
+        os.makedirs(datapath, exist_ok=True)
+        csv_path = Path(datapath) / f"{name}.csv"
+        if not csv_path.exists() or overwrite:
+            print(f"Downloading {name} (from {package})...")
+            base = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}"
+            urllib.request.urlretrieve(f"{base}.csv", csv_path)
+            try:
+                urllib.request.urlretrieve(
+                    f"{base}.schema.json", csv_path.with_suffix(".schema.json")
+                )
+            except urllib.error.HTTPError:
+                pass
+        df = pl.read_csv(csv_path, null_values="NA")
+
+    return _apply_dataset_schema(df, _find_schema(package, name))

@@ -357,7 +357,11 @@ def test_factor_helper():
     from lmpy import factor
     from lmpy.formula import _ORDERED_COLS_CV, set_ordered_cols
 
-    df = pl.read_csv("datasets/nlme/Machines.csv", null_values="NA")
+    # Bypass `lmpy.data` (which applies our schema sidecar) to simulate the
+    # wild-data scenario where factor info has been stripped — exactly what
+    # rdatasets gives us out of the box.
+    import rdatasets
+    df = pl.from_pandas(rdatasets.data("nlme", "Machines")).drop("rownames")
     assert df.schema["Worker"] == pl.Int64  # the wild-data scenario
 
     # Auto-detect levels, alphanumeric sort
