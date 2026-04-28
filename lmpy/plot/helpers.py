@@ -1,5 +1,5 @@
 """Faraway-favorite single-purpose plotters: ``qqnorm``, ``halfnorm``,
-``termplot``, ``pairs``.
+``termplot``, ``pairs``, ``interaction_plot``.
 
 Unlike the ``plot()`` dispatch, these are direct entry points (R doesn't
 S3-dispatch through them either, except ``pairs`` which is reached as
@@ -14,7 +14,7 @@ import numpy as np
 import polars as pl
 from scipy.stats import norm
 
-from ._util import draw_points
+from ._util import draw_points, r_lty
 
 
 def qqnorm(
@@ -314,3 +314,100 @@ def pairs(
         fig.suptitle(main)
     fig.tight_layout()
     return axes
+
+
+def _resolve_arg(arg, data, role: str) -> tuple[pl.Series, str]:
+    """Accept a Series, ndarray, list, or column-name string + ``data=``."""
+    if isinstance(arg, str):
+        if data is None:
+            raise ValueError(
+                f"interaction_plot: {role}={arg!r} is a string but data= "
+                "is None — pass either polars Series for each arg or strings "
+                "with data=DataFrame"
+            )
+        return data[arg], arg
+    if isinstance(arg, pl.Series):
+        return arg, arg.name or role
+    return pl.Series(role, arg), role
+
+
+def _level_order(s: pl.Series) -> list:
+    """Level order for grouping: Enum/Categorical use their cat order;
+    everything else uses sorted unique."""
+    if s.dtype in (pl.Enum, pl.Categorical):
+        return list(s.cat.get_categories())
+    return s.drop_nulls().unique().sort().to_list()
+
+
+def interaction_plot(
+    x_factor,
+    trace_factor,
+    response,
+    *,
+    data: pl.DataFrame | None = None,
+    fun=None,
+    ax=None,
+    xlab: str | None = None,
+    ylab: str | None = None,
+    main: str | None = None,
+    legend: bool = True,
+    trace_label: str | None = None,
+    type: str = "l",
+    figsize: tuple[float, float] | None = None,
+):
+    """Port of R's ``interaction.plot`` — cell-statistic-vs-x.factor with
+    one line per ``trace.factor`` level.
+
+    Computes ``fun(response)`` (default mean) over every
+    ``(x_factor, trace_factor)`` cell and draws one line per
+    ``trace_factor`` level across the ``x_factor`` x-axis. R's default
+    look: all lines black, line style cycled across trace levels — so
+    parallel-vs-crossing patterns read off as the *interaction*.
+
+    Each of ``x_factor`` / ``trace_factor`` / ``response`` accepts a
+    polars ``Series`` directly, or a string column name when ``data=``
+    is supplied. ``type=`` is R's ``"l"``/``"p"``/``"b"``/``"o"``.
+    """
+    x_s, x_name = _resolve_arg(x_factor, data, "x_factor")
+    t_s, t_name = _resolve_arg(trace_factor, data, "trace_factor")
+    y_s, y_name = _resolve_arg(response, data, "response")
+
+    if fun is None:
+        fun = np.mean
+
+    x_levels = _level_order(x_s)
+    t_levels = _level_order(t_s)
+
+    df = pl.DataFrame({x_name: x_s, t_name: t_s, y_name: y_s})
+
+    cells = np.full((len(t_levels), len(x_levels)), np.nan)
+    for ti, tl in enumerate(t_levels):
+        for xi, xl in enumerate(x_levels):
+            ys = df.filter((pl.col(x_name) == xl) & (pl.col(t_name) == tl))[y_name].to_numpy()
+            if ys.size:
+                cells[ti, xi] = float(fun(ys))
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    x_pos = np.arange(len(x_levels))
+    show_line = type in ("l", "b", "o", "c")
+    show_pts = type in ("p", "b", "o")
+    for ti, tl in enumerate(t_levels):
+        ls = r_lty(((ti % 6) + 1)) if show_line else "None"
+        marker = "o" if show_pts else None
+        ax.plot(x_pos, cells[ti], color="black",
+                linestyle=ls, marker=marker, label=str(tl))
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels([str(xl) for xl in x_levels])
+    ax.set_xlabel(xlab if xlab is not None else x_name)
+    ax.set_ylabel(ylab if ylab is not None else f"mean of {y_name}")
+    if main is not None:
+        ax.set_title(main)
+    if legend:
+        ax.legend(
+            title=trace_label if trace_label is not None else t_name,
+            loc="best", frameon=False, fontsize="small",
+        )
+    return ax

@@ -566,6 +566,46 @@ def test_pairs_rows_share_y_limits_off_diag_under_hist(numeric_df):
     plt.close("all")
 
 
+def test_interaction_plot_matches_r_cell_means():
+    """interaction_plot cell means match R's tapply on Pinheiro & Bates'
+    Machines data — Worker on trace, Machine on x, score on y."""
+    from lmpy import data
+    m = data("Machines", "nlme")
+    ax = lmplot.interaction_plot("Machine", "Worker", "score", data=m)
+    assert ax.get_xlabel() == "Machine"
+    assert ax.get_ylabel() == "mean of score"
+    assert [t.get_text() for t in ax.get_xticklabels()] == ["A", "B", "C"]
+    assert len(ax.lines) == 6  # 6 workers
+    by_worker = {line.get_label(): line.get_ydata().tolist() for line in ax.lines}
+    # Reference values from R tapply(score, list(Worker, Machine), mean)
+    expected = {
+        "6": [46.8000, 43.6333, 61.3000],
+        "2": [52.5667, 59.5667, 61.8333],
+        "4": [51.2333, 62.7333, 64.7667],
+        "1": [52.6333, 62.9000, 67.2000],
+        "3": [59.5333, 68.0333, 70.8000],
+        "5": [51.3667, 65.0667, 71.7333],
+    }
+    for w, ref in expected.items():
+        np.testing.assert_allclose(by_worker[w], ref, atol=5e-3)
+    plt.close("all")
+
+
+def test_interaction_plot_series_input_form():
+    """Series form: pass each Series directly without data=."""
+    from lmpy import data
+    m = data("Machines", "nlme")
+    ax = lmplot.interaction_plot(m["Machine"], m["Worker"], m["score"])
+    assert len(ax.lines) == 6
+    plt.close("all")
+
+
+def test_interaction_plot_string_without_data_errors():
+    df = pl.DataFrame({"x": [1, 2, 3], "y": [1, 2, 3]})  # noqa: F841
+    with pytest.raises(ValueError, match="data="):
+        lmplot.interaction_plot("x", "y", "z")
+
+
 def test_pairs_diag_hist_suppresses_y_perimeter_labels(numeric_df):
     """Diagonal cells with diag='hist' show counts on y, so the perimeter
     y-label rule must not fire there (would print misleading count ticks)."""
