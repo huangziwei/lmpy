@@ -260,12 +260,25 @@ def data(name: str, package: str = "R", save_to: str = "./data",
 
     if df is None:
         datapath = os.path.join(save_to, package)
-        os.makedirs(datapath, exist_ok=True)
         csv_path = Path(datapath) / f"{name}.csv"
         if not csv_path.exists() or overwrite:
+            # Snapshot which dirs don't exist yet so a failed download can
+            # roll them back — otherwise a network error leaves an empty
+            # data/<package>/ (and possibly data/) behind in the CWD.
+            created_dirs = [Path(p) for p in (save_to, datapath) if not os.path.exists(p)]
+            os.makedirs(datapath, exist_ok=True)
             print(f"Downloading {name} (from {package})...")
             base = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}"
-            urllib.request.urlretrieve(f"{base}.csv", csv_path)
+            try:
+                urllib.request.urlretrieve(f"{base}.csv", csv_path)
+            except Exception:
+                csv_path.unlink(missing_ok=True)
+                for p in reversed(created_dirs):
+                    try:
+                        p.rmdir()
+                    except OSError:
+                        pass
+                raise
             try:
                 urllib.request.urlretrieve(
                     f"{base}.schema.json", csv_path.with_suffix(".schema.json")
