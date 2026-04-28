@@ -177,3 +177,57 @@ def test_anova_rejects_mixed_families():
     m2 = glm("Volume ~ log(Girth)", d, family=Gamma(link="log"))
     with pytest.raises(ValueError, match="family and link"):
         anova(m1, m2)
+
+
+def test_anova_glm_test_argument():
+    """`test=` switches the statistic — pinned to R's anova.glm output on
+    Wood's heart data (cbind(ha, ok) ~ ck via the proportion + weights form)."""
+    import io, contextlib
+    import polars as pl
+    from lmpy.family import Binomial
+    heart = pl.DataFrame({
+        "ck": [20, 60, 100, 140, 180, 220, 260, 300, 340, 380, 420, 460],
+        "ha": [2, 13, 30, 30, 21, 19, 18, 13, 19, 15, 7, 8],
+        "ok": [88, 26, 8, 5, 0, 1, 1, 1, 1, 0, 0, 0],
+    }).with_columns(
+        n=pl.col("ha") + pl.col("ok"),
+        p=pl.col("ha") / (pl.col("ha") + pl.col("ok")),
+    )
+    n = heart["n"].to_numpy()
+    m0 = glm("p ~ 1",  data=heart, family=Binomial(link="logit"), weights=n)
+    m1 = glm("p ~ ck", data=heart, family=Binomial(link="logit"), weights=n)
+
+    # Default + explicit Chisq + LRT alias all give the same table
+    for kw in [{}, {"test": "Chisq"}, {"test": "LRT"}, {"test": "lrt"}]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            anova(m0, m1, **kw)
+        out = buf.getvalue()
+        assert "Pr(>Chi)" in out
+        assert "234.78" in out  # R's deviance, matches at 2dp
+
+    # test='F' produces an F column
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        anova(m0, m1, test="F")
+    out = buf.getvalue()
+    assert "Pr(>F)" in out
+    assert "234.78" in out
+
+    # test='Rao' is the score test, not implemented yet
+    with pytest.raises(NotImplementedError, match="Rao"):
+        anova(m0, m1, test="Rao")
+
+    # Bogus value
+    with pytest.raises(ValueError, match="must be"):
+        anova(m0, m1, test="bogus")
+
+
+def test_anova_lm_rejects_test_argument():
+    """`test=` is glm-only; lm/lme always use F/Chisq respectively."""
+    from lmpy import lm
+    d = load_dataset("R", "iris")
+    m1 = lm("Sepal.Length ~ Petal.Length", d)
+    m2 = lm("Sepal.Length ~ Petal.Length + Petal.Width", d)
+    with pytest.raises(TypeError, match="test="):
+        anova(m1, m2, test="Chisq")

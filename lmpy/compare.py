@@ -73,15 +73,28 @@ def BIC(*models) -> None:
     print(format_df(rows))
 
 
-def anova(*models):
+def anova(*models, test: str | None = None):
     """Compare nested fits, or decompose a single fit by Type-I SS.
 
     - One ``lm`` → sequential (Type I) ANOVA table, splitting the model's
       total SS into incremental contributions per RHS term in formula
       order. Mirrors R's ``anova(m)`` for a single ``lm``.
     - Multiple ``lm`` fits → F-test ANOVA table (incremental for 3+).
+    - Multiple ``glm`` fits → analysis-of-deviance table (incremental for
+      3+); ``test=`` selects the test statistic (see below).
     - Multiple ``lme`` fits → likelihood-ratio test (lme4-style, incremental
       for 3+). REML fits are internally refit by ML before the LRT.
+
+    Parameters
+    ----------
+    test : {"Chisq", "LRT", "F", "Rao", None}, optional
+        Only meaningful for ``glm`` comparisons. ``None`` (default) auto-
+        picks ``"Chisq"`` for scale-known families (Poisson, Binomial) and
+        ``"F"`` for unknown-scale (Gaussian, Gamma, IG), matching R's
+        ``anova.glm`` recommendation. ``"LRT"`` is an alias for ``"Chisq"``.
+        ``"Rao"`` (score test) is not implemented yet. For ``lm`` and ``lme``
+        the test is fixed (always F / Chisq LRT respectively); passing
+        ``test=`` for those raises.
 
     For multi-model calls rows are sorted by parameter count (smaller
     model first), matching R's ``anova``. Row labels are recovered from
@@ -97,15 +110,24 @@ def anova(*models):
                 "anova(m): single-model form supports lm only "
                 f"(got {type(m).__name__})"
             )
+        if test is not None:
+            raise TypeError("anova(lm): test= is not accepted (always F)")
         return _anova_lm_single(m)
     labels = _caller_names(models, inspect.currentframe().f_back)
     if all(isinstance(m, lme) for m in models):
+        if test is not None and test.upper() not in ("CHISQ", "LRT"):
+            raise ValueError(
+                f"anova(lme): only test='Chisq'/'LRT' (the default LRT) "
+                f"is supported, got {test!r}"
+            )
         return _anova_lme(*models, labels=labels)
     # glm before lm: glm is not an lm subclass, but the isinstance order
     # would still matter if it ever became one. Keep the explicit branch.
     if all(isinstance(m, glm) for m in models):
-        return _anova_glm(*models, labels=labels)
+        return _anova_glm(*models, labels=labels, test=test)
     if all(isinstance(m, lm) for m in models):
+        if test is not None:
+            raise TypeError("anova(lm): test= is not accepted (always F)")
         return _anova_lm(*models, labels=labels)
     raise TypeError("anova(): all models must be the same type (lm, glm, or lme)")
 
@@ -247,16 +269,22 @@ def _anova_lm_single(m: lm):
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
 
 
-def _anova_glm(*models, labels: list[str]):
+def _anova_glm(*models, labels: list[str], test: str | None = None):
     """``anova.glm``-style deviance table for nested ``glm`` fits.
 
-    Test selection mirrors R's ``anova.glm`` defaults:
-    - scale-known families (Poisson, Binomial) → ``Chisq`` LRT on Δdev,
-      with df = Δrank.
-    - unknown-scale families (Gaussian, Gamma, IG) → ``F`` test, where
-      ``F = (Δdev / Δdf) / dispersion_full`` and ``dispersion_full`` is the
-      Pearson estimator of the largest fitted model. Denominator df is
-      ``df_residual_full``.
+    With ``test=None`` we auto-pick (matches R's recommendation):
+    - scale-known families (Poisson, Binomial) → ``Chisq`` LRT on Δdev.
+    - unknown-scale families (Gaussian, Gamma, IG) → ``F``.
+
+    Override via ``test=``:
+    - ``"Chisq"`` / ``"LRT"`` (alias) → ``Δdev / dispersion_full ~ χ²(Δdf)``.
+      For scale-known families ``dispersion_full = 1`` so this is just Δdev,
+      matching the auto-pick. For unknown-scale, the division is the
+      asymptotic chi-square test (R's ``anova.glm`` does the same).
+    - ``"F"`` → ``F = (Δdev / Δdf) / dispersion_full`` against ``F(Δdf,
+      df_residual_full)``. Allowed for scale-known families too (R does)
+      though the chi-square version is preferred.
+    - ``"Rao"`` → score test, not implemented yet.
 
     Three-or-more models are walked incrementally (row k vs row k-1 after
     sorting by ``df_residuals`` descending, matching ``_anova_lm``).
@@ -265,7 +293,26 @@ def _anova_glm(*models, labels: list[str]):
     if not all(type(m.family) is type(fam0) and
                m.family.link.name == fam0.link.name for m in models):
         raise ValueError("anova(): all glm fits must share family and link")
-    test = "Chisq" if fam0.scale_known else "F"
+
+    if test is None:
+        test = "Chisq" if fam0.scale_known else "F"
+    else:
+        t_norm = test.upper()
+        if t_norm == "LRT":
+            test = "Chisq"
+        elif t_norm == "RAO":
+            raise NotImplementedError(
+                "anova(glm, test='Rao'): score test not implemented yet"
+            )
+        elif t_norm == "CHISQ":
+            test = "Chisq"
+        elif t_norm == "F":
+            test = "F"
+        else:
+            raise ValueError(
+                f"anova(glm): test must be 'Chisq', 'LRT', 'F', 'Rao', or None; "
+                f"got {test!r}"
+            )
 
     # Sort ascending by npar (= descending by df_residuals), matching R.
     order = sorted(range(len(models)), key=lambda i: models[i].df_residuals,
@@ -289,7 +336,12 @@ def _anova_glm(*models, labels: list[str]):
             stat_col.append(None); p_col.append(None); sig_col.append("")
             continue
         if test == "Chisq":
-            stat = d_dev
+            # disp_full == 1 for scale-known families (Poisson/Binomial),
+            # so this matches the canonical LRT there. For unknown-scale
+            # it's the asymptotic χ² test on the rescaled deviance — same
+            # formula R uses when `test="Chisq"` is passed for Gaussian/
+            # Gamma/IG fits.
+            stat = d_dev / disp_full
             p = float(chi2.sf(stat, d_df))
         else:
             stat = (d_dev / d_df) / disp_full
