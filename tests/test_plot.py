@@ -479,6 +479,36 @@ def test_plot_dataframe_dispatches_to_pairs(numeric_df):
     plt.close("all")
 
 
+def test_plot_leverage_constant_swaps_to_factor_levels():
+    """One-way ANOVA on a balanced design (PlantGrowth: 30 obs / 3 groups)
+    has h_ii = 1/n_g for every row → constant leverage. R's plot.lm swaps
+    panel 5 from 'Residuals vs Leverage' to 'Constant Leverage: Residuals
+    vs Factor Levels'. Match that."""
+    from lmpy import data
+    pg = data("PlantGrowth")
+    m = lm("weight ~ group", data=pg)
+    fig, ax = plt.subplots()
+    m.plot_leverage(ax=ax)
+    assert "Constant Leverage" in ax.get_title()
+    assert ax.get_xlabel() == "Factor Level Combinations"
+    # 3 groups → 3 distinct x-tick positions
+    assert len(ax.get_xticks()) == 3
+    tick_labels = [t.get_text() for t in ax.get_xticklabels()]
+    assert set(tick_labels) == {"ctrl", "trt1", "trt2"}
+    plt.close("all")
+
+
+def test_plot_leverage_keeps_standard_view_for_continuous_predictor(numeric_df):
+    """A model with a non-constant hat matrix (any continuous predictor)
+    must still draw the standard Residuals-vs-Leverage view."""
+    m = lm("y ~ x + z", data=numeric_df)
+    fig, ax = plt.subplots()
+    m.plot_leverage(ax=ax)
+    assert ax.get_title() == "Residuals vs. Leverage"
+    assert ax.get_xlabel() == "Leverage"
+    plt.close("all")
+
+
 def test_pairs_perimeter_tick_labels_alternate(numeric_df):
     """R's pairs.default places tick labels on alternating perimeter sides
     so each variable's scale appears once around the matrix edge:

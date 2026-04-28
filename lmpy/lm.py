@@ -735,6 +735,20 @@ class lm:
             fig, ax = plt.subplots(figsize=figsize)
         h = self.leverage
         r = self.std_residuals
+
+        # R's plot.lm swaps panel 5 to a factor-level stripchart when hat
+        # values are essentially constant (pure-ANOVA, balanced one-way
+        # design, etc.). The standard Residuals-vs-Leverage view is
+        # degenerate then — every point stacks at the same h, and the
+        # Cook's contours sweep over leverages that don't exist in the
+        # data, looking informative but meaning nothing.
+        h_mean = float(np.mean(h))
+        if h_mean > 0 and bool(np.all(np.abs(h - h_mean) < 1e-10 * h_mean)):
+            return self._plot_constant_leverage(
+                ax=ax, r=r, facecolor=facecolor, edgecolor=edgecolor,
+                label_n=label_n,
+            )
+
         ax.scatter(h, r, facecolor=facecolor, edgecolor=edgecolor)
         ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
         if smooth:
@@ -756,6 +770,44 @@ class lm:
         ax.set_xlabel("Leverage")
         ax.set_ylabel("Standardized Residuals")
         ax.set_title("Residuals vs. Leverage")
+
+    def _plot_constant_leverage(self, *, ax, r, facecolor, edgecolor, label_n):
+        """Stripchart of standardized residuals vs factor-level combinations
+        — R's fallback for plot.lm panel 5 when leverage is constant.
+        Levels of every categorical RHS predictor are concatenated with
+        ``:`` (matching R's ``apply(..., paste, collapse=":")``); models
+        with no categorical predictor fall back to observation index."""
+        from .formula import referenced_columns
+
+        referenced = referenced_columns(self._expanded)
+        factor_cols = [
+            c for c in self._design_data.columns
+            if c in referenced
+            and self._design_data[c].dtype in (pl.Enum, pl.Categorical, pl.Utf8)
+        ]
+
+        if factor_cols:
+            keys = self._design_data.select(factor_cols).to_numpy().astype(str)
+            level_labels = [":".join(row) for row in keys]
+            unique_levels = list(dict.fromkeys(level_labels))
+            level_to_x = {lab: i for i, lab in enumerate(unique_levels)}
+            x_pos = np.array([level_to_x[lab] for lab in level_labels],
+                             dtype=float)
+            ax.scatter(x_pos, r, facecolor=facecolor, edgecolor=edgecolor)
+            ax.set_xticks(range(len(unique_levels)))
+            ax.set_xticklabels(unique_levels)
+            ax.set_xlim(-0.5, len(unique_levels) - 0.5)
+            ax.set_xlabel("Factor Level Combinations")
+        else:
+            x_pos = np.arange(len(r), dtype=float)
+            ax.scatter(x_pos, r, facecolor=facecolor, edgecolor=edgecolor)
+            ax.set_xlabel("Obs. number")
+
+        ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
+        if label_n:
+            _label_top_n(ax, x_pos, r, scores=np.abs(r), n=label_n)
+        ax.set_ylabel("Standardized Residuals")
+        ax.set_title("Constant Leverage:\nResiduals vs Factor Levels")
 
     def plot(self, figsize=None, smooth=True, label_n=3):
         """4-panel diagnostic display: Residuals, Q-Q, Scale-Location, Leverage."""
