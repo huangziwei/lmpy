@@ -74,19 +74,30 @@ def BIC(*models) -> None:
 
 
 def anova(*models):
-    """Compare two or more nested fits.
+    """Compare nested fits, or decompose a single fit by Type-I SS.
 
-    - All ``lm`` fits → F-test ANOVA table (incremental for 3+).
-    - All ``lme`` fits → likelihood-ratio test (lme4-style, incremental
+    - One ``lm`` → sequential (Type I) ANOVA table, splitting the model's
+      total SS into incremental contributions per RHS term in formula
+      order. Mirrors R's ``anova(m)`` for a single ``lm``.
+    - Multiple ``lm`` fits → F-test ANOVA table (incremental for 3+).
+    - Multiple ``lme`` fits → likelihood-ratio test (lme4-style, incremental
       for 3+). REML fits are internally refit by ML before the LRT.
 
-    Rows are sorted by parameter count (smaller model first), matching
-    R's ``anova``. Row labels are recovered from the caller's variable
-    names (R-style); falls back to ``model i`` for unbound or aliased
-    arguments, preserving *input* order.
+    For multi-model calls rows are sorted by parameter count (smaller
+    model first), matching R's ``anova``. Row labels are recovered from
+    the caller's variable names (R-style); falls back to ``model i`` for
+    unbound or aliased arguments, preserving *input* order.
     """
-    if len(models) < 2:
-        raise TypeError("anova(): need at least two models")
+    if len(models) == 0:
+        raise TypeError("anova(): need at least one model")
+    if len(models) == 1:
+        m = models[0]
+        if not isinstance(m, lm) or isinstance(m, glm):
+            raise TypeError(
+                "anova(m): single-model form supports lm only "
+                f"(got {type(m).__name__})"
+            )
+        return _anova_lm_single(m)
     labels = _caller_names(models, inspect.currentframe().f_back)
     if all(isinstance(m, lme) for m in models):
         return _anova_lme(*models, labels=labels)
@@ -143,6 +154,91 @@ def _anova_lm(*models, labels: list[str]):
         "F":         f_col,
         "Pr(>F)":    p_col,
         " ":         sig_col,
+    })
+
+    print(docstring)
+    print(format_df(df_))
+    print("---")
+    print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
+
+
+def _anova_lm_single(m: lm):
+    """Sequential (Type I) ANOVA — R's ``anova.lm(m)`` for a single fit.
+
+    Refits the model with terms added one at a time in formula order,
+    attributing each step's drop in RSS to that term. F = MS_term /
+    MS_residual_full, p = upper-tail F. R uses QR-incremental SS, which
+    is bit-equivalent for full-rank designs; refitting is conceptually
+    simpler and reuses lmpy's existing rank-deficiency handling.
+    """
+    terms = m._expanded.terms
+    if not terms:
+        raise TypeError(
+            "anova(m): single-model form needs at least one RHS term "
+            "(got an intercept-only model)"
+        )
+
+    lhs = m.formula.split("~", 1)[0].strip()
+    intercept_str = "1" if m._expanded.intercept else "0"
+
+    def cumulative_formula(k: int) -> str:
+        if k == 0:
+            return f"{lhs} ~ {intercept_str}"
+        rhs = " + ".join(t.label for t in terms[:k])
+        return f"{lhs} ~ {intercept_str} + {rhs}"
+
+    rss_chain: list[float] = []
+    df_chain: list[int] = []
+    for k in range(len(terms)):
+        m_k = lm(cumulative_formula(k), m.data,
+                 weights=m.weights, method=m.method)
+        rss_chain.append(m_k.rss)
+        df_chain.append(m_k.df_residuals)
+    # Last entry = the original full model — reuse its values directly to
+    # avoid a redundant refit and any floating-point drift from re-solving.
+    rss_chain.append(m.rss)
+    df_chain.append(m.df_residuals)
+
+    mse_full = m.rss / m.df_residuals
+
+    df_col: list[int] = []
+    sos_col: list[float] = []
+    ms_col: list[float] = []
+    f_col: list[float | None] = []
+    p_col: list[float | None] = []
+    sig_col: list[str] = []
+    for i, t in enumerate(terms):
+        d_df = df_chain[i] - df_chain[i + 1]
+        d_rss = rss_chain[i] - rss_chain[i + 1]
+        if d_df <= 0:
+            df_col.append(d_df); sos_col.append(round(d_rss, 4))
+            ms_col.append(float("nan"))
+            f_col.append(None); p_col.append(None); sig_col.append("")
+            continue
+        ms = d_rss / d_df
+        fstat = ms / mse_full
+        p = float(f.sf(fstat, d_df, m.df_residuals))
+        df_col.append(d_df); sos_col.append(round(d_rss, 4))
+        ms_col.append(round(ms, 4))
+        f_col.append(round(fstat, 4))
+        p_col.append(float(f"{p:.4g}"))
+        sig_col.append(significance_code([p])[0])
+    # Residuals row
+    df_col.append(m.df_residuals); sos_col.append(round(m.rss, 4))
+    ms_col.append(round(mse_full, 4))
+    f_col.append(None); p_col.append(None); sig_col.append("")
+
+    docstring = "Analysis of Variance Table\n\n"
+    docstring += f"Response: {lhs}\n"
+
+    df_ = pl.DataFrame({
+        "":         [t.label for t in terms] + ["Residuals"],
+        "Df":       df_col,
+        "Sum Sq":   sos_col,
+        "Mean Sq":  ms_col,
+        "F value":  f_col,
+        "Pr(>F)":   p_col,
+        " ":        sig_col,
     })
 
     print(docstring)

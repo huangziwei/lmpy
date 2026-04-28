@@ -354,3 +354,20 @@ def test_wood_2_1_1_stomata_rank_deficient_anova():
     np.testing.assert_allclose(m0.rss, 2.1348, atol=5e-3)
     f_stat = ((m0.rss - m1.rss) / 4) / (m1.rss / m1.df_residuals)
     np.testing.assert_allclose(f_stat, 6.6654, atol=5e-3)
+
+
+def test_wood_2_1_1_stomata_anova_single_model_sequential(capsys):
+    """anova(lm) for a single fit — sequential (Type I) SS, R parity.
+    Wood §2.1.1: anova(lm(area ~ CO2 + tree)) decomposes into CO2 + tree
+    incremental F-tests; pinned to R's anova.lm output."""
+    from lmpy import anova
+    df = load_dataset("gamair", "stomata")
+    m = lm("area ~ CO2 + tree", data=df)
+    anova(m)
+    out = capsys.readouterr().out
+    # CO2 row
+    assert "CO2" in out and "184.5452" in out and "6.686e-11" in out
+    # tree row
+    assert "tree" in out and "6.6654" in out and "0.001788" in out
+    # Residuals row uses df=18 / SS=0.8604
+    assert "Residuals" in out and "0.8604" in out
