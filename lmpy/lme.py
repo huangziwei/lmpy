@@ -581,6 +581,14 @@ class lme:
         other = [k for k in range(len(self._theta_bounds)) if k != slot_i]
         theta_rest0 = np.array([theta_start[k] for k in other])
 
+        # Guard θ[slot_i] = sd_tgt/σ from blowing up when L-BFGS-B probes
+        # very small σ — without this the implied θ becomes O(1e7) and
+        # ``M = ΛᵀZᵀZΛ + I`` factorizes with rcond ≈ 1e-15. Cholmod warns
+        # and the gradient gets noisy. Cap θ at 1e4 → cond(M) ≲ 1e8, well
+        # away from Cholmod's near-singular threshold; the optimum lives
+        # at θ_slot ≈ θ_hat ≪ 1e4 anyway, so the cap never binds.
+        sigma_lb = max(1e-8, sd_tgt / 1e4)
+
         def obj(x):
             sigma = x[0]
             if sigma <= 0:
@@ -591,8 +599,8 @@ class lme:
                 theta[slot] = x[1 + k]
             return self._ml_deviance(theta, sigma_fix=sigma)
 
-        x0 = np.concatenate([[sigma_start], theta_rest0])
-        bounds = [(1e-8, None)] + [self._theta_bounds[k] for k in other]
+        x0 = np.concatenate([[max(sigma_start, sigma_lb)], theta_rest0])
+        bounds = [(sigma_lb, None)] + [self._theta_bounds[k] for k in other]
         res = minimize(
             obj, x0, method="L-BFGS-B", bounds=bounds,
             options={"ftol": 1e-12, "gtol": 1e-8, "maxiter": 1000},
@@ -606,13 +614,89 @@ class lme:
         _, beta_opt = self._post_refit_state(theta_opt, sigma_fix=sigma_opt)
         return float(res.fun), theta_opt, sigma_opt, beta_opt
 
+    def _step_adaptive(
+        self, *, direction: int, v_start: float, initial_step: float,
+        fit_at_v, theta_warm: np.ndarray, sigma_warm: float,
+        d_hat: float, v_min: float = -np.inf, v_max: float = np.inf,
+        zeta_cutoff: float = 4.0, target_dzeta: float = 0.5,
+        max_steps: int = 25,
+    ) -> list[tuple]:
+        """One-direction adaptive ζ-stepper — matches R's profile.merMod.
+
+        Steps from ``v_start`` along ``direction`` (±1), refits the
+        constrained deviance at each step, and adapts the v-step size so
+        |Δζ| ≈ ``target_dzeta`` per step. Stops when |ζ| ≥ ``zeta_cutoff``,
+        v hits a bound, or ``max_steps`` is exhausted. Critically, this
+        avoids the σ → 5·σ̂ extreme-grid points where ``M = ΛᵀZᵀZΛ + I``
+        becomes Cholmod-near-singular (rcond ≈ 1e-15), which is what made
+        the old fixed-grid profile diverge between Intel Macs and ARM.
+        Returns ``(v, ζ, θ, σ, β)`` tuples in stepping order.
+        """
+        out: list[tuple] = []
+        v_curr, zeta_curr, step = v_start, 0.0, float(initial_step)
+        for _ in range(max_steps):
+            v_try = v_curr + direction * step
+            boundary_hit = False
+            if v_try <= v_min:
+                v_try = v_min + 1e-6 * abs(initial_step)
+                boundary_hit = True
+            elif v_try >= v_max:
+                v_try = v_max - 1e-6 * abs(initial_step)
+                boundary_hit = True
+            d, theta_opt, sigma_opt, beta_opt = fit_at_v(v_try, theta_warm, sigma_warm)
+            if not np.isfinite(d):
+                step *= 0.5
+                if step < 1e-6 * initial_step:
+                    break
+                continue
+            zeta_try = direction * np.sqrt(max(0.0, d - d_hat))
+            out.append((float(v_try), float(zeta_try), theta_opt, sigma_opt, beta_opt))
+            theta_warm, sigma_warm = theta_opt, sigma_opt
+            if abs(zeta_try) >= zeta_cutoff or boundary_hit:
+                break
+            dzeta = abs(zeta_try - zeta_curr)
+            if dzeta > 1e-6:
+                step = float(np.clip(step * (target_dzeta / dzeta), step / 4, step * 4))
+            v_curr, zeta_curr = v_try, zeta_try
+        return out
+
+    def _profile_param_adaptive(
+        self, *, fit_at_v, v_start: float,
+        theta_start: np.ndarray, sigma_start: float, beta_start: np.ndarray,
+        d_hat: float, initial_step: float,
+        v_min: float = -np.inf, v_max: float = np.inf,
+        zeta_cutoff: float = 4.0, max_steps_per_dir: int = 25,
+    ) -> list[tuple]:
+        """Profile one parameter in both ζ-directions + insert the MLE
+        row. See :meth:`_step_adaptive`. Output order: most-negative ζ
+        first → MLE → most-positive ζ last.
+        """
+        common = dict(
+            initial_step=initial_step, fit_at_v=fit_at_v, d_hat=d_hat,
+            v_min=v_min, v_max=v_max, zeta_cutoff=zeta_cutoff,
+            max_steps=max_steps_per_dir,
+        )
+        pos = self._step_adaptive(
+            direction=+1, v_start=v_start,
+            theta_warm=theta_start.copy(), sigma_warm=sigma_start, **common,
+        )
+        neg = self._step_adaptive(
+            direction=-1, v_start=v_start,
+            theta_warm=theta_start.copy(), sigma_warm=sigma_start, **common,
+        )
+        mle = (float(v_start), 0.0, theta_start.copy(), float(sigma_start),
+               beta_start.copy())
+        return list(reversed(neg)) + [mle] + pos
+
     def profile(self, n_grid: int = 41) -> "Profile":
         """Compute profile-likelihood curves for σ_i, σ, and each β_j.
 
-        For each parameter we fix it at ``n_grid`` values centered on the
-        MLE, re-minimize the ML deviance over the remaining parameters, and
-        record ``ζ = sign(v − v̂) · √(d(v) − d̂)``. The result is a
-        :class:`Profile` carrying one DataFrame per parameter plus the MLEs.
+        Uses R's adaptive ζ-stepping (``profile.merMod``): from the MLE
+        we step in v with step size adapted so |Δζ| ≈ 0.5 per step,
+        stopping each direction when |ζ| ≥ 4 or v hits a bound. ``n_grid``
+        is reinterpreted as the max-steps-per-direction cap; in practice
+        most parameters terminate after 10–15 steps. The Profile rows
+        thus have variable length, sorted by ζ.
 
         For REML fits we first re-fit by ML, per lme4's convention (the LRT
         statistic requires ML). Only scalar bars ``(1|g)`` are supported in
@@ -654,50 +738,53 @@ class lme:
                 row[name] = float(beta_opt[j])
             return row
 
-        # Grid widths are picked to comfortably cover |ζ| ≤ 3 (so the
-        # 99% CI cutoff at ±2.576 is inside the grid). β uses Wald SE as a
-        # scale; σ and σ_i get multiplicative ranges. Each grid point also
-        # records the full optimized state — needed for plot_pairs traces.
+        # Adaptive ζ-stepping per parameter — see _step_adaptive. Each
+        # call returns rows ordered most-negative-ζ → MLE → most-positive-ζ.
         rows_by_param: dict[str, list[dict[str, float]]] = {p: [] for p in param_names}
-        zetas_by_param: dict[str, np.ndarray] = {p: np.empty(n_grid) for p in param_names}
+        zetas_by_param: dict[str, np.ndarray] = {}
+
+        def _samples_to_storage(samples: list[tuple], lbl: str):
+            zetas_by_param[lbl] = np.array([s[1] for s in samples])
+            for s in samples:
+                rows_by_param[lbl].append(_state_to_row(s[2], s[3], s[4]))
 
         # -- σ_i (one per scalar bar) ---------------------------------------
-        for i, (lbl, slot_i) in enumerate(zip(bar_labels, bar_slots)):
+        for lbl, slot_i in zip(bar_labels, bar_slots):
             sd_i = estimate[lbl]
-            grid = np.linspace(1e-3 * sd_i, 5.0 * sd_i, n_grid)
-            theta_warm = theta_hat.copy()
-            sigma_warm = sigma_hat
-            for k, v in enumerate(grid):
-                d_k, theta_warm, sigma_warm, beta_opt = self._dev_with_sd_fixed(
-                    slot_i, v, sigma_warm, theta_warm,
-                )
-                zetas_by_param[lbl][k] = np.sign(v - sd_i) * np.sqrt(max(0.0, d_k - d_hat))
-                rows_by_param[lbl].append(_state_to_row(theta_warm, sigma_warm, beta_opt))
+            samples = self._profile_param_adaptive(
+                fit_at_v=lambda v, th_w, sg_w, _slot=slot_i:
+                    self._dev_with_sd_fixed(_slot, v, sg_w, th_w),
+                v_start=sd_i, theta_start=theta_hat,
+                sigma_start=sigma_hat, beta_start=self._beta,
+                d_hat=d_hat, initial_step=0.1 * max(sd_i, 1.0),
+                v_min=0.0, max_steps_per_dir=n_grid,
+            )
+            _samples_to_storage(samples, lbl)
 
         # -- σ ----------------------------------------------------------------
-        log_grid = np.linspace(-0.6, 0.6, n_grid) + np.log(sigma_hat)
-        sigma_grid = np.exp(log_grid)
-        theta_warm = theta_hat.copy()
-        for k, s in enumerate(sigma_grid):
-            d_k, theta_warm, sigma_opt, beta_opt = self._dev_with_sigma_fixed(s, theta_warm)
-            zetas_by_param[".sigma"][k] = np.sign(s - sigma_hat) * np.sqrt(max(0.0, d_k - d_hat))
-            rows_by_param[".sigma"].append(_state_to_row(theta_warm, sigma_opt, beta_opt))
+        samples = self._profile_param_adaptive(
+            fit_at_v=lambda v, th_w, sg_w:
+                self._dev_with_sigma_fixed(v, th_w),
+            v_start=sigma_hat, theta_start=theta_hat,
+            sigma_start=sigma_hat, beta_start=self._beta,
+            d_hat=d_hat, initial_step=0.1 * sigma_hat,
+            v_min=0.0, max_steps_per_dir=n_grid,
+        )
+        _samples_to_storage(samples, ".sigma")
 
         # -- β_j --------------------------------------------------------------
-        # Range matches lme4's cutoff = √χ²(0.99, nptot); using 6·SE so that
-        # |ζ| ≥ cutoff at the boundary even when β-vs-ζ is sub-linear (lme4
-        # does this iteratively in profile.merMod). splom needs |ζ| ≥ mlev =
-        # √χ²₂(0.99) ≈ 3.03 in the trace-spline domain so the 99% contour
-        # anchors don't have to extrapolate.
         for j, name in enumerate(self.column_names):
             beta_j = estimate[name]
             se_j = float(self._se_beta[j])
-            grid = np.linspace(beta_j - 6 * se_j, beta_j + 6 * se_j, n_grid)
-            theta_warm = theta_hat.copy()
-            for k, b in enumerate(grid):
-                d_k, theta_warm, sigma_opt, beta_opt = self._dev_with_beta_fixed(j, b, theta_warm)
-                zetas_by_param[name][k] = np.sign(b - beta_j) * np.sqrt(max(0.0, d_k - d_hat))
-                rows_by_param[name].append(_state_to_row(theta_warm, sigma_opt, beta_opt))
+            samples = self._profile_param_adaptive(
+                fit_at_v=lambda v, th_w, sg_w, _j=j:
+                    self._dev_with_beta_fixed(_j, v, th_w),
+                v_start=beta_j, theta_start=theta_hat,
+                sigma_start=sigma_hat, beta_start=self._beta,
+                d_hat=d_hat, initial_step=max(se_j, 1e-3),
+                max_steps_per_dir=n_grid,
+            )
+            _samples_to_storage(samples, name)
 
         data: dict[str, pl.DataFrame] = {}
         for p in param_names:
@@ -1161,7 +1248,13 @@ def _invert_zeta(
     vals: np.ndarray, zetas: np.ndarray, target: float,
     *, fallback: float = float("nan"),
 ) -> float:
-    """Linearly interpolate the ζ-curve to find where ζ(v) = target.
+    """Cubic-spline-interpolate the ζ-curve to find where ζ(v) = target.
+
+    Matches R's ``confint(profile(...))`` which uses ``splines::interpSpline``
+    on the ``ζ → v`` mapping — linear interpolation across two adjacent
+    grid points loses noticeable curvature near ±z (visible as ~0.25
+    units of error in the Dyestuff (Intercept) 99% bounds). Falls back to
+    linear interp when there are too few points for a cubic.
 
     Returns ``fallback`` if ``target`` falls outside the observed ζ range —
     callers pass 0 for variance-component SDs (natural lower bound; matches
@@ -1171,8 +1264,26 @@ def _invert_zeta(
     """
     if target < np.nanmin(zetas) or target > np.nanmax(zetas):
         return fallback
-    order = np.argsort(zetas)
-    return float(np.interp(target, zetas[order], vals[order]))
+    if len(vals) < 4:
+        order = np.argsort(zetas)
+        return float(np.interp(target, zetas[order], vals[order]))
+    # Match R: fit a forward natural cubic spline ζ = f(v), then numerically
+    # invert. The forward direction is monotonic and smooth even at .sig
+    # boundary corners (where ζ at v=0 is a finite asymptote, not ±∞), so
+    # the spline isn't pulled into the oscillations that fitting v(ζ) on
+    # the same data triggers. R uses splines::interpSpline + backSpline.
+    from scipy.interpolate import CubicSpline
+    from scipy.optimize import brentq
+    v_order = np.argsort(vals)
+    v_sorted, z_sorted = vals[v_order], zetas[v_order]
+    fwd = CubicSpline(v_sorted, z_sorted, bc_type="natural", extrapolate=False)
+    # Find the bracket: target lies between two consecutive ζ-knots.
+    diffs = z_sorted - target
+    sign_change = np.where(diffs[:-1] * diffs[1:] <= 0)[0]
+    if len(sign_change) == 0:
+        return float(np.interp(target, np.sort(zetas), vals[np.argsort(zetas)]))
+    i = int(sign_change[0])
+    return float(brentq(lambda v: float(fwd(v)) - target, v_sorted[i], v_sorted[i + 1]))
 
 
 class Profile:

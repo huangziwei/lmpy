@@ -45,7 +45,10 @@ def _assert_fixed(m, col, est, se=None, tval=None, *, atol=5e-3):
     if se is not None:
         np.testing.assert_allclose(m.se_bhat[col][0], se, atol=atol)
     if tval is not None:
-        np.testing.assert_allclose(m.t_values[col][0], tval, atol=5e-2)
+        # rtol covers large |t| where the pinned value is R's print()-rounded
+        # display (e.g. 104.2 vs full-precision 104.1623); atol covers small
+        # |t| where relative tol would be too lax.
+        np.testing.assert_allclose(m.t_values[col][0], tval, atol=5e-2, rtol=1e-3)
 
 
 def _assert_re_scalar(m, group, sd, *, atol=5e-3):
