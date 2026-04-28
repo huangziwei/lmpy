@@ -332,3 +332,26 @@ def test_breheny_airquality():
     _assert_coef(m, "Solar.R",     0.060,  0.023,  2.580, 0.011)
     _assert_coef(m, "Wind",       -3.334,  0.654, -5.094, 0.000)
     _assert_coef(m, "Temp",        1.652,  0.254,  6.516, 0.000)
+
+
+def test_wood_2_1_1_stomata_rank_deficient_anova():
+    """Wood 2017 §2.1.1 stomata: `tree` is nested in `CO2` (3 trees per
+    level), so `area ~ CO2 + tree` has rank 6 (not 7) — R's lm() drops
+    one aliased tree dummy via dqrdc2 pivoting. Verify the F-test in
+    anova(m0, m1) matches the book: Df=4 (not 5), F=6.665 (not 5.025),
+    Res.Df_full=18 (not 17)."""
+    import warnings
+    from lmpy import anova
+    df = load_dataset("gamair", "stomata")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # singularity warning is expected here
+        m1 = lm("area ~ CO2 + tree", data=df)
+        m0 = lm("area ~ CO2", data=df)
+    assert m1.df_residuals == 18
+    assert m0.df_residuals == 22
+    assert len(m1._aliased_cols) == 1
+    np.testing.assert_allclose(m1.rss, 0.8604, atol=5e-3)
+    np.testing.assert_allclose(m0.rss, 2.1348, atol=5e-3)
+    # F = ((rss0 - rss1) / dDf) / (rss1 / df1)
+    f_stat = ((m0.rss - m1.rss) / 4) / (m1.rss / m1.df_residuals)
+    np.testing.assert_allclose(f_stat, 6.6654, atol=5e-3)

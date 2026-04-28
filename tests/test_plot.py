@@ -24,10 +24,12 @@ from lmpy import plot as lmplot
 @pytest.fixture
 def numeric_df():
     rng = np.random.RandomState(0)
+    # z carries its own noise so it isn't perfectly collinear with x
+    # (linspace(-5, 5) = linspace(0, 10) - 5 → would alias to (Intercept) + x).
     return pl.DataFrame({
         "x": np.linspace(0, 10, 50),
         "y": np.linspace(0, 10, 50) + rng.randn(50),
-        "z": np.linspace(-5, 5, 50),
+        "z": np.linspace(-5, 5, 50) + rng.randn(50),
     })
 
 

@@ -1,3 +1,4 @@
+import warnings
 from typing import Union
 
 import matplotlib.pyplot as plt
@@ -25,6 +26,29 @@ def _row_frame(values: np.ndarray, columns: list[str]) -> pl.DataFrame:
     """Build a 1-row pl.DataFrame from a flat numpy array + column names."""
     flat = np.asarray(values).reshape(-1)
     return pl.DataFrame({c: [float(flat[i])] for i, c in enumerate(columns)})
+
+
+def _drop_aliased_cols(X_df: pl.DataFrame) -> list[str]:
+    """Identify linearly-dependent columns in a design matrix.
+
+    Uses left-to-right (non-pivoted) QR so the *later* of two collinear
+    columns is the one flagged — matches R's ``dqrdc2``, which prefers
+    earlier columns (intercept first, then formula RHS terms in order)
+    instead of strict-norm pivoting. Without this the intercept could
+    get dropped when a later predictor is constant + a centered copy.
+    Needed so ``df_residuals`` reflects effective rank, not column count.
+    """
+    if X_df.height == 0 or X_df.width == 0:
+        return []
+    X = X_df.to_numpy().astype(float)
+    _, R_qr = qr(X, mode="economic")
+    diag_abs = np.abs(np.diag(R_qr))
+    if diag_abs.size == 0:
+        return []
+    ref = max(float(diag_abs.max()), 1.0)
+    tol = ref * np.finfo(float).eps * max(X.shape)
+    cols = X_df.columns
+    return [cols[i] for i, v in enumerate(diag_abs) if v <= tol]
 
 
 def _lowess(x, y, frac=2 / 3, it=3):
@@ -159,6 +183,23 @@ class lm:
         self._design_data = d.data
         self.X = d.X
         self.y = d.y  # pl.Series
+
+        # R's lm() drops linearly-dependent columns from X (via dqrdc2's
+        # pivoted QR) before fitting — without this, df_residuals is off by
+        # the alias count whenever the design is rank-deficient. Common
+        # case: nested factors like `tree` nested in `CO2` (Wood 2017
+        # §2.1.1), where the inner factor's dummies absorb the outer one.
+        # We drop the aliased columns up front so every downstream df / SE
+        # / F-stat reads from the correct effective parameter count.
+        self._aliased_cols: list[str] = _drop_aliased_cols(self.X)
+        if self._aliased_cols:
+            keep = [c for c in self.X.columns if c not in self._aliased_cols]
+            self.X = self.X.select(keep)
+            warnings.warn(
+                f"lm: {len(self._aliased_cols)} coefficient(s) not defined "
+                f"because of singularities: {self._aliased_cols!r}",
+                stacklevel=2,
+            )
 
         self.column_names = list(self.X.columns)
         self.feature_names = (
@@ -401,7 +442,7 @@ class lm:
             X = self.X.to_numpy().astype(float)
             off = self._offset
         else:
-            X = materialize(self._expanded, Xnew).to_numpy().astype(float)
+            X = materialize(self._expanded, Xnew).select(self.column_names).to_numpy().astype(float)
             # Re-evaluate formula offsets against newdata, mirroring R's
             # predict.lm. Offsets are zero unless the formula uses offset(...).
             off = np.zeros(X.shape[0])
@@ -435,7 +476,7 @@ class lm:
         if Xnew is None:
             X = self.X.to_numpy().astype(float)
         else:
-            X = materialize(self._expanded, Xnew).to_numpy().astype(float)
+            X = materialize(self._expanded, Xnew).select(self.column_names).to_numpy().astype(float)
 
         # Var(ŷ) = σ² · x'(X'X)⁻¹x  ⇒  se = √diag(σ² · X(X'X)⁻¹Xᵀ).
         var_mean = np.einsum("ij,jk,ik->i", X, self.XtXinv, X) * self.sigma_squared
@@ -459,7 +500,7 @@ class lm:
         if Xnew is None:
             X = self.X.to_numpy().astype(float)
         else:
-            X = materialize(self._expanded, Xnew).to_numpy().astype(float)
+            X = materialize(self._expanded, Xnew).select(self.column_names).to_numpy().astype(float)
 
         # Var(y_new − ŷ) = σ²·(1 + x'(X'X)⁻¹x).
         var_mean = np.einsum("ij,jk,ik->i", X, self.XtXinv, X) * self.sigma_squared
