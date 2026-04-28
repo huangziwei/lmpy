@@ -419,3 +419,128 @@ def test_termplot_unknown_term_errors(numeric_df):
 def test_termplot_non_lm_input():
     with pytest.raises(TypeError, match="lm/glm"):
         lmplot.termplot("not a model")
+
+
+def test_pairs_default_uses_all_numeric_columns(numeric_df):
+    """pairs() defaults to every numeric column → 3×3 grid for the fixture."""
+    axes = lmplot.pairs(numeric_df)
+    assert axes.shape == (3, 3)
+    # diagonal in "label" mode prints column name as text, no scatter points
+    diag_text = [t.get_text() for t in axes[0, 0].texts]
+    assert diag_text == ["x"]
+    assert len(axes[0, 0].collections) == 0
+    # off-diagonal cell has a scatter PathCollection
+    assert len(axes[0, 1].collections) == 1
+    plt.close("all")
+
+
+def test_pairs_cols_subset_and_labels(numeric_df):
+    """cols= picks a subset and labels= renames the diagonal text."""
+    axes = lmplot.pairs(numeric_df, cols=["x", "y"], labels=["X", "Y"])
+    assert axes.shape == (2, 2)
+    assert axes[0, 0].texts[0].get_text() == "X"
+    assert axes[1, 1].texts[0].get_text() == "Y"
+    plt.close("all")
+
+
+def test_pairs_diag_hist(numeric_df):
+    """diag='hist' draws a histogram (Patch artists) on each diagonal cell."""
+    axes = lmplot.pairs(numeric_df, cols=["x", "y"], diag="hist")
+    # hist creates Rectangle patches; label/none modes add none
+    assert len(axes[0, 0].patches) > 0
+    assert len(axes[1, 1].patches) > 0
+    plt.close("all")
+
+
+def test_pairs_rejects_non_dataframe():
+    with pytest.raises(TypeError, match="DataFrame"):
+        lmplot.pairs(np.arange(10))
+
+
+def test_pairs_rejects_single_column(numeric_df):
+    with pytest.raises(ValueError, match="at least 2"):
+        lmplot.pairs(numeric_df, cols=["x"])
+
+
+def test_pairs_invalid_diag(numeric_df):
+    with pytest.raises(ValueError, match="diag="):
+        lmplot.pairs(numeric_df, diag="bogus")
+
+
+def test_pairs_labels_length_mismatch(numeric_df):
+    with pytest.raises(ValueError, match="labels has"):
+        lmplot.pairs(numeric_df, cols=["x", "y"], labels=["only-one"])
+
+
+def test_plot_dataframe_dispatches_to_pairs(numeric_df):
+    """plot(df) for a DataFrame routes to pairs() (R's plot.data.frame)."""
+    axes = lmplot.plot(numeric_df)
+    assert axes.shape == (3, 3)
+    plt.close("all")
+
+
+def test_pairs_perimeter_tick_labels_alternate(numeric_df):
+    """R's pairs.default places tick labels on alternating perimeter sides
+    so each variable's scale appears once around the matrix edge:
+    top row ↔ odd-index cols, bottom row ↔ even-index cols,
+    left col ↔ odd-index rows, right col ↔ even-index rows (0-indexed)."""
+    axes = lmplot.pairs(numeric_df)  # 3 numeric cols → 3×3 grid
+    n = axes.shape[0]
+
+    def visible_sides(ax):
+        # Read back the labelXXX flags via a major tick's label visibility
+        # — matplotlib stores them on each tick after tick_params runs.
+        xt = ax.xaxis.get_major_ticks()[0] if ax.xaxis.get_major_ticks() else None
+        yt = ax.yaxis.get_major_ticks()[0] if ax.yaxis.get_major_ticks() else None
+        return {
+            "top":    bool(xt and xt.label2.get_visible()),
+            "bottom": bool(xt and xt.label1.get_visible()),
+            "left":   bool(yt and yt.label1.get_visible()),
+            "right":  bool(yt and yt.label2.get_visible()),
+        }
+
+    for i in range(n):
+        for j in range(n):
+            sides = visible_sides(axes[i, j])
+            assert sides["top"] == (i == 0 and j % 2 == 1), (i, j, sides)
+            assert sides["bottom"] == (i == n - 1 and j % 2 == 0), (i, j, sides)
+            assert sides["left"] == (j == 0 and i % 2 == 1), (i, j, sides)
+            assert sides["right"] == (j == n - 1 and i % 2 == 0), (i, j, sides)
+    plt.close("all")
+
+
+def test_pairs_columns_share_x_limits(numeric_df):
+    """Every cell in column j is pinned to variable_j's range, so tick
+    marks line up vertically (matching R's pairs)."""
+    axes = lmplot.pairs(numeric_df)
+    n = axes.shape[0]
+    for j in range(n):
+        col_xlims = [axes[i, j].get_xlim() for i in range(n)]
+        assert all(xl == col_xlims[0] for xl in col_xlims), \
+            f"col {j} xlims diverge: {col_xlims}"
+    plt.close("all")
+
+
+def test_pairs_rows_share_y_limits_off_diag_under_hist(numeric_df):
+    """Under diag='hist' the diagonal cell uses a count y-axis, but every
+    OFF-diagonal cell in row i is still pinned to variable_i's range so
+    horizontal tick marks line up across the row."""
+    axes = lmplot.pairs(numeric_df, diag="hist")
+    n = axes.shape[0]
+    for i in range(n):
+        off = [axes[i, j].get_ylim() for j in range(n) if j != i]
+        assert all(yl == off[0] for yl in off), \
+            f"row {i} off-diag ylims diverge: {off}"
+    plt.close("all")
+
+
+def test_pairs_diag_hist_suppresses_y_perimeter_labels(numeric_df):
+    """Diagonal cells with diag='hist' show counts on y, so the perimeter
+    y-label rule must not fire there (would print misleading count ticks)."""
+    # n=3 (odd) → diagonal (2,2) would normally get right labels via the
+    # alternating rule (j=n-1=2, i=2 even). Suppressed for hist diag.
+    axes = lmplot.pairs(numeric_df, diag="hist")
+    yt = axes[2, 2].yaxis.get_major_ticks()
+    if yt:
+        assert not yt[0].label2.get_visible()
+    plt.close("all")
