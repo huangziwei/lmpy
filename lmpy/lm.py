@@ -1,4 +1,3 @@
-import warnings
 from typing import Union
 
 import matplotlib.pyplot as plt
@@ -191,15 +190,13 @@ class lm:
         # §2.1.1), where the inner factor's dummies absorb the outer one.
         # We drop the aliased columns up front so every downstream df / SE
         # / F-stat reads from the correct effective parameter count.
+        # Surface the alias info via summary()/__repr__ rather than a fit-time
+        # warning — R does the same (silent at construction, prints "(N not
+        # defined because of singularities)" only when you look at the model).
         self._aliased_cols: list[str] = _drop_aliased_cols(self.X)
         if self._aliased_cols:
             keep = [c for c in self.X.columns if c not in self._aliased_cols]
             self.X = self.X.select(keep)
-            warnings.warn(
-                f"lm: {len(self._aliased_cols)} coefficient(s) not defined "
-                f"because of singularities: {self._aliased_cols!r}",
-                stacklevel=2,
-            )
 
         self.column_names = list(self.X.columns)
         self.feature_names = (
@@ -333,10 +330,18 @@ class lm:
     def __repr__(self):
 
         docstring = f"""Formula: {self.formula}\n\n"""
-        docstring += "Coefficients:\n"
+        docstring += self._coef_header() + "\n"
         docstring += format_df(self.bhat)
 
         return docstring
+
+    def _coef_header(self) -> str:
+        """R-style 'Coefficients:' header — adds '(N not defined because of
+        singularities)' when the design was rank-deficient and aliased columns
+        had to be dropped from ``self.X``."""
+        if self._aliased_cols:
+            return f"Coefficients: ({len(self._aliased_cols)} not defined because of singularities)"
+        return "Coefficients:"
 
     def __str__(self):
 
@@ -626,7 +631,7 @@ class lm:
 
         docstring = f"""Formula: {self.formula}\n\n"""
         docstring += "\n".join(self._residuals_lines(digits=digits))
-        docstring += "\n\nCoefficients:\n"
+        docstring += "\n\n" + self._coef_header() + "\n"
 
         t_arr = self._bhat_arr / self._se_bhat_arr
         p_arr = np.asarray(self.p_values.row(0), dtype=float)
