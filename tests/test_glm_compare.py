@@ -222,6 +222,39 @@ def test_anova_glm_test_argument():
         anova(m0, m1, test="bogus")
 
 
+def test_anova_gam_single_pins_to_mgcv_on_trees():
+    """``anova(gam_single)`` should produce mgcv's anova.gam single-model
+    output: parametric Terms F-table + smooth significance table."""
+    import io, contextlib
+    from hea import gam, Gamma
+    trees = load_dataset("mgcv", "trees").with_columns(
+        Hclass=((pl.col("Height") / 10).floor() - 5)
+            .cast(pl.Int64)
+            .replace_strict([1, 2, 3], ["small", "medium", "large"],
+                            return_dtype=pl.Enum(["small", "medium", "large"])),
+    )
+    ct7 = gam("Volume ~ Hclass + s(Girth)",
+              family=Gamma(link="log"), data=trees)
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        anova(ct7)
+    out = buf.getvalue()
+    # Header
+    assert "Family: Gamma" in out
+    assert "Volume ~ Hclass + s(Girth)" in out
+    # Parametric table — pinned to mgcv (df=2, F=6.802, p≈0.00428)
+    assert "Parametric Terms:" in out
+    assert "Hclass" in out
+    assert "6.802" in out  # F-stat
+    assert "0.00428" in out  # p-value
+    # Smooth table — pinned to mgcv (edf=2.444, Ref.df=3.076, F=152.7)
+    assert "Approximate significance of smooth terms:" in out
+    assert "s(Girth)" in out
+    assert "2.444" in out
+    assert "3.076" in out
+    assert "152.7" in out
+
+
 def test_anova_lm_rejects_test_argument():
     """`test=` is glm-only; lm/lme always use F/Chisq respectively."""
     from hea import lm

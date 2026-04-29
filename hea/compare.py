@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import inspect
 
+import numpy as np
 import polars as pl
 from scipy.stats import chi2, f
 
+from .gam import gam
 from .glm import glm
 from .lm import lm
 from .lme import lme
-from .utils import format_df, significance_code
+from .utils import _dig_tst, format_df, format_pval, format_signif, significance_code
 
 __all__ = ["anova", "AIC", "BIC"]
 
@@ -105,14 +107,18 @@ def anova(*models, test: str | None = None):
         raise TypeError("anova(): need at least one model")
     if len(models) == 1:
         m = models[0]
-        if not isinstance(m, lm) or isinstance(m, glm):
-            raise TypeError(
-                "anova(m): single-model form supports lm only "
-                f"(got {type(m).__name__})"
-            )
-        if test is not None:
-            raise TypeError("anova(lm): test= is not accepted (always F)")
-        return _anova_lm_single(m)
+        if isinstance(m, gam):
+            if test is not None:
+                raise TypeError("anova(gam): test= is not accepted")
+            return _anova_gam_single(m)
+        if isinstance(m, lm) and not isinstance(m, glm):
+            if test is not None:
+                raise TypeError("anova(lm): test= is not accepted (always F)")
+            return _anova_lm_single(m)
+        raise TypeError(
+            "anova(m): single-model form supports lm and gam only "
+            f"(got {type(m).__name__})"
+        )
     labels = _caller_names(models, inspect.currentframe().f_back)
     if all(isinstance(m, lme) for m in models):
         if test is not None and test.upper() not in ("CHISQ", "LRT"):
@@ -267,6 +273,140 @@ def _anova_lm_single(m: lm):
     print(format_df(df_))
     print("---")
     print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
+
+
+def _anova_gam_single(m: gam):
+    """``anova.gam``-style single-model output: parametric Terms F-table
+    plus the smooth significance table. Mirrors mgcv's ``anova.gam`` for
+    a single fit (which omits the lm-coefficient details that
+    ``summary.gam`` prints).
+
+    Per-term parametric F is the joint Wald test
+    ``F = β_t' Vp_t⁻¹ β_t / k_t``, with ``k_t`` = number of model-matrix
+    columns the term contributes (1 for a numeric, ``L−1`` for an
+    ``L``-level factor). Term→column mapping is by name prefix — works
+    for the common factor / numeric / simple-interaction cases.
+    """
+    digits = 4
+
+    out = []
+    out.append("")
+    out.append(f"Family: {m.family.name}")
+    out.append(f"Link function: {m.family.link.name}")
+    out.append("")
+    out.append(f"Formula: {m.formula}")
+    out.append("")
+
+    # ---- Parametric Terms (per-term joint Wald F) -----------------------
+    # Collect non-intercept parametric columns. Intercept is excluded — mgcv
+    # follows the same convention in anova.gam's pTerms.table.
+    cols = m.parametric_columns
+    col_idx = {c: i for i, c in enumerate(cols)}
+    used = {"(Intercept)"} if "(Intercept)" in col_idx else set()
+
+    rows: list[tuple[str, int, float, float]] = []
+    if m._expanded.terms:
+        for term in m._expanded.terms:
+            label = term.label
+            # Match: a column belongs to ``term`` if it equals the label
+            # exactly (numeric term) or starts with the label (factor /
+            # interaction). Pick the longest label match per column to
+            # avoid e.g. ``Hclass`` claiming ``Hclassmedium:Girth`` when
+            # the interaction term ``Hclass:Girth`` exists.
+            term_cols = [
+                c for c in cols
+                if c not in used and (c == label or c.startswith(label))
+            ]
+            if not term_cols:
+                continue
+            used.update(term_cols)
+            idx = np.array([col_idx[c] for c in term_cols], dtype=int)
+            beta_t = m._beta[idx]
+            Vp_t = m.Vp[np.ix_(idx, idx)]
+            k = len(idx)
+            try:
+                solved = np.linalg.solve(Vp_t, beta_t)
+                F_stat = float(beta_t @ solved) / k
+            except np.linalg.LinAlgError:
+                F_stat = float("nan")
+            df_resid = float(m.df_residuals)
+            if np.isfinite(F_stat) and df_resid > 0:
+                p_val = float(f.sf(F_stat, k, df_resid))
+            else:
+                p_val = float("nan")
+            rows.append((label, k, F_stat, p_val))
+
+    if rows:
+        sig = significance_code([r[3] for r in rows])
+        tbl = pl.DataFrame({
+            "":        [r[0] for r in rows],
+            "df":      [r[1] for r in rows],
+            "F":       format_signif([r[2] for r in rows], digits=digits),
+            "p-value": format_pval([r[3] for r in rows],
+                                   digits=_dig_tst(digits)),
+            " ":       sig,
+        })
+        out.append("Parametric Terms:")
+        out.append(format_df(
+            tbl,
+            align={c: "right" for c in ("df", "F", "p-value")},
+        ))
+        out.append("---")
+        out.append(
+            "Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
+        )
+        out.append("")
+
+    # ---- Smooth significance table (same logic as gam.summary) ----------
+    if m._blocks:
+        from scipy.stats import f as _f_dist
+        rows_label: list[str] = []
+        rows_edf: list[float] = []
+        rows_refdf: list[float] = []
+        rows_F: list[float] = []
+        rows_p: list[float] = []
+        for b, (a, bcol) in zip(m._blocks, m._block_col_ranges):
+            beta_b = m._beta[a:bcol]
+            Vp_b = m.Vp[a:bcol, a:bcol]
+            X_b = m._X_full[:, a:bcol]
+            edf_b = float(m.edf[a:bcol].sum())
+            edf1_b = (
+                float(m.edf1[a:bcol].sum())
+                if hasattr(m, "edf1") else edf_b
+            )
+            p_b = bcol - a
+            rank = float(min(p_b, edf1_b))
+            Tr, ref_df = m._test_stat_type0(X_b, Vp_b, beta_b, rank)
+            F_smooth = Tr / max(ref_df, 1e-8)
+            p_smooth = (
+                float(_f_dist.sf(F_smooth, ref_df, m.df_residuals))
+                if m.df_residuals > 0 else float("nan")
+            )
+            rows_label.append(b.label)
+            rows_edf.append(edf_b)
+            rows_refdf.append(edf1_b)
+            rows_F.append(F_smooth)
+            rows_p.append(p_smooth)
+        sig_smooth = significance_code(rows_p)
+        sm_tbl = pl.DataFrame({
+            "":        rows_label,
+            "edf":     format_signif(rows_edf, digits=digits),
+            "Ref.df":  format_signif(rows_refdf, digits=digits),
+            "F":       format_signif(rows_F, digits=digits),
+            "p-value": format_pval(rows_p, digits=_dig_tst(digits)),
+            " ":       sig_smooth,
+        })
+        out.append("Approximate significance of smooth terms:")
+        out.append(format_df(
+            sm_tbl,
+            align={c: "right" for c in ("edf", "Ref.df", "F", "p-value")},
+        ))
+        out.append("---")
+        out.append(
+            "Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1"
+        )
+
+    print("\n".join(out))
 
 
 def _anova_glm(*models, labels: list[str], test: str | None = None):
