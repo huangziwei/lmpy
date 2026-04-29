@@ -3262,7 +3262,7 @@ class gam:
         rug=True,
         partial_residuals=False,
         n_grid: int = 40,
-        too_far: float = 0.0,
+        too_far: float = 0.1,
         ax=None,
     ):
         """Per-smooth effect plots — the hea port of mgcv's ``plot.gam``.
@@ -3272,9 +3272,11 @@ class gam:
         - **1D** ``s(x)`` → curve of ``f̂(x_i)`` with a 2·SE band, optional
           rug and partial residuals.
         - **2D** ``s(x,y)`` / ``te(x,y)`` → contour plot of ``f̂(x,y)``:
-          bold contours for the estimate, dashed for ``f̂ + SE``, dotted
-          for ``f̂ − SE`` (Wood 2017 Fig. 4.14 convention). Data locations
-          overlaid as a scatter.
+          bold contours for the estimate, dashed for ``f̂ − SE``, dotted
+          for ``f̂ + SE`` (matches mgcv's ``sp.contour`` lty=1/2/3 — note
+          Wood 2017 Fig. 4.14's caption inverts the SE assignments
+          relative to the actual mgcv code). Data locations overlaid as a
+          scatter.
 
         Multi-block factor-by smooths (e.g. ``s(x, by=g)`` for each level
         of ``g``) appear as separate panels — same as mgcv.
@@ -3298,7 +3300,8 @@ class gam:
         too_far : float
             (2D only) Mask grid points whose normalized distance to the
             nearest data point exceeds this threshold (mgcv's
-            ``exclude.too.far``). 0 disables masking.
+            ``exclude.too.far``). Default 0.1 matches mgcv's plot.gam
+            default; set to 0 to disable masking.
         ax : matplotlib Axes | None
             If given, draw the (single) selected smooth into this axes
             instead of building a new figure. The model must resolve to
@@ -3351,7 +3354,7 @@ class gam:
             _, block, a, bcol = plottable[0]
             edf_b = float(self.edf[a:bcol].sum())
             label_inner = block.label.rstrip(")")
-            title = f"{label_inner},{edf_b:.2f})"
+            title = f"{label_inner},{round(edf_b, 2):g})"
             wr_all = (
                 self.residuals_of("working") if partial_residuals else None
             )
@@ -3394,7 +3397,7 @@ class gam:
             ax = axes_arr[r, c]
             edf_b = float(self.edf[a:bcol].sum())
             label_inner = block.label.rstrip(")")
-            title = f"{label_inner},{edf_b:.2f})"
+            title = f"{label_inner},{round(edf_b, 2):g})"
 
             if len(block.term) == 1:
                 self._plot_smooth_1d(
@@ -3475,8 +3478,15 @@ class gam:
     ):
         """2D smooth panel: three-contour view (estimate / +SE / −SE) plus
         data-location scatter. Mirrors mgcv's ``plot.gam`` for ``s(x,y)`` /
-        ``te(x,y)`` smooths (Wood 2017 Fig. 4.14).
+        ``te(x,y)`` smooths: bold = f̂, **dashed = f̂−SE**, **dotted = f̂+SE**
+        (matches the lty=1/2/3 assignments in mgcv's ``sp.contour``; note
+        Wood 2017 Fig. 4.14's caption swaps these — the code is the truth).
+        Levels are shared across the three layers (so the same contour
+        value lines up bold/dashed/dotted, ±SE apart) and labeled with
+        their numeric value (mgcv default).
         """
+        from matplotlib.ticker import MaxNLocator
+
         x_name, y_name = block.term
         x_data = self.data[x_name].to_numpy().astype(float)
         y_data = self.data[y_name].to_numpy().astype(float)
@@ -3506,11 +3516,26 @@ class gam:
             fit = np.where(mask, np.nan, fit)
             se_f = np.where(mask, np.nan, se_f)
 
-        ax.contour(XX, YY, fit,         colors=color, linewidths=1.4)
-        ax.contour(XX, YY, fit + se_f,  colors=color, linestyles="--",
-                   linewidths=0.6)
-        ax.contour(XX, YY, fit - se_f,  colors=color, linestyles=":",
-                   linewidths=0.6)
+        # Pick mgcv-style "pretty" round levels covering the union of
+        # f̂, f̂+SE and f̂−SE so the same level value renders bold/dashed/
+        # dotted across the three layers (mgcv plot.gam convention).
+        zmin = float(np.nanmin(fit - se_f))
+        zmax = float(np.nanmax(fit + se_f))
+        # nbins=15 lets the locator choose a 0.2-spaced step over a [-1, 1]
+        # range (matches mgcv's plot.gam default density).
+        levels = MaxNLocator(nbins=15, steps=[1, 2, 5, 10]).tick_values(zmin, zmax)
+
+        # ``linestyles="solid"`` overrides matplotlib's default of switching
+        # negative-valued contours to dashed (rcParams["contour.negative_
+        # linestyle"]) — R's contour() doesn't do that, so the bold lines
+        # would otherwise visually mix with the f̂−SE dashed layer.
+        cs_fit = ax.contour(XX, YY, fit,        levels=levels,
+                            colors=color, linestyles="solid", linewidths=1.4)
+        ax.contour(XX, YY, fit - se_f,          levels=levels,
+                   colors=color, linestyles="--", linewidths=0.6)  # lty=2
+        ax.contour(XX, YY, fit + se_f,          levels=levels,
+                   colors=color, linestyles=":",  linewidths=0.6)  # lty=3
+        ax.clabel(cs_fit, inline=True, fontsize=8, fmt="%g")
         ax.scatter(x_data, y_data, s=10, color=color)
         ax.set_xlabel(x_name)
         ax.set_ylabel(y_name)
