@@ -3591,6 +3591,7 @@ class gam:
     def plot_smooth(
         self,
         select=None,
+        scheme=None,
         n_cols=2,
         figsize=None,
         color="black",
@@ -3600,6 +3601,7 @@ class gam:
         partial_residuals=False,
         n_grid: int = 40,
         too_far: float = 0.1,
+        zlim=None,
         all_terms: bool = False,
         ax=None,
     ):
@@ -3609,12 +3611,15 @@ class gam:
 
         - **1D** ``s(x)`` → curve of ``f̂(x_i)`` with a 2·SE band, optional
           rug and partial residuals.
-        - **2D** ``s(x,y)`` / ``te(x,y)`` → contour plot of ``f̂(x,y)``:
-          bold contours for the estimate, dashed for ``f̂ − SE``, dotted
-          for ``f̂ + SE`` (matches mgcv's ``sp.contour`` lty=1/2/3 — note
-          Wood 2017 Fig. 4.14's caption inverts the SE assignments
-          relative to the actual mgcv code). Data locations overlaid as a
-          scatter.
+        - **2D** ``s(x,y)`` / ``te(x,y)`` → contour plot of ``f̂(x,y)``
+          (default, ``scheme=0``) or a 3D persp wireframe (``scheme=1``).
+          Contour: bold = f̂, dashed = f̂−SE, dotted = f̂+SE (matches
+          mgcv's ``sp.contour`` lty=1/2/3 — note Wood 2017 Fig. 4.14's
+          caption inverts the SE assignments relative to the actual mgcv
+          code). Persp: white facets, black mesh, ``too_far``-masked
+          grid for the irregular boundary (matches mgcv's
+          ``plot.gam(scheme=1)`` look used in Wood 2017 Fig. 7.9 bottom
+          row).
 
         With ``all_terms=True``, parametric terms get their own panels
         (mgcv's ``plot.gam(..., all.terms=TRUE)`` behavior):
@@ -3628,14 +3633,29 @@ class gam:
 
         Parameters
         ----------
-        select : int | None
-            If set, plot just the ``select``-th panel (0-indexed in the
-            order panels would otherwise appear). Default plots every
-            plottable panel in a grid. Required when ``ax=`` is given and
-            the model has more than one plottable panel.
+        select : int | str | list of int|str | None
+            Which panel(s) to plot.
+
+            - ``None`` (default): all plottable panels in their formula
+              order.
+            - ``int``: 0-indexed position in the plottable list.
+            - ``str``: matches ``block.label`` for smooths
+              (``"s(dur)"``, ``"ti(gly,bmi)"``) or the term label for
+              parametric panels (``all_terms=True`` only). First match
+              wins.
+            - list of int/str: subset of panels in the given order.
+
+            Required when ``ax=`` is given and the model has more than
+            one plottable panel.
+        scheme : int | list[int] | None
+            Rendering style for 2D smooths, mgcv-style. ``0`` (default)
+            = contour; ``1`` = 3D persp (wireframe, white facets, black
+            edges, masked by ``too_far``). 1D smooths and parametric
+            panels ignore this. A scalar applies to every selected
+            panel; a list must have length equal to the number of
+            selected panels.
         n_cols : int
-            Columns in the grid layout when ``select`` is None and ``ax`` is
-            None.
+            Columns in the grid layout when ``ax`` is None.
         partial_residuals : bool
             (1D only) Overlay partial residuals (working residual + ``f̂_i``).
         rug : bool
@@ -3647,15 +3667,24 @@ class gam:
             nearest data point exceeds this threshold (mgcv's
             ``exclude.too.far``). Default 0.1 matches mgcv's plot.gam
             default; set to 0 to disable masking.
+        zlim : (float, float) | None
+            (``scheme=1`` persp only) Shared z-axis range across all
+            persp panels. Default ``None`` lets matplotlib autoscale per
+            panel — visually misleading when one term has been shrunk to
+            ~0 (the tiny range gets stretched to fill the panel and
+            doesn't read as flat). Pass an explicit range (e.g.
+            ``(-3, 3)``) to make near-zero terms render as flat plates,
+            matching Wood 2017 Fig. 7.9.
         all_terms : bool
             Also include parametric terms (factor / numeric, excluding the
             intercept) — Wood 2017 Fig. 4.15 layout.
         ax : matplotlib Axes | None
             If given, draw the (single) selected panel into this axes
-            instead of building a new figure. The model must resolve to
-            exactly one panel — either via ``select=`` or because there
-            is only one plottable panel. Returns ``ax`` in that case
-            (single-panel return convention); otherwise returns ``fig``.
+            instead of building a new figure. The axes must be a 3D
+            ``Axes3D`` (``projection='3d'``) when the panel is a 2D
+            smooth with ``scheme=1``; a regular 2D axes otherwise.
+            Returns ``ax`` in that case (single-panel return
+            convention); otherwise returns ``fig``.
 
         Returns
         -------
@@ -3714,19 +3743,15 @@ class gam:
                 "≥3D / fs / re smooths aren't supported here — try vis()"
             )
 
-        if select is not None:
-            if not (0 <= select < len(plottable)):
-                raise IndexError(
-                    f"select={select} out of range; "
-                    f"have {len(plottable)} plottable panel(s)"
-                )
-            plottable = [plottable[select]]
+        sel_idx = self._resolve_plot_select(select, plottable)
+        selected = [plottable[i] for i in sel_idx]
+        schemes = self._resolve_plot_scheme(scheme, len(selected))
 
         wr_all = (
             self.residuals_of("working") if partial_residuals else None
         )
 
-        def draw_panel(ax_, item):
+        def draw_panel(ax_, item, sch):
             kind = item[0]
             if kind == "smooth":
                 _, block, a, bcol = item
@@ -3740,6 +3765,12 @@ class gam:
                         band_alpha=band_alpha,
                         rug=rug, partial_residuals=partial_residuals,
                         wr_all=wr_all, ylabel=title,
+                    )
+                elif sch == 1:
+                    self._plot_smooth_2d_persp(
+                        ax_, block, a, bcol,
+                        color=color, n_grid=n_grid, too_far=too_far,
+                        zlim=zlim, zlabel=title,
                     )
                 else:
                     self._plot_smooth_2d(
@@ -3763,40 +3794,122 @@ class gam:
 
         # Single-panel target: draw into the user-supplied ax and return it.
         if ax is not None:
-            if len(plottable) != 1:
+            if len(selected) != 1:
                 raise ValueError(
-                    f"ax= requires exactly one panel; have {len(plottable)} "
-                    f"plottable panel(s). Pass select= to pick one."
+                    f"ax= requires exactly one panel; have {len(selected)} "
+                    f"selected panel(s). Pass select= to pick one."
                 )
-            draw_panel(ax, plottable[0])
+            item, sch = selected[0], schemes[0]
+            needs_3d = (
+                item[0] == "smooth" and len(item[1].term) == 2 and sch == 1
+            )
+            if needs_3d and not hasattr(ax, "get_zlim"):
+                raise TypeError(
+                    "scheme=1 (persp) on a 2D smooth requires a 3D Axes; "
+                    "pass an axes built with projection='3d'."
+                )
+            draw_panel(ax, item, sch)
             return ax
 
-        n_plots = len(plottable)
-        if n_plots == 1:
-            fig, ax_one = plt.subplots(figsize=figsize or (5, 4))
-            axes_arr = np.array([[ax_one]])
-            n_rows, n_cols_eff = 1, 1
+        n_plots = len(selected)
+        n_cols_eff = 1 if n_plots == 1 else min(n_cols, n_plots)
+        n_rows = (n_plots + n_cols_eff - 1) // n_cols_eff
+        any_persp = any(
+            item[0] == "smooth" and len(item[1].term) == 2 and sch == 1
+            for item, sch in zip(selected, schemes)
+        )
+        if figsize is None:
+            # Persp panels need extra width: matplotlib's 3D backend doesn't
+            # report the zlabel's bbox to the layout engine, so a vanilla
+            # tight/constrained layout clips the rightmost zlabel. Pad both
+            # the per-panel width and the inter-panel spacing.
+            w = 6.0 if any_persp else 5
+            figsize = (w * n_cols_eff, 4 * n_rows)
+        fig = plt.figure(figsize=figsize)
+        for plot_i, (item, sch) in enumerate(zip(selected, schemes)):
+            needs_3d = (
+                item[0] == "smooth" and len(item[1].term) == 2 and sch == 1
+            )
+            proj = "3d" if needs_3d else None
+            ax_i = fig.add_subplot(
+                n_rows, n_cols_eff, plot_i + 1, projection=proj
+            )
+            draw_panel(ax_i, item, sch)
+
+        if any_persp:
+            # Hard-coded margins: leave 8% on the right (zlabel of the
+            # rightmost panel sits there) and 4% on the other sides;
+            # ~25% wspace between panels. Jupyter's inline backend renders
+            # with bbox_inches='tight' which can crop zlabels right up to
+            # the panel edge — the wider right margin gives them room.
+            fig.subplots_adjust(
+                left=0.04, right=0.92, bottom=0.06, top=0.96,
+                wspace=0.25, hspace=0.25,
+            )
         else:
-            n_cols_eff = min(n_cols, n_plots)
-            n_rows = (n_plots + n_cols_eff - 1) // n_cols_eff
-            if figsize is None:
-                figsize = (5 * n_cols_eff, 4 * n_rows)
-            fig, axes = plt.subplots(n_rows, n_cols_eff, figsize=figsize)
-            axes_arr = np.atleast_2d(axes)
-            if n_rows == 1 and axes_arr.shape[0] != 1:
-                axes_arr = axes_arr.reshape(1, -1)
-
-        for plot_i, item in enumerate(plottable):
-            r, c = divmod(plot_i, n_cols_eff)
-            draw_panel(axes_arr[r, c], item)
-
-        # Hide unused grid cells.
-        for plot_i in range(n_plots, axes_arr.size):
-            r, c = divmod(plot_i, n_cols_eff)
-            axes_arr[r, c].set_visible(False)
-
-        fig.tight_layout()
+            fig.tight_layout()
         return fig
+
+    def _resolve_plot_select(self, select, plottable):
+        """Map ``select=`` (None / int / str / list of those) to a list of
+        indices into ``plottable``. String names match ``block.label`` for
+        smooth panels and the term label for parametric panels.
+        """
+        if select is None:
+            return list(range(len(plottable)))
+        items = select if isinstance(select, (list, tuple)) else [select]
+        out = []
+        for s in items:
+            if isinstance(s, bool):
+                raise TypeError(
+                    f"select entries must be int or str, got bool ({s!r})"
+                )
+            if isinstance(s, (int, np.integer)):
+                i = int(s)
+                if not (0 <= i < len(plottable)):
+                    raise IndexError(
+                        f"select={i} out of range; have {len(plottable)} "
+                        "plottable panel(s)"
+                    )
+                out.append(i)
+            elif isinstance(s, str):
+                matched = None
+                for j, item in enumerate(plottable):
+                    name = item[1].label if item[0] == "smooth" else item[1]
+                    if name == s:
+                        matched = j
+                        break
+                if matched is None:
+                    avail = [
+                        item[1].label if item[0] == "smooth" else item[1]
+                        for item in plottable
+                    ]
+                    raise ValueError(
+                        f"select={s!r} doesn't match any plottable panel; "
+                        f"have {avail}"
+                    )
+                out.append(matched)
+            else:
+                raise TypeError(
+                    f"select entries must be int or str, got "
+                    f"{type(s).__name__}"
+                )
+        return out
+
+    def _resolve_plot_scheme(self, scheme, n_panels):
+        """Map ``scheme=`` (None / int / list of int) to a list of length
+        ``n_panels``.
+        """
+        if scheme is None:
+            return [0] * n_panels
+        if isinstance(scheme, (list, tuple)):
+            if len(scheme) != n_panels:
+                raise ValueError(
+                    f"scheme list must have length {n_panels} (one per "
+                    f"selected panel); got {len(scheme)}"
+                )
+            return [int(s) for s in scheme]
+        return [int(scheme)] * n_panels
 
     def _plot_smooth_1d(
         self, ax, block, a, bcol, *,
@@ -3917,6 +4030,50 @@ class gam:
         ax.set_xlabel(x_name)
         ax.set_ylabel(y_name)
         ax.set_title(title)
+
+    def _plot_smooth_2d_persp(
+        self, ax, block, a, bcol, *,
+        color, n_grid, too_far, zlim, zlabel,
+    ):
+        """2D smooth as a 3D persp wireframe — mgcv's ``plot.gam(scheme=1)``.
+
+        White facets, black mesh, masked outside the data convex hull when
+        ``too_far > 0`` (NaNs become holes in ``plot_surface``). Used in
+        Wood 2017 Fig. 7.9 bottom row.
+        """
+        x_name, y_name = block.term
+        x_data = self.data[x_name].to_numpy().astype(float)
+        y_data = self.data[y_name].to_numpy().astype(float)
+
+        x_grid = np.linspace(np.nanmin(x_data), np.nanmax(x_data), n_grid)
+        y_grid = np.linspace(np.nanmin(y_data), np.nanmax(y_data), n_grid)
+        XX, YY = np.meshgrid(x_grid, y_grid, indexing="ij")
+        grid_df = pl.DataFrame({
+            x_name: XX.flatten(),
+            y_name: YY.flatten(),
+        })
+
+        B = np.asarray(block.spec.predict_mat(grid_df), dtype=float)
+        beta = self._beta[a:bcol]
+        Z = (B @ beta).reshape(XX.shape)
+
+        if too_far > 0.0:
+            mask = _too_far_mask(
+                XX.flatten(), YY.flatten(),
+                self.data[x_name], self.data[y_name], too_far,
+            ).reshape(XX.shape)
+            Z = np.where(mask, np.nan, Z)
+
+        ax.plot_surface(
+            XX, YY, Z,
+            color="white", edgecolor=color,
+            linewidth=0.3, shade=False,
+        )
+        if zlim is not None:
+            ax.set_zlim(*zlim)
+        ax.set_xlabel(x_name)
+        ax.set_ylabel(y_name)
+        ax.set_zlabel(zlabel)
 
     def _plot_parametric_factor(
         self, ax, label: str, col_idx: list[int], *, color, rug: bool,

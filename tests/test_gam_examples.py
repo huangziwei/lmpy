@@ -940,6 +940,104 @@ def test_plot_smooth_all_terms_factor_termplot():
     assert len(fig2.axes) == 1
 
 
+def test_plot_smooth_select_by_name_and_list():
+    """``select=`` accepts a smooth label, a list of labels, or a list of
+    ints; ordering follows the list."""
+    import matplotlib
+    matplotlib.use("Agg")
+    d = load_dataset("synthetic", "seed_synth_basic")
+    m = gam("y ~ s(x1) + s(x2) + s(x3)", d, method="REML")
+
+    # Single string → one panel.
+    fig = m.plot_smooth(select="s(x2)")
+    assert len(fig.axes) == 1
+    assert "s(x2," in fig.axes[0].get_ylabel()
+
+    # List of strings → panels in given order. Reverse formula order to
+    # verify ordering is honored.
+    fig = m.plot_smooth(select=["s(x3)", "s(x1)"])
+    assert len(fig.axes) == 2
+    assert "s(x3," in fig.axes[0].get_ylabel()
+    assert "s(x1," in fig.axes[1].get_ylabel()
+
+    # Mixed int + str works.
+    fig = m.plot_smooth(select=[0, "s(x3)"])
+    assert len(fig.axes) == 2
+    assert "s(x1," in fig.axes[0].get_ylabel()
+    assert "s(x3," in fig.axes[1].get_ylabel()
+
+    # Unknown name lists the available labels.
+    with pytest.raises(ValueError, match="doesn't match"):
+        m.plot_smooth(select="s(missing)")
+    with pytest.raises(IndexError, match="out of range"):
+        m.plot_smooth(select=99)
+
+
+def test_plot_smooth_scheme_persp_for_2d():
+    """``scheme=1`` renders a 2D smooth as a 3D persp wireframe; the panel's
+    axes must be a 3D Axes3D and carry the smooth label as zlabel."""
+    import matplotlib
+    matplotlib.use("Agg")
+    from mpl_toolkits.mplot3d import Axes3D
+    from hea import Gamma
+    trees = load_dataset("mgcv", "trees")
+    m = gam("Volume ~ s(Height, Girth, k=20)",
+            family=Gamma(link="log"), data=trees)
+
+    # scheme=1 → persp axes; zlabel carries the smooth label.
+    fig = m.plot_smooth(scheme=1)
+    assert len(fig.axes) == 1
+    assert isinstance(fig.axes[0], Axes3D)
+    assert "s(Height,Girth," in fig.axes[0].get_zlabel()
+
+    # scheme=0 (default) keeps the contour rendering.
+    fig = m.plot_smooth(scheme=0)
+    assert not isinstance(fig.axes[0], Axes3D)
+    assert "s(Height,Girth," in fig.axes[0].get_title()
+
+
+def test_plot_smooth_scheme_per_panel_list():
+    """``scheme=[...]`` aligns to selected panels — 1D smooths ignore it,
+    2D panels get persp where requested. Mirrors Wood 2017 Fig. 7.9."""
+    import matplotlib
+    matplotlib.use("Agg")
+    from mpl_toolkits.mplot3d import Axes3D
+    from hea import Gamma
+    trees = load_dataset("mgcv", "trees")
+    m = gam("Volume ~ s(Height) + s(Height, Girth, k=20)",
+            family=Gamma(link="log"), data=trees)
+
+    # 1D, 2D-persp — last panel must be 3D, first 2D.
+    fig = m.plot_smooth(scheme=[0, 1])
+    assert len(fig.axes) == 2
+    assert not isinstance(fig.axes[0], Axes3D)
+    assert isinstance(fig.axes[1], Axes3D)
+
+    # Length mismatch raises.
+    with pytest.raises(ValueError, match="scheme list must have length 2"):
+        m.plot_smooth(scheme=[0, 1, 0])
+
+
+def test_plot_smooth_ax_3d_required_for_persp():
+    """Passing ``ax=`` for a 2D scheme=1 panel demands a 3D Axes."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from hea import Gamma
+    trees = load_dataset("mgcv", "trees")
+    m = gam("Volume ~ s(Height, Girth, k=20)",
+            family=Gamma(link="log"), data=trees)
+
+    fig, ax2d = plt.subplots()
+    with pytest.raises(TypeError, match="3D Axes"):
+        m.plot_smooth(scheme=1, ax=ax2d)
+
+    fig = plt.figure()
+    ax3d = fig.add_subplot(111, projection="3d")
+    out = m.plot_smooth(scheme=1, ax=ax3d)
+    assert out is ax3d
+
+
 def test_gam_gamma_validation():
     d = load_dataset("R", "iris")
     with pytest.raises(ValueError, match="gamma"):
