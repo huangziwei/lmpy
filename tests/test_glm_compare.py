@@ -22,6 +22,7 @@ import pytest
 
 from conftest import load_dataset, load_glm_oracle
 from hea import AIC, BIC, Binomial, Gamma, Gaussian, Poisson, anova, glm
+from hea.compare import _anova_glm_table
 
 
 # ---------------------------------------------------------------------------
@@ -89,13 +90,11 @@ def test_anova_glm(oid: str):
     o = load_glm_oracle(oid)
     fits = ANOVA_CASES[oid]()
 
-    # Capture stdout so the printed table doesn't pollute pytest output;
-    # we verify against the *returned* dataframe.
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        df = anova(*fits)
-
-    assert isinstance(df, pl.DataFrame), f"anova(glm) should return a polars DataFrame; got {type(df)}"
+    # Public anova() prints and returns None; call the builder directly so
+    # we can assert on column values.
+    labels = [f"m{i}" for i in range(len(fits))]
+    df, _ = _anova_glm_table(*fits, labels=labels, test=None)
+    assert isinstance(df, pl.DataFrame)
 
     # Per-row residual df / dev — order should match the oracle (sorted by
     # df_residuals descending, which equals the input order for nested fits).

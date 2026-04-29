@@ -289,6 +289,20 @@ def _anova_glm(*models, labels: list[str], test: str | None = None):
     Three-or-more models are walked incrementally (row k vs row k-1 after
     sorting by ``df_residuals`` descending, matching ``_anova_lm``).
     """
+    df_, docstring = _anova_glm_table(*models, labels=labels, test=test)
+    print(docstring)
+    print(format_df(df_))
+    print("---")
+    print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
+
+
+def _anova_glm_table(*models, labels: list[str], test: str | None = None):
+    """Pure builder for the ``anova(glm,...)`` table.
+
+    Returns ``(df, docstring)``. Used by ``_anova_glm`` (which prints) and
+    by tests that need to inspect column values directly. See ``_anova_glm``
+    for the semantics of ``test=``.
+    """
     fam0 = models[0].family
     if not all(type(m.family) is type(fam0) and
                m.family.link.name == fam0.link.name for m in models):
@@ -369,12 +383,7 @@ def _anova_glm(*models, labels: list[str], test: str | None = None):
         p_lbl:        p_col,
         " ":          sig_col,
     })
-
-    print(docstring)
-    print(format_df(df_))
-    print("---")
-    print("Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
-    return df_
+    return df_, docstring
 
 
 def _anova_lme(*models, labels: list[str]):
