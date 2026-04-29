@@ -962,3 +962,91 @@ def test_gam_predict_reevaluates_offset_on_newdata():
     eta_orig = m.predict(type="link")
     eta_new = m.predict(new, type="link")
     np.testing.assert_allclose(eta_new - eta_orig, 2.0, atol=1e-10)
+
+
+# ---------------------------------------------------------------------------
+# select=TRUE — mgcv's null-space penalty for term selection
+# ---------------------------------------------------------------------------
+
+
+def test_select_true_doubles_n_sp():
+    """select=TRUE adds one null-space penalty per smooth → n_sp doubles."""
+    d = load_dataset("synthetic", "seed_synth_basic")
+    m_off = gam("y ~ s(x1) + s(x2) + s(x3)", d, method="REML")
+    m_on  = gam("y ~ s(x1) + s(x2) + s(x3)", d, method="REML", select=True)
+    assert len(m_off.sp) == 3
+    assert len(m_on.sp) == 6
+
+
+def test_select_true_three_smooth_REML():
+    """gam(y ~ s(x1)+s(x2)+s(x3), data=seed_synth_basic, method="REML", select=TRUE)
+
+    Pinned to mgcv's converged values. s(x3) is signal-free in this data, so
+    select=TRUE shrinks its edf to ~0 — the whole point of the null-space
+    penalty.
+    """
+    d = load_dataset("synthetic", "seed_synth_basic")
+    m = gam("y ~ s(x1) + s(x2) + s(x3)", d, method="REML", select=True)
+
+    # mgcv-converged scalars (from gam(..., select=TRUE) on seed_synth_basic):
+    _allclose(m.edf_total, 2.912088577, atol=5e-3, name="edf_total")
+    _allclose(m.sigma_squared, 0.8940008109, atol=5e-3, name="sigma2")
+    _allclose(m.REML_criterion / 2, 277.0814067, atol=5e-3, name="REML/2")
+    _assert_param(m, "(Intercept)", 1.091137918, atol=5e-3)
+
+    # Per-smooth edf — both implementations land in the flat plateau where
+    # the heavily-shrunk null-space sps drift; pin only the well-determined
+    # active edf and assert s(x3) is essentially shrunk out.
+    _allclose(m.edf_by_smooth["s(x1)"], 0.9739738079, atol=5e-3, name="edf[s(x1)]")
+    _allclose(m.edf_by_smooth["s(x2)"], 0.9379440321, atol=5e-3, name="edf[s(x2)]")
+    assert m.edf_by_smooth["s(x3)"] < 1e-2, \
+        f"s(x3) should be selected out, got edf={m.edf_by_smooth['s(x3)']}"
+
+
+def test_select_true_single_smooth_sp_passthrough():
+    """Single-smooth select=TRUE: gam(..., sp=m_free.sp) reproduces the
+    free-optimization fit at the same sp — the augmented sp vector (now
+    length 2) is correctly threaded through the slot machinery, and the
+    sp= path's profile-out log φ̂ matches the optimizer's converged log φ̂
+    to optimizer-tolerance precision.
+    """
+    d = load_dataset("MASS", "mcycle")
+    m_free = gam("accel ~ s(times)", d, method="REML", select=True)
+    assert len(m_free.sp) == 2
+    m_fix  = gam("accel ~ s(times)", d, method="REML", select=True, sp=m_free.sp)
+    # β at the same rho is independent of φ — fitted values match exactly.
+    np.testing.assert_allclose(m_fix.fitted, m_free.fitted, atol=1e-10)
+    np.testing.assert_allclose(m_fix.edf_total, m_free.edf_total, atol=1e-10)
+    # σ² and REML are profile-out-identical only at the *exact* gradient zero;
+    # the optimizer stops at gradient ≈ 0 → expect ~1e-6 relative agreement.
+    np.testing.assert_allclose(m_fix.sigma_squared, m_free.sigma_squared, rtol=1e-5)
+    np.testing.assert_allclose(m_fix.REML_criterion, m_free.REML_criterion, rtol=1e-7)
+
+
+def test_select_true_at_mgcv_sp_matches_mgcv():
+    """At a fixed sp vector, hea's select=TRUE fit must reproduce mgcv's
+    post-fit numbers — checks the null-space penalty math directly,
+    bypassing optimizer convergence differences.
+
+    mgcv-converged sp on `gamSim_eg1` for `y ~ s(x0)+s(x1)+s(x2)+s(x3)` with
+    `select=TRUE, method="REML"`:
+    """
+    d = load_dataset("mgcv", "gamSim_eg1")
+    sp_mgcv = np.array([
+        2.521010255, 423334.7801,    # s(x0): wig, null
+        1.843214985, 1.820731653,    # s(x1): wig, null
+        0.00569866453, 47639.04804,  # s(x2): wig, null
+        84968.55542, 131.2834178,    # s(x3): wig, null (essentially zeroed)
+    ])
+    m = gam("y ~ s(x0) + s(x1) + s(x2) + s(x3)",
+            d, method="REML", select=True, sp=sp_mgcv)
+
+    # mgcv post-fit at this sp — bit-perfect targets:
+    _allclose(m.edf_total, 14.45446565, atol=1e-3, name="edf_total")
+    _allclose(m.sigma_squared, 3.933035582, atol=1e-3, name="sigma2")
+    _allclose(m.REML_criterion / 2, 868.3979813, atol=1e-3, name="REML/2")
+    _assert_param(m, "(Intercept)", 7.833279497, atol=1e-3)
+    _allclose(m.edf_by_smooth["s(x0)"], 2.418051213, atol=1e-3, name="edf[s(x0)]")
+    _allclose(m.edf_by_smooth["s(x1)"], 2.839713272, atol=1e-3, name="edf[s(x1)]")
+    _allclose(m.edf_by_smooth["s(x2)"], 7.448219388, atol=1e-3, name="edf[s(x2)]")
+    _allclose(m.edf_by_smooth["s(x3)"], 0.7484817774, atol=1e-3, name="edf[s(x3)]")

@@ -73,6 +73,12 @@ class gam:
         If given, fix smoothing parameters at these (non-negative)
         values and skip optimization. Length must match the total number
         of penalty slots across all smooth blocks.
+    select : bool, default False
+        Mirror of mgcv's ``select=TRUE``. When ``True``, an extra penalty
+        is added to each smooth term over its null-space directions, so
+        the smoothing-parameter selection can shrink any term entirely
+        to zero — i.e., perform model selection alongside smoothness
+        estimation. Each smooth gains one additional smoothing parameter.
 
     Attributes (always set)
     -----------------------
@@ -153,6 +159,7 @@ class gam:
         family: Family | None = None,
         offset: np.ndarray | list | None = None,
         gamma: float = 1.0,
+        select: bool = False,
     ):
         if method not in ("REML", "GCV.Cp"):
             raise ValueError(f"method must be 'REML' or 'GCV.Cp', got {method!r}")
@@ -161,6 +168,7 @@ class gam:
 
         self.formula = formula
         self.method = method
+        self._select = bool(select)
         # mgcv's smoothing-strength multiplier. ``gamma > 1`` produces
         # smoother fits by inflating the apparent edf cost in the GCV/UBRE
         # criterion, or by dividing the data-fit term in REML. Wood §4.6
@@ -195,6 +203,12 @@ class gam:
 
         sb_lists = materialize_smooths(d.expanded, d.data) if d.expanded.smooths else []
         blocks: list[SmoothBlock] = [b for group in sb_lists for b in group]
+        # mgcv: select=TRUE adds a null-space penalty per smooth inside
+        # smoothCon — i.e., before gam.side. Mirror that order so the
+        # subsequent column drops (gam.side) restrict Sf to the kept-cols
+        # subspace exactly the way mgcv does.
+        if self._select:
+            blocks = _add_null_space_penalties(blocks)
         # mgcv's gam.side: when one smooth's variable set is a strict subset
         # of another's (e.g. `s(x1) + te(x1, x2)`), the wider smooth's basis
         # contains a copy of the narrower's main effect, which makes the
@@ -315,6 +329,17 @@ class gam:
             rho_hat = np.log(np.maximum(sp_arr, 1e-10))
             self.sp = sp_arr
             fit = self._fit_given_rho(rho_hat)
+            # For unknown-scale families fit by REML, set log φ̂ to the
+            # profile-out value log(Dp/(n−Mp)) — the same value the
+            # (ρ, log φ) outer optimizer would converge to at this sp.
+            # Keeps `sigma_squared` and `REML_criterion` consistent with the
+            # free-optimization path bit-for-bit when sp= is fed back in.
+            if (not self.family.scale_known) and method == "REML":
+                Dp = float(fit.dev + fit.pen)
+                n_minus_mp = max(float(n - self._Mp), 1.0)
+                self._log_phi_hat = float(
+                    np.log(max(Dp / n_minus_mp, 1e-300))
+                )
         else:
             # Unified outer optimization. PIRLS inner solve + general
             # `_reml(ρ, log φ)` + analytical Newton, family-agnostic.
@@ -658,7 +683,7 @@ class gam:
                 # `_reml` returns -2·V_R; `summary()`'s `/2` recovers
                 # mgcv's `-REML` display value. Scale-known families (Poisson,
                 # Binomial) substitute log φ = 0; scale-unknown read the
-                # outer-optimizer's converged log φ̂.
+                # outer-optimizer's (or sp= path's profile-out) log φ̂.
                 log_phi_hat = (
                     self._log_phi_hat if self._log_phi_hat is not None else 0.0
                 )
@@ -3710,6 +3735,60 @@ class gam:
 def _row_frame(values: np.ndarray, columns: list[str]) -> pl.DataFrame:
     flat = np.asarray(values).reshape(-1)
     return pl.DataFrame({c: [float(flat[i])] for i, c in enumerate(columns)})
+
+
+def _add_null_space_penalties(blocks: list[SmoothBlock]) -> list[SmoothBlock]:
+    """Mirror mgcv's ``null.space.penalty=TRUE`` (``gam(..., select=TRUE)``).
+
+    For each block, append a rank-``(p − rank_S)`` matrix that penalizes the
+    null-space directions of the existing combined penalty ``Σⱼ Sⱼ`` to the
+    block's ``S`` list. With this extra penalty plus its own smoothing
+    parameter, the term can be shrunk to zero — that's the whole point of
+    ``select=TRUE``. After augmentation the per-block combined penalty is
+    full-rank, so the smooth's null-space dim is zero and ``_Mp`` collapses
+    to ``p_param``.
+
+    Implements the ``need.full`` eigendecomposition branch of mgcv's
+    ``smoothCon`` (R/smooth.r): ``St = Σⱼ Sⱼ``, eigendecompose, take the
+    eigenvectors ``U`` with eigenvalues below ``max_eig · ε^0.66``, and use
+    ``Sf = U Uᵀ`` (the projection onto the null space). Mgcv's fast path
+    for ``nsm=1`` plus a diagonal-canonical ``S`` produces the same ``Sf``
+    when applicable; this routine takes the eigen path unconditionally,
+    which is bit-equal up to LAPACK's choice of basis for repeated
+    eigenvalues — and ``U Uᵀ`` is invariant to that choice.
+
+    No rescaling: mgcv assigns ``S.scale = 1`` to ``Sf`` (left at unit
+    norm), in contrast to the per-S ``maXX/‖S‖`` rescaling that
+    ``_scale_penalty`` applied to the original penalties.
+    """
+    eps = float(np.finfo(float).eps)
+    threshold_factor = eps ** 0.66
+    out: list[SmoothBlock] = []
+    for b in blocks:
+        S_list = [np.asarray(s, dtype=float) for s in b.S]
+        if not S_list:
+            out.append(b)
+            continue
+        St = S_list[0].copy()
+        for Sj in S_list[1:]:
+            St += Sj
+        eigvals, eigvecs = np.linalg.eigh(St)
+        max_eig = float(eigvals.max()) if eigvals.size else 0.0
+        if max_eig <= 0.0:
+            out.append(b)
+            continue
+        null_mask = eigvals < max_eig * threshold_factor
+        if not bool(np.any(null_mask)):
+            out.append(b)
+            continue
+        U = eigvecs[:, null_mask]
+        Sf = U @ U.T
+        Sf = 0.5 * (Sf + Sf.T)
+        out.append(SmoothBlock(
+            label=b.label, term=b.term, cls=b.cls,
+            X=b.X, S=S_list + [Sf], spec=b.spec,
+        ))
+    return out
 
 
 def _apply_gam_side(blocks: list[SmoothBlock]) -> list[SmoothBlock]:
