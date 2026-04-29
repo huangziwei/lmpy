@@ -3263,6 +3263,7 @@ class gam:
         partial_residuals=False,
         n_grid: int = 40,
         too_far: float = 0.1,
+        all_terms: bool = False,
         ax=None,
     ):
         """Per-smooth effect plots — the hea port of mgcv's ``plot.gam``.
@@ -3278,16 +3279,23 @@ class gam:
           relative to the actual mgcv code). Data locations overlaid as a
           scatter.
 
+        With ``all_terms=True``, parametric terms get their own panels
+        (mgcv's ``plot.gam(..., all.terms=TRUE)`` behavior):
+
+        - Factor term → horizontal-bar termplot, one bar per level
+          (reference level pinned at 0), with ±SE dashed bars and a rug.
+        - Numeric term → linear partial effect ``β·x`` with a 2·SE band.
+
         Multi-block factor-by smooths (e.g. ``s(x, by=g)`` for each level
         of ``g``) appear as separate panels — same as mgcv.
 
         Parameters
         ----------
         select : int | None
-            If set, plot just the ``select``-th smooth (0-indexed in the
-            order they appear in the formula). Default plots every plottable
-            smooth in a grid. Required when ``ax=`` is given and the model
-            has more than one plottable smooth.
+            If set, plot just the ``select``-th panel (0-indexed in the
+            order panels would otherwise appear). Default plots every
+            plottable panel in a grid. Required when ``ax=`` is given and
+            the model has more than one plottable panel.
         n_cols : int
             Columns in the grid layout when ``select`` is None and ``ax`` is
             None.
@@ -3302,11 +3310,14 @@ class gam:
             nearest data point exceeds this threshold (mgcv's
             ``exclude.too.far``). Default 0.1 matches mgcv's plot.gam
             default; set to 0 to disable masking.
+        all_terms : bool
+            Also include parametric terms (factor / numeric, excluding the
+            intercept) — Wood 2017 Fig. 4.15 layout.
         ax : matplotlib Axes | None
-            If given, draw the (single) selected smooth into this axes
+            If given, draw the (single) selected panel into this axes
             instead of building a new figure. The model must resolve to
             exactly one panel — either via ``select=`` or because there
-            is only one plottable smooth. Returns ``ax`` in that case
+            is only one plottable panel. Returns ``ax`` in that case
             (single-panel return convention); otherwise returns ``fig``.
 
         Returns
@@ -3320,7 +3331,11 @@ class gam:
         and random-effect smooths (``bs="re"``) are still skipped. For ≥3D
         viewing use :meth:`vis` with ``view=`` to pick a 2D slice.
         """
-        plottable: list[tuple[int, "SmoothBlock", int, int]] = []
+        # Plottable panels: a list of dispatch records, each a tuple where
+        # the first element is a discriminator string. Two kinds:
+        #   ("smooth", block, a, bcol)
+        #   ("param",  term_label, col_indices, kind)  kind ∈ {"factor", "numeric"}
+        plottable: list[tuple] = []
         for idx, (b, (a, bcol)) in enumerate(
             zip(self._blocks, self._block_col_ranges)
         ):
@@ -3328,49 +3343,95 @@ class gam:
                 continue
             if b.cls in ("re.smooth.spec", "fs.interaction", "sz.interaction"):
                 continue
-            plottable.append((idx, b, a, bcol))
+            plottable.append(("smooth", b, a, bcol))
+
+        if all_terms and self._expanded.terms:
+            param_cols = self.parametric_columns
+            col_index_of = {c: i for i, c in enumerate(param_cols)}
+            used = {"(Intercept)"} if "(Intercept)" in col_index_of else set()
+            for term in self._expanded.terms:
+                label = term.label
+                term_cols = [
+                    c for c in param_cols
+                    if c not in used and (c == label or c.startswith(label))
+                ]
+                if not term_cols:
+                    continue
+                used.update(term_cols)
+                col_idx = [col_index_of[c] for c in term_cols]
+                # Classify the underlying variable: factor (Enum/Categorical/Utf8)
+                # vs numeric. Skip terms whose variable can't be resolved
+                # (interactions, transformed terms) — those need bespoke
+                # rendering and aren't supported here yet.
+                if label in self.data.columns:
+                    dt = self.data[label].dtype
+                    if dt in (pl.Enum, pl.Categorical, pl.Utf8):
+                        plottable.append(("param", label, col_idx, "factor"))
+                    elif dt.is_numeric():
+                        plottable.append(("param", label, col_idx, "numeric"))
+                    # else: skip (datetime, list, etc.)
 
         if not plottable:
             raise ValueError(
-                "no plottable 1D or 2D smooths in this model; "
-                "≥3D / fs / re smooths aren't supported here — try vis() instead"
+                "no plottable panels in this model; "
+                "≥3D / fs / re smooths aren't supported here — try vis()"
             )
 
         if select is not None:
             if not (0 <= select < len(plottable)):
                 raise IndexError(
                     f"select={select} out of range; "
-                    f"have {len(plottable)} plottable smooth(s)"
+                    f"have {len(plottable)} plottable panel(s)"
                 )
             plottable = [plottable[select]]
+
+        wr_all = (
+            self.residuals_of("working") if partial_residuals else None
+        )
+
+        def draw_panel(ax_, item):
+            kind = item[0]
+            if kind == "smooth":
+                _, block, a, bcol = item
+                edf_b = float(self.edf[a:bcol].sum())
+                label_inner = block.label.rstrip(")")
+                title = f"{label_inner},{round(edf_b, 2):g})"
+                if len(block.term) == 1:
+                    self._plot_smooth_1d(
+                        ax_, block, a, bcol,
+                        color=color, band_color=band_color,
+                        band_alpha=band_alpha,
+                        rug=rug, partial_residuals=partial_residuals,
+                        wr_all=wr_all, ylabel=title,
+                    )
+                else:
+                    self._plot_smooth_2d(
+                        ax_, block, a, bcol,
+                        color=color, n_grid=n_grid, too_far=too_far,
+                        title=title,
+                    )
+            else:  # "param"
+                _, term_label, col_idx, term_kind = item
+                if term_kind == "factor":
+                    self._plot_parametric_factor(
+                        ax_, term_label, col_idx,
+                        color=color, rug=rug,
+                    )
+                else:
+                    self._plot_parametric_numeric(
+                        ax_, term_label, col_idx,
+                        color=color, band_color=band_color,
+                        band_alpha=band_alpha, rug=rug,
+                    )
 
         # Single-panel target: draw into the user-supplied ax and return it.
         if ax is not None:
             if len(plottable) != 1:
                 raise ValueError(
                     f"ax= requires exactly one panel; have {len(plottable)} "
-                    f"plottable smooth(s). Pass select= to pick one."
+                    f"plottable panel(s). Pass select= to pick one."
                 )
-            _, block, a, bcol = plottable[0]
-            edf_b = float(self.edf[a:bcol].sum())
-            label_inner = block.label.rstrip(")")
-            title = f"{label_inner},{round(edf_b, 2):g})"
-            wr_all = (
-                self.residuals_of("working") if partial_residuals else None
-            )
-            if len(block.term) == 1:
-                self._plot_smooth_1d(
-                    ax, block, a, bcol,
-                    color=color, band_color=band_color, band_alpha=band_alpha,
-                    rug=rug, partial_residuals=partial_residuals,
-                    wr_all=wr_all, ylabel=title,
-                )
-            else:
-                self._plot_smooth_2d(
-                    ax, block, a, bcol,
-                    color=color, n_grid=n_grid, too_far=too_far,
-                    title=title,
-                )
+            draw_panel(ax, plottable[0])
             return ax
 
         n_plots = len(plottable)
@@ -3388,30 +3449,9 @@ class gam:
             if n_rows == 1 and axes_arr.shape[0] != 1:
                 axes_arr = axes_arr.reshape(1, -1)
 
-        wr_all = (
-            self.residuals_of("working") if partial_residuals else None
-        )
-
-        for plot_i, (_, block, a, bcol) in enumerate(plottable):
+        for plot_i, item in enumerate(plottable):
             r, c = divmod(plot_i, n_cols_eff)
-            ax = axes_arr[r, c]
-            edf_b = float(self.edf[a:bcol].sum())
-            label_inner = block.label.rstrip(")")
-            title = f"{label_inner},{round(edf_b, 2):g})"
-
-            if len(block.term) == 1:
-                self._plot_smooth_1d(
-                    ax, block, a, bcol,
-                    color=color, band_color=band_color, band_alpha=band_alpha,
-                    rug=rug, partial_residuals=partial_residuals,
-                    wr_all=wr_all, ylabel=title,
-                )
-            else:  # 2D
-                self._plot_smooth_2d(
-                    ax, block, a, bcol,
-                    color=color, n_grid=n_grid, too_far=too_far,
-                    title=title,
-                )
+            draw_panel(axes_arr[r, c], item)
 
         # Hide unused grid cells.
         for plot_i in range(n_plots, axes_arr.size):
@@ -3540,6 +3580,109 @@ class gam:
         ax.set_xlabel(x_name)
         ax.set_ylabel(y_name)
         ax.set_title(title)
+
+    def _plot_parametric_factor(
+        self, ax, label: str, col_idx: list[int], *, color, rug: bool,
+    ):
+        """Termplot for a factor parametric term — Wood 2017 Fig. 4.15
+        right panel. Reference level pinned at 0 (default treatment
+        contrasts); other levels show β̂ as a solid horizontal bar with
+        ±SE dashed bars. Optional rug along the bottom (one tick per
+        observation, aggregated by level).
+        """
+        series = self.data[label]
+        if isinstance(series.dtype, pl.Enum):
+            levels = list(series.dtype.categories)
+        elif isinstance(series.dtype, pl.Categorical):
+            levels = sorted(series.unique().drop_nulls().to_list())
+        else:
+            # Utf8 fallback — sort alphabetically (matches R's default).
+            levels = sorted(series.unique().drop_nulls().to_list())
+
+        ests = [0.0]
+        ses = [0.0]
+        cols = self.parametric_columns
+        for lvl in levels[1:]:
+            col_name = f"{label}{lvl}"
+            if col_name in cols:
+                i = cols.index(col_name)
+                ests.append(float(self._beta[i]))
+                ses.append(float(np.sqrt(max(self.Vp[i, i], 0.0))))
+            else:
+                ests.append(float("nan"))
+                ses.append(float("nan"))
+
+        half = 0.35
+        for i, (est, s) in enumerate(zip(ests, ses)):
+            xL, xR = i - half, i + half
+            ax.plot([xL, xR], [est, est], color=color, linewidth=1.2)
+            if s > 0:
+                ax.plot([xL, xR], [est + s, est + s], color=color,
+                        linestyle="--", linewidth=0.7)
+                ax.plot([xL, xR], [est - s, est - s], color=color,
+                        linestyle="--", linewidth=0.7)
+
+        if rug:
+            # Spread rug ticks within each level so the count is visible
+            # (mgcv's plot.gam uses ``rug(jitter(x))`` for the same effect;
+            # we lay them out deterministically across [i±half_rug] instead
+            # of jittering randomly).
+            pos = {lv: i for i, lv in enumerate(levels)}
+            obs_levels = self.data[label].drop_nulls().to_list()
+            counts: dict = {}
+            for v in obs_levels:
+                if v in pos:
+                    counts[v] = counts.get(v, 0) + 1
+            half_rug = 0.2
+            xs_list: list[float] = []
+            for lvl in levels:
+                n_obs = counts.get(lvl, 0)
+                if n_obs == 0:
+                    continue
+                i = pos[lvl]
+                if n_obs == 1:
+                    xs_list.append(float(i))
+                else:
+                    xs_list.extend(
+                        np.linspace(i - half_rug, i + half_rug, n_obs).tolist()
+                    )
+            if xs_list:
+                xs = np.asarray(xs_list)
+                ymin = ax.get_ylim()[0]
+                ax.plot(xs, np.full_like(xs, ymin), "|",
+                        color="black", markersize=6, alpha=0.6)
+
+        ax.set_xticks(range(len(levels)))
+        ax.set_xticklabels([str(l) for l in levels])
+        ax.set_xlabel(label)
+        ax.set_ylabel(f"Partial for {label}")
+
+    def _plot_parametric_numeric(
+        self, ax, label: str, col_idx: list[int], *,
+        color, band_color, band_alpha, rug: bool,
+    ):
+        """Linear partial effect for a numeric parametric term — ``β̂·x``
+        with a 2·SE band (mgcv's termplot for non-factor terms).
+        """
+        i = col_idx[0]
+        beta_x = float(self._beta[i])
+        se_x = float(np.sqrt(max(self.Vp[i, i], 0.0)))
+        x = self.data[label].drop_nulls().to_numpy().astype(float)
+        x_grid = np.linspace(float(np.min(x)), float(np.max(x)), 100)
+        fhat = beta_x * x_grid
+        se_fhat = se_x * np.abs(x_grid)
+        ax.axhline(0, color="black", linestyle="--", linewidth=0.5)
+        ax.fill_between(
+            x_grid, fhat - 2 * se_fhat, fhat + 2 * se_fhat,
+            color=band_color, alpha=band_alpha, linewidth=0,
+        )
+        ax.plot(x_grid, fhat, color=color, linewidth=1.0)
+        if rug:
+            ymin = ax.get_ylim()[0]
+            ax.plot(x, np.full_like(x, ymin), "|",
+                    color="black", markersize=6, alpha=0.6)
+        ax.set_xlabel(label)
+        ax.set_ylabel(f"Partial for {label}")
 
     def plot(self, figsize=None, smooth=True, label_n=3):
         """4-panel diagnostic, matching the graphical part of gam.check.

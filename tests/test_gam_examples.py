@@ -905,6 +905,39 @@ def test_plot_smooth_dispatches_2d_to_contour():
     assert "s(Height,Girth," in fig2.axes[1].get_title()  # 2D panel
 
 
+def test_plot_smooth_all_terms_factor_termplot():
+    """``plot_smooth(all_terms=True)`` should add a parametric panel for
+    the factor — Wood 2017 Fig. 4.15."""
+    import matplotlib
+    matplotlib.use("Agg")
+    from hea import Gamma
+    trees = load_dataset("mgcv", "trees").with_columns(
+        Hclass=((pl.col("Height") / 10).floor() - 5)
+            .cast(pl.Int64)
+            .replace_strict([1, 2, 3], ["small", "medium", "large"],
+                            return_dtype=pl.Enum(["small", "medium", "large"])),
+    )
+    ct7 = gam("Volume ~ Hclass + s(Girth)",
+              family=Gamma(link="log"), data=trees)
+    fig = ct7.plot_smooth(all_terms=True)
+    assert len(fig.axes) == 2
+
+    # Panel 0: smooth s(Girth)
+    assert fig.axes[0].get_xlabel() == "Girth"
+    assert "s(Girth," in fig.axes[0].get_ylabel()
+
+    # Panel 1: parametric Hclass (factor termplot)
+    assert fig.axes[1].get_xlabel() == "Hclass"
+    assert fig.axes[1].get_ylabel() == "Partial for Hclass"
+    # x-tick labels are the level names in factor order.
+    xticks = [t.get_text() for t in fig.axes[1].get_xticklabels()]
+    assert xticks == ["small", "medium", "large"]
+
+    # all_terms=False (default) → only the smooth panel.
+    fig2 = ct7.plot_smooth()
+    assert len(fig2.axes) == 1
+
+
 def test_gam_gamma_validation():
     d = load_dataset("R", "iris")
     with pytest.raises(ValueError, match="gamma"):
