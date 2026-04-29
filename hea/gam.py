@@ -1253,6 +1253,12 @@ class gam:
 
         where ``ls'_hea_2 = family.ls(y, wt, φ)[2]`` (chain-ruled to log φ).
 
+        Under ``method="ML"`` the log|H| log-det becomes the projected form
+        log|U_rᵀ(H+S)U_r|; the additional ∂²log|M_proj| Hessian correction
+        (with M_proj = U_nᵀA⁻¹U_n) is added in-loop. Mirrors the gradient
+        correction in ``_reml_grad`` and mgcv's ``MLpenalty1`` →
+        ``get_ddetXWXpS`` in gdi.c, which fills ``det2`` on the post-drop K,P.
+
         For Gaussian-identity (h' ≡ h'' ≡ 0) only the SS Wood block and the
         Gaussian Dp/log|S|+ pieces survive, so the result equals 2·`_reml_hessian`
         in the unprofiled REML formulation (the existing `_reml_hessian`
@@ -1321,6 +1327,49 @@ class gam:
             SkM = slot.S @ M[a:b, :]                          # (m_k, n)
             diag_MtSM.append(np.einsum("ji,ji->i", M[a:b, :], SkM))
 
+        # ML range-projection correction. Under method="ML" the Hessian
+        # log-det is log|U_rᵀ(H+S)U_r|, which by the block-determinant
+        # identity equals log|H+S| + log|M_proj| with M_proj = U_nᵀ A⁻¹ U_n
+        # (B_proj = A⁻¹ U_n; see ``_ml_logdet_adj``). The Hessian therefore
+        # gains the ∂²log|M_proj|/∂ρ_l∂ρ_k term:
+        #
+        #     ∂²log|M_proj|/∂ρ_l∂ρ_k = −tr(M_proj⁻¹·∂M_proj_l·M_proj⁻¹·∂M_proj_k)
+        #                             + tr(M_proj⁻¹·∂²M_proj_lk)
+        #
+        # with ∂M_proj_k = −B_projᵀ·(∂A/∂ρ_k)·B_proj and
+        #   ∂²M_proj_lk = B_projᵀ·(∂A/∂ρ_l)·A⁻¹·(∂A/∂ρ_k)·B_proj
+        #              + B_projᵀ·(∂A/∂ρ_k)·A⁻¹·(∂A/∂ρ_l)·B_proj
+        #              − B_projᵀ·(∂²A/∂ρ_l∂ρ_k)·B_proj
+        # ∂A/∂ρ_k = X'·diag(h'·v_k)·X + λ_k·S_k_full and ∂²A/∂ρ_l∂ρ_k as in
+        # the comment above. Mirrors mgcv's ``MLpenalty1`` → ``get_ddetXWXpS``
+        # in gdi.c, which fills ``det2`` from the projected K, P.
+        ml_active = False
+        if self.method == "ML":
+            _, M_proj_inv, B_proj = self._ml_logdet_adj(fit)
+            if M_proj_inv is not None:
+                ml_active = True
+                Mp_dim = M_proj_inv.shape[0]
+                Y_proj = X @ B_proj                                 # (n, Mp)
+                Y_proj_Minv = Y_proj @ M_proj_inv                   # (n, Mp)
+                q_vec = np.einsum("ij,ij->i", Y_proj, Y_proj_Minv)  # (n,)
+                Yk_arr = np.zeros((n_sp, p, Mp_dim))
+                Zk_arr = np.zeros((n_sp, p, Mp_dim))
+                Pk_M_arr = np.zeros(n_sp)
+                Minv_dMk_arr = np.zeros((n_sp, Mp_dim, Mp_dim))
+                for kk, slot_kk in enumerate(self._slots):
+                    a_k, b_k = slot_kk.col_start, slot_kk.col_end
+                    Yk_ = X.T @ (hv[:, kk:kk + 1] * Y_proj)
+                    Yk_[a_k:b_k, :] += sp[kk] * (slot_kk.S @ B_proj[a_k:b_k, :])
+                    Yk_arr[kk] = Yk_
+                    Zk_arr[kk] = cho_solve(
+                        (fit.A_chol, fit.A_chol_lower), Yk_
+                    )
+                    Minv_dMk_arr[kk] = M_proj_inv @ (-B_proj.T @ Yk_)
+                    Bk_proj = B_proj[a_k:b_k, :]
+                    Pk_M_arr[kk] = float(np.einsum(
+                        "ij,ji->", M_proj_inv, Bk_proj.T @ slot_kk.S @ Bk_proj
+                    ))
+
         # Hessian assembly — symmetric loop.
         H2 = np.zeros((n_sp, n_sp))
         for i in range(n_sp):
@@ -1361,6 +1410,32 @@ class gam:
                 )
                 # δ_lk·λ_l·tr(H⁻¹·S_l) is the off-square diagonal term.
                 d2logH_ij = -tr_HinvHpHinvHp + tr_d2H
+
+                if ml_active:
+                    # ∂²log|M_proj|/∂ρ_i∂ρ_j = T1 + T2_mixed − T2_d2A:
+                    #   T1       = −tr(M_proj⁻¹·∂M_proj_i·M_proj⁻¹·∂M_proj_j)
+                    #   T2_mixed = 2·tr(M_proj⁻¹·Y_iᵀ·Z_j)
+                    #   T2_d2A   = tr(M_proj⁻¹·B_projᵀ·(∂²A_ij)·B_proj)
+                    # T2_mixed uses Y_iᵀ Z_j = Y_iᵀ A⁻¹ Y_j (symmetric in i,j up
+                    # to transpose of an inside Mp×Mp block; M_proj⁻¹ symmetric
+                    # → both orders give the same trace, so the factor of 2
+                    # absorbs the symmetric pair).
+                    T1_ml = -float(np.einsum(
+                        "ab,ba->", Minv_dMk_arr[i], Minv_dMk_arr[j]
+                    ))
+                    T2_mixed = 2.0 * float(np.einsum(
+                        "ab,ba->", M_proj_inv, Yk_arr[i].T @ Zk_arr[j]
+                    ))
+                    D_ij_diag = (
+                        d2w_deta2 * v[:, i] * v[:, j]
+                        + dw_deta * Xd2b
+                    )
+                    T2_d2A = float(np.sum(D_ij_diag * q_vec))
+                    if i == j:
+                        # δ_ij·λ_i·tr(M_proj⁻¹·B_projᵀ·S_i_full·B_proj) from
+                        # ∂²A's penalty piece.
+                        T2_d2A += sp[i] * Pk_M_arr[i]
+                    d2logH_ij += T1_ml + T2_mixed - T2_d2A
 
                 # ∂²log|S|+/∂ρ_i∂ρ_j Gaussian form.
                 tr_SpSiSpSj = float(np.einsum(
