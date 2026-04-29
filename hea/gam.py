@@ -420,6 +420,11 @@ class gam:
         A_chol = fit_F.A_chol
         A_chol_lower = fit_F.A_chol_lower
         log_det_A = fit_F.log_det_A
+        # Fisher working weights — needed by reTest (Wood 2013) so summary()
+        # can rebuild X'WX without re-running PIRLS. None ↔ unit weights.
+        self._fisher_w = (
+            np.asarray(fit_F.w, dtype=float).copy() if fit_F.w is not None else None
+        )
         # Posterior β covariance Vp = σ²·A_F⁻¹. We get A_F⁻¹ once via
         # cho_solve(I) rather than via diag-tricks, since we need the full
         # matrix for Ve, per-coef SEs, and predict().
@@ -2284,6 +2289,92 @@ class gam:
         stat = float(np.sum(proj ** 2))
         return stat, float(rank)
 
+    def _recov_no_re(self, m_idx: int) -> np.ndarray:
+        """Port of ``mgcv:::recov`` for the no-RE case (re=∅, m>0).
+
+        Returns ``Rm`` such that ``Rm' Rm`` is the m-th block's Schur
+        complement of A = X'WX + Sλ — i.e. the inverse of ``A⁻¹[m,m]``,
+        the precision of β̂_m after profiling out the rest. Built by stacking
+        the model-matrix R factor (chol(X'WX)) on top of the penalty
+        square-root, reordering target cols last, then taking the bottom-right
+        block of the QR's R.
+        """
+        p = self.p
+        a, bcol = self._block_col_ranges[m_idx]
+        k = bcol - a
+        # X'WX from stored Fisher working weights.
+        if self._fisher_w is None:
+            XtWX = self._X_full.T @ self._X_full
+        else:
+            Xw = self._X_full * np.sqrt(self._fisher_w)[:, None]
+            XtWX = Xw.T @ Xw
+        # Cholesky of X'WX: R_factor' R_factor = X'WX (upper-triangular).
+        # Use eigendecomp+jitter when XtWX is borderline-PSD (gam.side
+        # rank-trim, near-singular weights, etc.).
+        try:
+            R_factor = np.linalg.cholesky(XtWX).T
+        except np.linalg.LinAlgError:
+            ev, U = np.linalg.eigh(0.5 * (XtWX + XtWX.T))
+            ev = np.clip(ev, 0.0, None)
+            R_factor = (U * np.sqrt(ev)).T
+        # Penalty square-root sqrtS such that sqrtS' sqrtS = Sλ.
+        S_lam = self._build_S_lambda(self._rho_hat)
+        ev, U = np.linalg.eigh(0.5 * (S_lam + S_lam.T))
+        max_ev = ev.max() if ev.size else 0.0
+        keep = ev > max(max_ev, 0.0) * 1e-12
+        if keep.any():
+            sqrtS = (U[:, keep] * np.sqrt(ev[keep])).T
+        else:
+            sqrtS = np.zeros((0, p), dtype=float)
+        LRB = np.vstack([R_factor, sqrtS])
+        # Reorder columns: target block last.
+        target = list(range(a, bcol))
+        other = [j for j in range(p) if j < a or j >= bcol]
+        perm = other + target
+        LRB_perm = LRB[:, perm]
+        _, R_qr = np.linalg.qr(LRB_perm, mode="reduced")
+        return R_qr[-k:, -k:]
+
+    def _re_test(
+        self, m_idx: int, beta_b: np.ndarray, Vp_b: np.ndarray
+    ) -> tuple[float, float, float]:
+        """Port of ``mgcv:::reTest`` (no-RE branch). Returns ``(stat, pval,
+        rank)``. Uses ``psum_chisq`` (Davies 1980) for the p-value.
+
+        - Wood (2013) "On p-values for smooth components of an extended GAM",
+          Biometrika 100(1), 221–228.
+        - mgcv source: ``R/mgcv.r``.
+        """
+        from ._pchisqsum import psum_chisq
+        sig2 = float(self.sigma_squared) if np.isfinite(self.sigma_squared) \
+            and self.sigma_squared > 0 else 1.0
+        Rm = self._recov_no_re(m_idx)
+        # Ve[ind, ind] half-square-root via eigendecomp.
+        Ve_b = self.Ve[
+            self._block_col_ranges[m_idx][0]:self._block_col_ranges[m_idx][1],
+            self._block_col_ranges[m_idx][0]:self._block_col_ranges[m_idx][1],
+        ]
+        ev_b, U_b = np.linalg.eigh(0.5 * (Ve_b + Ve_b.T))
+        ev_b = np.clip(ev_b, 0.0, None)
+        B = U_b * np.sqrt(ev_b)
+        d = Rm @ beta_b
+        stat = float((d * d).sum() / sig2)
+        M = Rm @ B
+        ev = np.linalg.eigvalsh(0.5 * ((M.T @ M) + (M.T @ M).T) / sig2)
+        ev = np.clip(ev, 0.0, None)
+        max_ev = ev.max() if ev.size else 0.0
+        rank = int(np.sum(ev > max(max_ev, 0.0) * np.finfo(float).eps ** 0.8))
+        if self.family.scale_known:
+            pval = psum_chisq(stat, ev) if ev.size else float("nan")
+        else:
+            k_df = max(1, int(round(self.df_residuals)))
+            lb = np.concatenate([ev, np.array([-stat / k_df])])
+            df = np.concatenate(
+                [np.ones(ev.size, dtype=int), np.array([k_df], dtype=int)]
+            )
+            pval = psum_chisq(0.0, lb, df) if ev.size else float("nan")
+        return stat, float(pval), float(rank)
+
     def _compute_edf12(self, rho: np.ndarray, fit: "_FitState",
                        sigma_squared: float, A_inv: np.ndarray,
                        A_inv_XtWX: np.ndarray, edf: np.ndarray,
@@ -2853,30 +2944,41 @@ class gam:
         ]
 
         # -- parametric table (lm-style) -----------------------------------
+        # mgcv (summary.gam): when scale.estimated, t/Pr(>|t|) on residual.df;
+        # otherwise (binomial/poisson with φ ≡ 1) Wald z/Pr(>|z|).
+        scale_known = bool(self.family.scale_known)
         if self.p_param > 0:
             out.append("Parametric coefficients:")
             est = self._beta[:self.p_param]
             se  = self._se[:self.p_param]
             with np.errstate(divide="ignore", invalid="ignore"):
                 t_stats = est / se
-            if self.df_residuals > 0 and np.isfinite(self.df_residuals):
+            if scale_known:
+                pv = 2 * norm.sf(np.abs(t_stats))
+                stat_col = "z value"
+                pcol = "Pr(>|z|)"
+            elif self.df_residuals > 0 and np.isfinite(self.df_residuals):
                 pv = 2 * t_dist.sf(np.abs(t_stats), self.df_residuals)
+                stat_col = "t value"
+                pcol = "Pr(>|t|)"
             else:
                 pv = np.full_like(t_stats, np.nan)
+                stat_col = "t value"
+                pcol = "Pr(>|t|)"
             sig = significance_code(pv)
             est_s, se_s = format_signif_jointly([est, se], digits=digits)
             tbl = pl.DataFrame({
                 "": self.parametric_columns,
                 "Estimate":   est_s,
                 "Std. Error": se_s,
-                "t value":    format_signif(t_stats, digits=digits),
-                "Pr(>|t|)":   format_pval(pv, digits=_dig_tst(digits)),
+                stat_col:     format_signif(t_stats, digits=digits),
+                pcol:         format_pval(pv, digits=_dig_tst(digits)),
                 " ":          sig,
             })
             out.append(format_df(
                 tbl,
                 align={c: "right" for c in
-                       ("Estimate", "Std. Error", "t value", "Pr(>|t|)")},
+                       ("Estimate", "Std. Error", stat_col, pcol)},
             ))
             out.append("---")
             out.append(
@@ -2885,45 +2987,74 @@ class gam:
             out.append("")
 
         # -- smooth-edf table ----------------------------------------------
+        # mgcv summary.gam dispatches per-smooth on null.space.dim and on
+        # scale.estimated. Under select=TRUE the null-space penalty makes
+        # null.space.dim == 0 for every smooth ⇒ reTest path (Wood 2013).
+        # Without select=TRUE we fall back to testStat (the type=0 fractional
+        # rank routine, _test_stat_type0). Output column header switches
+        # F↔Chi.sq, and Ref.df reports the rank actually used in the test.
         if self._blocks:
             out.append("Approximate significance of smooth terms:")
             rows_label: list[str] = []
             rows_edf:   list[float] = []
             rows_refdf: list[float] = []
-            rows_F:     list[float] = []
+            rows_stat:  list[float] = []
             rows_p:     list[float] = []
-            for b, (a, bcol) in zip(self._blocks, self._block_col_ranges):
+            for m_idx, (b, (a, bcol)) in enumerate(
+                zip(self._blocks, self._block_col_ranges)
+            ):
                 beta_b = self._beta[a:bcol]
                 Vp_b   = self.Vp[a:bcol, a:bcol]
                 X_b    = self._X_full[:, a:bcol]
                 edf_b  = float(self.edf[a:bcol].sum())
                 edf1_b = float(self.edf1[a:bcol].sum()) if hasattr(self, "edf1") else edf_b
                 p_b = bcol - a
-                rank = float(min(p_b, edf1_b))
-                Tr, ref_df = self._test_stat_type0(X_b, Vp_b, beta_b, rank)
-                F = Tr / max(ref_df, 1e-8)
-                p_val = (
-                    float(f_dist.sf(F, ref_df, self.df_residuals))
-                    if self.df_residuals > 0 else float("nan")
-                )
+                if self._select:
+                    # reTest path — null.space.dim==0 for every block.
+                    stat, p_val, ref_df = self._re_test(m_idx, beta_b, Vp_b)
+                    if scale_known:
+                        # Chi.sq column = stat. F column = stat / rank.
+                        col_stat = stat
+                    else:
+                        col_stat = stat / max(ref_df, 1e-8)
+                else:
+                    rank_in = float(min(p_b, edf1_b))
+                    Tr, ref_df = self._test_stat_type0(X_b, Vp_b, beta_b, rank_in)
+                    if scale_known:
+                        # mgcv testStat with res.df=-1 uses chi^2 with df=rank
+                        # for integer rank (the fractional path averages two
+                        # psum_chisq calls; we approximate with rounded rank
+                        # for known-scale select=False — rare in practice).
+                        col_stat = Tr
+                        df_int = max(1, int(round(ref_df)))
+                        from scipy.stats import chi2 as _chi2_dist
+                        p_val = float(_chi2_dist.sf(Tr, df_int))
+                    else:
+                        F = Tr / max(ref_df, 1e-8)
+                        col_stat = F
+                        p_val = (
+                            float(f_dist.sf(F, ref_df, self.df_residuals))
+                            if self.df_residuals > 0 else float("nan")
+                        )
                 rows_label.append(b.label)
                 rows_edf.append(edf_b)
-                rows_refdf.append(edf1_b)
-                rows_F.append(F)
+                rows_refdf.append(float(ref_df))
+                rows_stat.append(col_stat)
                 rows_p.append(p_val)
             sig = significance_code(rows_p)
+            stat_col = "Chi.sq" if scale_known else "F"
             sm_tbl = pl.DataFrame({
                 "":        rows_label,
                 "edf":     format_signif(rows_edf, digits=digits),
                 "Ref.df":  format_signif(rows_refdf, digits=digits),
-                "F":       format_signif(rows_F, digits=digits),
+                stat_col:  format_signif(rows_stat, digits=digits),
                 "p-value": format_pval(rows_p, digits=_dig_tst(digits)),
                 " ":       sig,
             })
             out.append(format_df(
                 sm_tbl,
                 align={c: "right" for c in
-                       ("edf", "Ref.df", "F", "p-value")},
+                       ("edf", "Ref.df", stat_col, "p-value")},
             ))
             out.append("---")
             out.append(

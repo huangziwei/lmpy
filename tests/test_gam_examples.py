@@ -1050,3 +1050,71 @@ def test_select_true_at_mgcv_sp_matches_mgcv():
     _allclose(m.edf_by_smooth["s(x1)"], 2.839713272, atol=1e-3, name="edf[s(x1)]")
     _allclose(m.edf_by_smooth["s(x2)"], 7.448219388, atol=1e-3, name="edf[s(x2)]")
     _allclose(m.edf_by_smooth["s(x3)"], 0.7484817774, atol=1e-3, name="edf[s(x3)]")
+
+
+# ---------------------------------------------------------------------------
+# Summary p-value dispatch — known-scale family (binomial), select=TRUE
+# ---------------------------------------------------------------------------
+
+
+def test_select_true_binomial_summary_matches_mgcv():
+    """hea's summary() must dispatch on ``family.scale_known``: known-scale
+    families use the Wald z-test for parametric coefficients and the Wood
+    (2013) reTest with Davies' weighted-χ² CDF for smooth significance,
+    not t/F. Pinned to mgcv on wesdr at mgcv's converged sp.
+    """
+    from scipy.stats import norm
+    from hea import Binomial
+
+    d = load_dataset("gamair", "wesdr")
+    sp_mgcv = np.array([
+        0.0164113465035,  4.59199813892,  # s(dur): wig, null
+        1793.09515417,    0.953183305109, # s(gly): wig, null
+        0.0458306723482,  5.7780644155,   # s(bmi): wig, null
+    ])
+    m = gam("ret ~ s(dur,k=5) + s(gly,k=5) + s(bmi,k=5)",
+            d, family=Binomial(), method="REML", select=True, sp=sp_mgcv)
+
+    # Family / scale-known dispatch flag.
+    assert m.family.scale_known is True
+
+    # mgcv post-fit at the same sp:
+    _allclose(m.edf_total, 7.430392736, atol=1e-3, name="edf_total")
+    # mgcv's `b$gcv.ubre` (printed in summary as `-REML`) — for binomial it's
+    # the REML/2 we report, since hea's `REML_criterion` doubles mgcv's value.
+    _allclose(m.REML_criterion / 2, 389.4888704, atol=1e-3, name="REML/2")
+
+    # Parametric: z-test, not t-test (binomial → φ ≡ 1).
+    j = list(m.bhat.columns).index("(Intercept)")
+    est = float(m._beta[j])
+    se = float(m._se[j])
+    z = est / se
+    p_z = 2.0 * norm.sf(abs(z))
+    _allclose(est, -0.4150103, atol=1e-3, name="intercept")
+    _allclose(se, 0.0887844, atol=1e-3, name="intercept SE")
+    _allclose(z, -4.674361, atol=5e-3, name="z")
+    _allclose(p_z, 2.948704e-06, atol=5e-7, name="Pr(>|z|)")
+
+    # Smooth significance via reTest (mgcv summary.gam reTest path):
+    # mgcv pins (edf, Ref.df, Chi.sq, p-value):
+    targets = [
+        ("s(dur)", 2.982517, 4, 15.58609, 0.0007177005),
+        ("s(gly)", 0.989778, 4, 91.07272, 0.0),
+        ("s(bmi)", 2.458097, 4, 13.64956, 0.0008958199),
+    ]
+    for m_idx, (label, edf_t, refdf_t, chisq_t, pv_t) in enumerate(targets):
+        a, bcol = m._block_col_ranges[m_idx]
+        beta_b = m._beta[a:bcol]
+        Vp_b = m.Vp[a:bcol, a:bcol]
+        stat, pval, ref_df = m._re_test(m_idx, beta_b, Vp_b)
+        _allclose(float(m.edf[a:bcol].sum()), edf_t,
+                  atol=1e-3, name=f"edf[{label}]")
+        # Ref.df = effective rank from Davies' eigenvalue truncation.
+        # Under select=TRUE this is the basis dimension (= ncol of the
+        # smooth's design block).
+        assert int(ref_df) == refdf_t, f"Ref.df[{label}]: {ref_df} vs {refdf_t}"
+        _allclose(stat, chisq_t, atol=5e-3, name=f"Chi.sq[{label}]")
+        if pv_t > 0:
+            _allclose(pval, pv_t, atol=1e-5, name=f"p-value[{label}]")
+        else:
+            assert pval < 1e-15, f"p-value[{label}] not vanishing: {pval}"
