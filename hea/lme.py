@@ -1102,6 +1102,7 @@ class lme:
         ax.set_xlabel("Fitted")
         ax.set_ylabel("Observed")
         ax.set_title("Observed vs. Fitted")
+        return ax
 
     def plot_residuals(
         self, ax=None, figsize=None,
@@ -1121,11 +1122,13 @@ class lme:
         ax.set_xlabel("Fitted")
         ax.set_ylabel("Residuals")
         ax.set_title("Residuals vs. Fitted Plot")
+        return ax
 
     def plot_qq(self, ax=None, figsize=None, label_n=3):
         if ax is None:
             _fig, ax = plt.subplots(figsize=figsize)
         _qq_plot(ax, self.scaled_residuals, label_n=label_n)
+        return ax
 
     def plot_scale_location(
         self, ax=None, figsize=None,
@@ -1144,6 +1147,7 @@ class lme:
         ax.set_xlabel("Fitted")
         ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ Residuals}|}$")
         ax.set_title("Scale-Location")
+        return ax
 
     def plot_qq_ranef(
         self, figsize=None,
@@ -1183,6 +1187,7 @@ class lme:
             ax.set_ylabel("Standard normal quantiles")
             ax.set_title(title if strip else "")
         fig.tight_layout()
+        return fig
 
     def plot_ranef(
         self, figsize=None,
@@ -1232,6 +1237,7 @@ class lme:
             ax.set_xlabel("Random Effect")
             ax.set_title(title if strip else "")
         fig.tight_layout()
+        return fig
 
     def plot(self, figsize=None, smooth=True, label_n=3):
         """4-panel diagnostic: Residuals, Q-Q residuals, Scale-Location, Q-Q BLUPs."""
@@ -1251,6 +1257,7 @@ class lme:
         else:
             axes[1, 1].set_title("Random-Effects Q-Q (n too small)")
         fig.tight_layout()
+        return fig
 
 
 def _resolve_transform(t):

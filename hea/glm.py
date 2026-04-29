@@ -786,6 +786,7 @@ class glm:
         ax.set_xlabel("Fitted (μ̂)")
         ax.set_ylabel("Observed")
         ax.set_title("Observed vs. Fitted")
+        return ax
 
     def plot_residuals(
         self, ax=None, figsize=None,
@@ -805,6 +806,7 @@ class glm:
         ax.set_xlabel("Predicted values")
         ax.set_ylabel("Residuals")
         ax.set_title("Residuals vs. Fitted Plot")
+        return ax
 
     def plot_qq(self, ax=None, figsize=None, label_n=3):
         if ax is None:
@@ -813,6 +815,7 @@ class glm:
             ax, self.std_dev_residuals, label_n=label_n,
             ylabel="Std. deviance resid.",
         )
+        return ax
 
     def plot_scale_location(
         self, ax=None, figsize=None,
@@ -831,6 +834,7 @@ class glm:
         ax.set_xlabel("Predicted values")
         ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ deviance\ resid.}|}$")
         ax.set_title("Scale-Location")
+        return ax
 
     def plot_leverage(
         self, ax=None, figsize=None,
@@ -862,6 +866,7 @@ class glm:
         ax.set_xlabel("Leverage")
         ax.set_ylabel("Std. Pearson resid.")
         ax.set_title("Residuals vs. Leverage")
+        return ax
 
     def plot(self, figsize=None, smooth=True, label_n=3):
         """4-panel diagnostic, matching R's plot.glm default."""
@@ -873,3 +878,4 @@ class glm:
         self.plot_scale_location(ax=axes[1, 0], smooth=smooth, label_n=label_n)
         self.plot_leverage(ax=axes[1, 1], smooth=smooth, label_n=label_n)
         fig.tight_layout()
+        return fig

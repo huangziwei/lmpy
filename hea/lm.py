@@ -705,6 +705,7 @@ class lm:
         ax.set_xlabel("Fitted")
         ax.set_ylabel("Observed")
         ax.set_title("Observed vs. Fitted")
+        return ax
 
     def plot_residuals(
         self,
@@ -729,6 +730,7 @@ class lm:
         ax.set_xlabel("Fitted")
         ax.set_ylabel("Residuals")
         ax.set_title("Residuals vs. Fitted Plot")
+        return ax
 
     def plot_qq(
         self,
@@ -742,6 +744,7 @@ class lm:
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         _qq_plot(ax, self.std_residuals, label_n=label_n)
+        return ax
 
     def plot_scale_location(
         self,
@@ -765,6 +768,7 @@ class lm:
         ax.set_xlabel("Fitted")
         ax.set_ylabel(r"$\sqrt{|\mathrm{Std.\ Residuals}|}$")
         ax.set_title("Scale-Location")
+        return ax
 
     def plot_leverage(
         self,
@@ -816,6 +820,7 @@ class lm:
         ax.set_xlabel("Leverage")
         ax.set_ylabel("Standardized Residuals")
         ax.set_title("Residuals vs. Leverage")
+        return ax
 
     def _plot_constant_leverage(self, *, ax, r, facecolor, edgecolor, label_n):
         """Stripchart of standardized residuals vs factor-level combinations
@@ -854,6 +859,7 @@ class lm:
             _label_top_n(ax, x_pos, r, scores=np.abs(r), n=label_n)
         ax.set_ylabel("Standardized Residuals")
         ax.set_title("Constant Leverage:\nResiduals vs Factor Levels")
+        return ax
 
     def plot(self, figsize=None, smooth=True, label_n=3):
         """4-panel diagnostic display: Residuals, Q-Q, Scale-Location, Leverage."""
@@ -865,6 +871,7 @@ class lm:
         self.plot_scale_location(ax=axes[1, 0], smooth=smooth, label_n=label_n)
         self.plot_leverage(ax=axes[1, 1], smooth=smooth, label_n=label_n)
         fig.tight_layout()
+        return fig
 
     def plot_contrast(
         self, features=None, figsize=None, subplots=None, away_from="median"
@@ -941,6 +948,7 @@ class lm:
             )
 
         fig.tight_layout()
+        return fig
 
     def plot_conditional(
         self, features=None, figsize=None, subplots=None, away_from="median"
@@ -1025,6 +1033,7 @@ class lm:
             )
 
         fig.tight_layout()
+        return fig
 
 
 #################
