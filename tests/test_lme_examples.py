@@ -27,10 +27,68 @@ The post-migration lme is expected to expose, at minimum:
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from scipy.stats import chi2
 
 from conftest import load_dataset
 from lmpy.lme import lme
+
+
+# ---------------------------------------------------------------------------
+# Shared fits / profiles. Each model and (where applicable) its profile is
+# computed once per module — both are immutable post-construction in lmpy.lme,
+# and `profile()` here always uses the default n_grid=41, so the results are
+# bit-identical across the tests that consume them. Cuts ~14s off the file.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def fm01ML():
+    data = load_dataset("lme4", "Dyestuff")
+    return lme("Yield ~ 1 + (1|Batch)", data, REML=False)
+
+
+@pytest.fixture(scope="module")
+def fm01ML_profile(fm01ML):
+    return fm01ML.profile()
+
+
+@pytest.fixture(scope="module")
+def fm03ML():
+    data = load_dataset("lme4", "Penicillin")
+    return lme("diameter ~ 1 + (1|plate) + (1|sample)", data, REML=False)
+
+
+@pytest.fixture(scope="module")
+def fm03ML_profile(fm03ML):
+    return fm03ML.profile(n_grid=41)
+
+
+@pytest.fixture(scope="module")
+def fm04ML():
+    data = load_dataset("lme4", "Pastes")
+    return lme("strength ~ 1 + (1|sample) + (1|batch)", data, REML=False)
+
+
+@pytest.fixture(scope="module")
+def fm04aML():
+    data = load_dataset("lme4", "Pastes")
+    return lme("strength ~ 1 + (1|sample)", data, REML=False)
+
+
+@pytest.fixture(scope="module")
+def fm06ML():
+    data = load_dataset("lme4", "sleepstudy")
+    return lme("Reaction ~ 1 + Days + (1+Days|Subject)", data, REML=False)
+
+
+@pytest.fixture(scope="module")
+def fm07ML():
+    data = load_dataset("lme4", "sleepstudy")
+    return lme(
+        "Reaction ~ 1 + Days + (1|Subject) + (0+Days|Subject)",
+        data, REML=False,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -101,10 +159,9 @@ def test_bates_1_4_dyestuff_fm01_REML():
     _assert_fixed(m, "(Intercept)", 1527.5, se=19.38, tval=78.80)
 
 
-def test_bates_1_4_dyestuff_fm01_ML():
+def test_bates_1_4_dyestuff_fm01_ML(fm01ML):
     """fm01ML <- lmer(Yield ~ 1 + (1|Batch), Dyestuff, REML=FALSE)"""
-    data = load_dataset("lme4", "Dyestuff")
-    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
+    m = fm01ML
 
     _assert_ml_summary(
         m, AIC=333.3271, BIC=337.5307, loglike=-163.6635,
@@ -115,16 +172,14 @@ def test_bates_1_4_dyestuff_fm01_ML():
     _assert_fixed(m, "(Intercept)", 1527.5, se=17.6938, tval=86.33)
 
 
-def test_bates_1_4_dyestuff_fm01_ML_profile_confint():
+def test_bates_1_4_dyestuff_fm01_ML_profile_confint(fm01ML_profile):
     """confint(profile(fm01ML), level=...) — pinned to lme4 4.5/R 4.5.
 
     The 99% lower bound for .sig01 is the regression: lme4 reports 0
     (the natural σ ≥ 0 boundary) when the profile flattens to an
     asymptote above the −2.576 threshold. Lmpy used to return NaN.
     """
-    data = load_dataset("lme4", "Dyestuff")
-    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
-    pr = m.profile()
+    pr = fm01ML_profile
 
     ci99 = pr.confint(level=0.99).to_dict(as_series=False)
     assert ci99["parameter"] == [".sig01", ".sigma", "(Intercept)"]
@@ -136,15 +191,13 @@ def test_bates_1_4_dyestuff_fm01_ML_profile_confint():
     np.testing.assert_allclose(ci95["97.5%"], [84.0631, 67.6577, 1568.548], atol=0.1)
 
 
-def test_bates_1_4_dyestuff_fm01_ML_plot_fig17():
+def test_bates_1_4_dyestuff_fm01_ML_plot_fig17(fm01ML_profile):
     """plot(which=, transform=, ax=) building blocks for Bates Fig. 1.7."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    data = load_dataset("lme4", "Dyestuff")
-    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
-    pr = m.profile()
+    pr = fm01ML_profile
 
     fig, axes = plt.subplots(1, 3, sharey=True)
     pr.plot(which=".sigma", transform="log",    ax=axes[0])
@@ -175,7 +228,7 @@ def test_bates_1_4_dyestuff_fm01_ML_plot_fig17():
         raise AssertionError("ax= with all-params should raise")
 
 
-def test_bates_1_4_dyestuff_fm01_ML_plot_ranef_qqranef():
+def test_bates_1_4_dyestuff_fm01_ML_plot_ranef_qqranef(fm01ML):
     """Caterpillar (Fig 1.11) and qqmath (Fig 1.12) of ranef(., condVar=TRUE).
 
     BLUPs and condSDs pinned to R lme4 4.5; bars use level=0.95 default
@@ -186,8 +239,7 @@ def test_bates_1_4_dyestuff_fm01_ML_plot_ranef_qqranef():
     import matplotlib.pyplot as plt
     from scipy.stats import norm
 
-    data = load_dataset("lme4", "Dyestuff")
-    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
+    m = fm01ML
 
     # Numerical ranef + condSD pinned to R.
     [(_, _, _, b_mat, se_mat)] = m._ranef()
@@ -220,13 +272,11 @@ def test_bates_1_4_dyestuff_fm01_ML_plot_ranef_qqranef():
     plt.close("all")
 
 
-def test_bates_1_4_dyestuff_fm01_ML_plot_density():
+def test_bates_1_4_dyestuff_fm01_ML_plot_density(fm01ML_profile):
     """plot_density() — profile-implied density peaks pinned to lme4:::dens."""
     import matplotlib
     matplotlib.use("Agg")
-    data = load_dataset("lme4", "Dyestuff")
-    m = lme("Yield ~ 1 + (1|Batch)", data, REML=False)
-    pr = m.profile()
+    pr = fm01ML_profile
     fig = pr.plot_density()
     peaks = {}
     for ax in fig.axes:
@@ -275,7 +325,7 @@ def test_bates_2_1_penicillin_fm03_REML():
     _assert_fixed(m, "(Intercept)", 22.9722, se=0.8086, tval=28.41)
 
 
-def test_bates_2_6_penicillin_fm03_ML_profile_pairs():
+def test_bates_2_6_penicillin_fm03_ML_profile_pairs(fm03ML_profile):
     """plot_pairs (Bates Fig 2.6): each profile row carries the full
     optimum, traces are pinned to lme4 ``profile(fm03ML)`` output.
 
@@ -288,9 +338,7 @@ def test_bates_2_6_penicillin_fm03_ML_profile_pairs():
     matplotlib.use("Agg")
     from scipy.interpolate import PchipInterpolator
 
-    data = load_dataset("lme4", "Penicillin")
-    m = lme("diameter ~ 1 + (1|plate) + (1|sample)", data, REML=False)
-    pr = m.profile(n_grid=41)
+    pr = fm03ML_profile
 
     # Per-row schema: every parameter has a column, plus zeta.
     assert list(pr.data[".sig01"].columns) == [
@@ -345,7 +393,7 @@ def test_bates_2_6_penicillin_fm03_ML_profile_pairs():
     np.testing.assert_allclose(ax_zeta.get_ylim(), (-1.05 * mlev, 1.05 * mlev))
 
 
-def test_bates_2_7_penicillin_fm03_ML_profile_pairs_log():
+def test_bates_2_7_penicillin_fm03_ML_profile_pairs_log(fm03ML_profile):
     """plot_pairs(transform="log") (Bates Fig 2.7): the log-scale variant
     of the splom, R's ``splom(log(profile(fm03)))``.
 
@@ -360,9 +408,7 @@ def test_bates_2_7_penicillin_fm03_ML_profile_pairs_log():
     matplotlib.use("Agg")
     from scipy.stats import chi2 as _chi2
 
-    data = load_dataset("lme4", "Penicillin")
-    m = lme("diameter ~ 1 + (1|plate) + (1|sample)", data, REML=False)
-    pr = m.profile(n_grid=41)
+    pr = fm03ML_profile
 
     fig = pr.plot_pairs(transform="log")
     n = 4
@@ -399,10 +445,9 @@ def test_bates_2_7_penicillin_fm03_ML_profile_pairs_log():
         np.testing.assert_allclose(ax.get_ylim(), r_ref["(Intercept)"], atol=1e-3)
 
 
-def test_bates_2_2_pastes_fm04_ML():
+def test_bates_2_2_pastes_fm04_ML(fm04ML):
     """fm04 <- lmer(strength ~ 1 + (1|sample) + (1|batch), Pastes, REML=FALSE)"""
-    data = load_dataset("lme4", "Pastes")
-    m = lme("strength ~ 1 + (1|sample) + (1|batch)", data, REML=False)
+    m = fm04ML
 
     assert m.n == 60
     assert m.n_groups == {"sample": 30, "batch": 10}
@@ -416,12 +461,11 @@ def test_bates_2_2_pastes_fm04_ML():
     _assert_fixed(m, "(Intercept)", 60.0533, se=0.6421, tval=93.52)
 
 
-def test_bates_2_2_pastes_fm04a_ML_and_LRT():
+def test_bates_2_2_pastes_fm04a_ML_and_LRT(fm04ML, fm04aML):
     """fm04a <- lmer(strength ~ 1 + (1|sample), Pastes, REML=FALSE);
        anova(fm04a, fm04) — LRT for σ_batch = 0."""
-    data = load_dataset("lme4", "Pastes")
-    full = lme("strength ~ 1 + (1|sample) + (1|batch)", data, REML=False)
-    red = lme("strength ~ 1 + (1|sample)", data, REML=False)
+    full = fm04ML
+    red = fm04aML
 
     _assert_ml_summary(
         red, AIC=254.4020, BIC=260.6855, loglike=-124.2010,
@@ -442,14 +486,10 @@ def test_bates_2_2_pastes_fm04a_ML_and_LRT():
 # ---------------------------------------------------------------------------
 
 
-def test_bates_3_2_sleepstudy_fm07_uncorrelated_ML():
+def test_bates_3_2_sleepstudy_fm07_uncorrelated_ML(fm07ML):
     """fm07 <- lmer(Reaction ~ 1+Days + (1|Subject) + (0+Days|Subject),
                     sleepstudy, REML=FALSE)"""
-    data = load_dataset("lme4", "sleepstudy")
-    m = lme(
-        "Reaction ~ 1 + Days + (1|Subject) + (0+Days|Subject)",
-        data, REML=False,
-    )
+    m = fm07ML
 
     assert m.n == 180
     assert m.n_groups == {"Subject": 18}
@@ -466,14 +506,10 @@ def test_bates_3_2_sleepstudy_fm07_uncorrelated_ML():
     _assert_fixed(m, "Days",         10.467, se=1.519, tval=6.89)
 
 
-def test_bates_3_2_sleepstudy_fm06_correlated_ML():
+def test_bates_3_2_sleepstudy_fm06_correlated_ML(fm06ML):
     """fm06 <- lmer(Reaction ~ 1+Days + (1+Days|Subject),
                     sleepstudy, REML=FALSE)  -- correlated REs"""
-    data = load_dataset("lme4", "sleepstudy")
-    m = lme(
-        "Reaction ~ 1 + Days + (1+Days|Subject)",
-        data, REML=False,
-    )
+    m = fm06ML
 
     _assert_ml_summary(
         m, AIC=1763.9393, BIC=1783.0971, loglike=-875.9697,
@@ -485,16 +521,10 @@ def test_bates_3_2_sleepstudy_fm06_correlated_ML():
     _assert_fixed(m, "Days",         10.467, se=1.502, tval=6.968)
 
 
-def test_bates_3_2_sleepstudy_LRT_fm07_vs_fm06():
+def test_bates_3_2_sleepstudy_LRT_fm07_vs_fm06(fm06ML, fm07ML):
     """anova(fm07, fm06): test whether the (Intercept,Days) correlation
        is non-zero. Book: χ²=0.0639 on 1 df, p=0.8004."""
-    data = load_dataset("lme4", "sleepstudy")
-    fm06 = lme("Reaction ~ 1 + Days + (1+Days|Subject)", data, REML=False)
-    fm07 = lme(
-        "Reaction ~ 1 + Days + (1|Subject) + (0+Days|Subject)",
-        data, REML=False,
-    )
-    chisq, df, p = _lrt(fm07, fm06)
+    chisq, df, p = _lrt(fm07ML, fm06ML)
     np.testing.assert_allclose(chisq, 0.0639, atol=5e-3)
     assert df == 1
     np.testing.assert_allclose(p, 0.8004, atol=5e-3)
