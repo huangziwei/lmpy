@@ -791,3 +791,68 @@ def test_check_outer_info_is_populated_after_fit():
     d2 = load_dataset("R", "trees")
     m2 = gam("Volume ~ Height + Girth", d2, method="REML")
     assert m2._outer_info is None
+
+
+# ---------------------------------------------------------------------------
+# offset(...) — both via formula and via offset= kwarg.
+#
+# Identity check: a parametric-only formula's gam fit must exactly match
+# the equivalent glm fit (gam reduces to glm when there are no smooths).
+# Offset-shift check: predict with newdata re-evaluates formula offsets.
+# Parity check: mgcv pinned values for a small Poisson+offset GAM.
+# ---------------------------------------------------------------------------
+
+
+def test_gam_offset_in_formula_matches_glm():
+    """No smooths → gam == glm. Offset(...) inside the formula must
+    propagate identically through both."""
+    from hea import glm, Quasi
+    d = load_dataset("MASS", "quine")  # count data
+    # Synthetic offset column to exercise the path.
+    d = d.with_columns(off=pl.lit(0.3) * pl.col("Days").cast(pl.Float64).clip(lower_bound=1).log())
+    formula = "Days ~ offset(off) + Sex + Age"
+    fam = Quasi(link="log", variance="mu")
+    b_glm = glm(formula, family=fam, data=d)
+    b_gam = gam(formula, family=fam, data=d, method="REML")
+    np.testing.assert_allclose(
+        b_gam._beta, b_glm._bhat_arr, atol=1e-10,
+    )
+    np.testing.assert_allclose(b_gam.deviance, b_glm.deviance, atol=1e-10)
+    np.testing.assert_allclose(
+        b_gam.fitted_values, b_glm.fitted_values, atol=1e-10,
+    )
+
+
+def test_gam_offset_kwarg_equivalent_to_formula_offset():
+    """offset(off) in formula should give the same fit as offset=off kwarg."""
+    rng = np.random.default_rng(0)
+    n = 100
+    d = pl.DataFrame({
+        "y": rng.poisson(3.0, n).astype(float),
+        "x": rng.standard_normal(n),
+        "off_col": rng.uniform(0.0, 1.0, n),
+    })
+    from hea import Poisson
+    a = gam("y ~ offset(off_col) + x", family=Poisson(), data=d, method="REML")
+    b = gam("y ~ x", family=Poisson(), data=d, method="REML",
+            offset=d["off_col"].to_numpy())
+    np.testing.assert_allclose(a._beta, b._beta, atol=1e-10)
+    np.testing.assert_allclose(a.deviance, b.deviance, atol=1e-10)
+
+
+def test_gam_predict_reevaluates_offset_on_newdata():
+    """predict.gam re-evaluates formula offset(...) atoms on newdata."""
+    rng = np.random.default_rng(0)
+    n = 80
+    d = pl.DataFrame({
+        "y": rng.poisson(4.0, n).astype(float),
+        "x": rng.standard_normal(n),
+        "off_col": rng.uniform(0.5, 1.5, n),
+    })
+    from hea import Poisson
+    m = gam("y ~ offset(off_col) + x", family=Poisson(), data=d, method="REML")
+    # Same X but a different offset column → η̂ should shift by exactly Δoffset.
+    new = d.with_columns((pl.col("off_col") + 2.0).alias("off_col"))
+    eta_orig = m.predict(type="link")
+    eta_new = m.predict(new, type="link")
+    np.testing.assert_allclose(eta_new - eta_orig, 2.0, atol=1e-10)

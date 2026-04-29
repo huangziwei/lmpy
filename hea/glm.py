@@ -656,7 +656,12 @@ class glm:
         else:
             X_new = materialize(self._expanded, new).to_numpy().astype(float)
             n_new = X_new.shape[0]
+            # Re-evaluate any formula offset(...) atoms against newdata
+            # — predict.glm does the same. Caller's offset= still overrides.
             default_off = np.zeros(n_new)
+            for off_node in self._expanded.offsets:
+                blk = _eval_atom(off_node, new)
+                default_off = default_off + blk.values.flatten().astype(float)
         off_new = (default_off if offset is None
                    else np.asarray(offset, dtype=float).flatten())
         if off_new.shape != (n_new,):

@@ -41,7 +41,7 @@ from scipy.linalg import cho_factor, cho_solve, solve_triangular
 from scipy.stats import f as f_dist, norm, t as t_dist
 
 from .family import Family, Gaussian
-from .formula import BasisSpec, SmoothBlock, materialize_smooths
+from .formula import BasisSpec, SmoothBlock, _eval_atom, materialize_smooths
 from .design import prepare_design
 from .lm import _label_top_n, _lowess, _qq_plot
 from .utils import (
@@ -151,6 +151,7 @@ class gam:
         method: str = "GCV.Cp",
         sp: np.ndarray | None = None,
         family: Family | None = None,
+        offset: np.ndarray | list | None = None,
     ):
         if method not in ("REML", "GCV.Cp"):
             raise ValueError(f"method must be 'REML' or 'GCV.Cp', got {method!r}")
@@ -169,6 +170,18 @@ class gam:
         y = d.y.to_numpy().astype(float)
         X_param = X_param_df.to_numpy().astype(float)
         n, p_param = X_param.shape
+
+        # Sum any ``offset(...)`` atoms from the formula plus the kwarg
+        # offset. mgcv's gam adds these to η just like glm does:
+        # η = X·β + offset for both fitting and prediction.
+        off = (np.zeros(n) if offset is None
+               else np.asarray(offset, dtype=float).flatten())
+        if off.shape != (n,):
+            raise ValueError(f"offset must have length {n}, got {off.shape}")
+        for off_node in d.expanded.offsets:
+            blk = _eval_atom(off_node, d.data)
+            off = off + blk.values.flatten().astype(float)
+        self._offset = off
 
         sb_lists = materialize_smooths(d.expanded, d.data) if d.expanded.smooths else []
         blocks: list[SmoothBlock] = [b for group in sb_lists for b in group]
@@ -742,10 +755,15 @@ class gam:
         link = family.link
         X = self._X_full
         y = self._y_arr
+        off = self._offset
         n, p = self.n, self.p
         Sλ = self._build_S_lambda(rho)
         Sλ = 0.5 * (Sλ + Sλ.T)
-        wt = np.ones(n)                 # prior weights = 1 (no offset/prior-w yet)
+        wt = np.ones(n)                 # prior weights = 1 (offset is plumbed; prior-w lands later)
+
+        # ``eta`` here is the *offset-stripped* β-only predictor X·β; the
+        # full linear predictor is ``eta + off``. Mirrors glm._irls. We
+        # solve weighted LS on (z - off) ~ X to recover β each step.
 
         # Start μ̂ from the family's mustart (= y for Gamma/IG). The
         # *baseline* for step-halving and divergence is mgcv's ``null.coef``
@@ -757,23 +775,24 @@ class gam:
         # saturated η as baseline gives old_pdev=0, so any positive iter-1
         # pdev would look like divergence.
         mu = family.initialize(y, wt)
-        eta = link.link(mu)
+        eta = link.link(mu) - off       # β-only η
         beta = np.zeros(p)
 
         mu_null_const = float(np.average(mu, weights=wt))
-        eta_null_const = link.link(np.full(n, mu_null_const))
-        null_coef, *_ = np.linalg.lstsq(X, eta_null_const, rcond=None)
+        eta_null_full = link.link(np.full(n, mu_null_const))
+        # Solve null_coef from X·null_coef = (full η at null) − offset.
+        null_coef, *_ = np.linalg.lstsq(X, eta_null_full - off, rcond=None)
         eta_null = X @ null_coef
-        mu_null = link.linkinv(eta_null)
-        if not (link.valideta(eta_null) and family.validmu(mu_null)):
+        mu_null = link.linkinv(eta_null + off)
+        if not (link.valideta(eta_null + off) and family.validmu(mu_null)):
             # Constant-η projection drifted out of valid region — only
             # plausible for an X with no near-constant column. Fall back
-            # to zeros; if the canonical link rejects η=0 the user will
+            # to zeros; if the canonical link rejects η=off the user will
             # still get a clear error from the validity step-halver below
             # rather than silent divergence.
             null_coef = np.zeros(p)
             eta_null = np.zeros(n)
-            mu_null = link.linkinv(eta_null)
+            mu_null = link.linkinv(off)
         beta_old = null_coef.copy()
         eta_old = eta_null.copy()
         dev = float(np.sum(family.dev_resids(y, mu, wt)))
@@ -785,19 +804,20 @@ class gam:
         # (rare; e.g., Bernoulli at y=0/1 with linkinv-clamped initialize),
         # nudge η toward the null baseline until valid. Typically a no-op.
         ii = 0
-        while not (link.valideta(eta) and family.validmu(mu)):
+        while not (link.valideta(eta + off) and family.validmu(mu)):
             ii += 1
             if ii > 20:
                 raise FloatingPointError(
                     "PIRLS init: cannot find valid starting μ̂"
                 )
             eta = 0.9 * eta + 0.1 * eta_old
-            mu = link.linkinv(eta)
+            mu = link.linkinv(eta + off)
 
         eps = 1e-8
         max_it = 50
         for it in range(max_it):
-            mu_eta_v = link.mu_eta(eta)
+            eta_full = eta + off
+            mu_eta_v = link.mu_eta(eta_full)
             V = family.variance(mu)
             if np.any(V == 0) or np.any(np.isnan(V)):
                 raise FloatingPointError("V(μ)=0 or NaN in PIRLS")
@@ -809,6 +829,7 @@ class gam:
             # exact ∂/∂ρ derivatives starting from the Fisher-converged β̂,
             # which is what we replicate.
             alpha = np.ones(n)
+            # Working response, offset-stripped: z = (full η + (y-μ)/μ_η) - off.
             z = eta + (y - mu) / mu_eta_v
             w = mu_eta_v ** 2 / V
 
@@ -824,21 +845,21 @@ class gam:
                     A + ridge * np.eye(p), lower=True, overwrite_a=False,
                 )
             start = cho_solve((A_chol, lower), XtWz)
-            eta_new = X @ start
+            eta_new = X @ start         # β-only η
             if np.any(~np.isfinite(start)):
                 raise FloatingPointError("non-finite β in PIRLS")
 
-            mu_new = link.linkinv(eta_new)
+            mu_new = link.linkinv(eta_new + off)
             # If μ leaves the family's valid region, halve the step toward
             # the previous iterate (mgcv "inner loop 2").
             ii = 0
-            while not (link.valideta(eta_new) and family.validmu(mu_new)):
+            while not (link.valideta(eta_new + off) and family.validmu(mu_new)):
                 ii += 1
                 if ii > max_it:
                     raise FloatingPointError("PIRLS step halving failed (validity)")
                 start = 0.5 * (start + beta_old)
                 eta_new = 0.5 * (eta_new + eta_old)
-                mu_new = link.linkinv(eta_new)
+                mu_new = link.linkinv(eta_new + off)
 
             dev_new = float(np.sum(family.dev_resids(y, mu_new, wt)))
             pen_new = float(start @ Sλ @ start)
@@ -854,8 +875,8 @@ class gam:
                     break
                 start = 0.5 * (start + beta_old)
                 eta_new = 0.5 * (eta_new + eta_old)
-                mu_new = link.linkinv(eta_new)
-                if not (link.valideta(eta_new) and family.validmu(mu_new)):
+                mu_new = link.linkinv(eta_new + off)
+                if not (link.valideta(eta_new + off) and family.validmu(mu_new)):
                     continue
                 dev_new = float(np.sum(family.dev_resids(y, mu_new, wt)))
                 pen_new = float(start @ Sλ @ start)
@@ -887,12 +908,13 @@ class gam:
         # and the chain-rule ingredients (dw/dη, d²w/dη²) depend on which
         # W enters. mgcv's score computation uses Newton W; we evaluate α
         # at the Fisher-converged β̂ here so downstream code sees Newton W.
-        mu_eta_v = link.mu_eta(eta)
+        eta_full = eta + off
+        mu_eta_v = link.mu_eta(eta_full)
         V = family.variance(mu)
         d2g = link.d2link(mu)
         alpha = 1.0 + (y - mu) * (family.dvar(mu) / V + d2g * mu_eta_v)
         alpha = np.where(alpha == 0.0, np.finfo(float).eps, alpha)
-        z = eta + (y - mu) / (mu_eta_v * alpha)
+        z = eta + (y - mu) / (mu_eta_v * alpha)   # offset-stripped working response
         w = alpha * mu_eta_v ** 2 / V
         is_fisher_fallback = False
         if np.any(w < 0):
@@ -915,11 +937,14 @@ class gam:
             )
         log_det_A = 2.0 * float(np.log(np.abs(np.diag(A_chol))).sum())
 
+        # ``eta`` here is offset-stripped; downstream consumers
+        # (linear_predictors, predict, residuals_of) expect the full
+        # linear predictor — return ``eta + off``.
         return _FitState(
             beta=beta, dev=dev, pen=pen,
             A_chol=A_chol, A_chol_lower=lower,
             S_full=Sλ, log_det_A=log_det_A,
-            eta=eta, mu=mu, w=w, z=z, alpha=alpha,
+            eta=eta + off, mu=mu, w=w, z=z, alpha=alpha,
             is_fisher_fallback=is_fisher_fallback,
         )
 
@@ -2500,18 +2525,24 @@ class gam:
         newdata: pl.DataFrame | None = None,
         type: str = "response",
         se_fit: bool = False,
+        offset: np.ndarray | list | None = None,
     ):
         """Predict from the fitted GAM — :func:`predict.gam` parity.
 
-        ``type='response'`` returns ``μ̂ = g⁻¹(X_new β̂)``; ``type='link'``
-        returns ``η̂ = X_new β̂``. With ``se_fit=True``, also returns the
-        standard error: link-scale SE is ``√diag(X · Vp · Xᵀ)``;
-        response-scale SE multiplies by ``|dμ/dη|`` (delta method, same as
-        mgcv).
+        ``type='response'`` returns ``μ̂ = g⁻¹(X_new β̂ + offset)``;
+        ``type='link'`` returns ``η̂ = X_new β̂ + offset``. With
+        ``se_fit=True``, also returns the standard error: link-scale SE is
+        ``√diag(X · Vp · Xᵀ)`` (offset is constant so it doesn't affect
+        SE); response-scale SE multiplies by ``|dμ/dη|`` (delta method,
+        same as mgcv).
 
         ``Vp`` is the Bayesian posterior covariance (``self.Vp``) — mgcv's
         default for ``se.fit`` since smoothing-parameter shrinkage makes the
         frequentist ``Ve`` over-confident at the posterior mode.
+
+        With ``newdata`` and a formula offset, the offset is re-evaluated
+        against ``newdata`` (mirrors ``predict.gam``). Pass ``offset=`` to
+        override or to add an offset on top of the formula offset.
         """
         if type not in ("link", "response"):
             raise ValueError(
@@ -2520,7 +2551,7 @@ class gam:
 
         if newdata is None:
             X_new = self._X_full
-            eta = X_new @ self._beta
+            off_new = self._offset
         else:
             from .formula import materialize  # local to avoid cycle
 
@@ -2535,7 +2566,21 @@ class gam:
                     )
                 cols.append(np.asarray(b.spec.predict_mat(newdata), dtype=float))
             X_new = np.concatenate(cols, axis=1) if len(cols) > 1 else X_param
-            eta = X_new @ self._beta
+            n_new = X_new.shape[0]
+            # Re-evaluate any formula offset(...) atoms against newdata
+            # — predict.gam does the same.
+            off_new = np.zeros(n_new)
+            for off_node in self._expanded.offsets:
+                blk = _eval_atom(off_node, newdata)
+                off_new = off_new + blk.values.flatten().astype(float)
+        if offset is not None:
+            extra = np.asarray(offset, dtype=float).flatten()
+            if extra.shape != off_new.shape:
+                raise ValueError(
+                    f"offset must have length {off_new.shape[0]}, got {extra.shape}"
+                )
+            off_new = off_new + extra
+        eta = X_new @ self._beta + off_new
 
         fit = eta if type == "link" else self.family.link.linkinv(eta)
 

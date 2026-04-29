@@ -591,3 +591,35 @@ def test_bates_4_2_ergostool_fm17_ML():
     _assert_fixed(m, "TypeT2",      3.8889)
     _assert_fixed(m, "TypeT3",      2.2222)
     _assert_fixed(m, "TypeT4",      0.6667)
+
+
+# ---------------------------------------------------------------------------
+# offset(...) — algebraic identity: fitting (y-off) ~ X + (1|g) gives the
+# same β̂, û, and σ̂ as fitting y ~ X + offset(off) + (1|g). Fitted values
+# shift by the offset; residuals are unchanged.
+# ---------------------------------------------------------------------------
+
+
+def test_lme_offset_matches_y_minus_offset():
+    import polars as pl
+
+    rng = np.random.default_rng(0)
+    n = 80
+    g = np.repeat(np.arange(8), 10).astype(str)
+    x = rng.standard_normal(n)
+    o = rng.uniform(1.0, 3.0, n)
+    u_re = rng.standard_normal(8)[np.repeat(np.arange(8), 10)]
+    y = 0.5 + 0.7 * x + 1.5 * o + u_re + 0.3 * rng.standard_normal(n)
+    d = pl.DataFrame({"y": y, "x": x, "o": o, "g": g})
+    d_minus = d.with_columns((pl.col("y") - 1.5 * pl.col("o")).alias("y_minus"))
+
+    m_off  = lme("y ~ x + offset(1.5*o) + (1|g)", data=d, REML=True)
+    m_pre  = lme("y_minus ~ x + (1|g)", data=d_minus, REML=True)
+
+    np.testing.assert_allclose(m_off._beta, m_pre._beta, atol=1e-10)
+    np.testing.assert_allclose(m_off.sigma, m_pre.sigma, atol=1e-10)
+    np.testing.assert_allclose(m_off.residuals, m_pre.residuals, atol=1e-10)
+    # Fitted values shift by exactly the offset.
+    np.testing.assert_allclose(
+        m_off.fitted - m_pre.fitted, 1.5 * o, atol=1e-10,
+    )

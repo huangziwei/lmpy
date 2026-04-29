@@ -194,9 +194,21 @@ class lme:
         n, p = X.shape
         q = Z.shape[1]
 
+        # Sum any `offset(...)` atoms from the formula, then fit on
+        # ``y_solve = y - offset`` (R's lme/lmer convention). β̂, û and the
+        # variance components are all unchanged by the offset; only the
+        # fitted/residual scale shifts. ``self.y`` keeps the original
+        # response so plots and diagnostics show the user's data.
+        off = np.zeros(n)
+        for off_node in d.expanded.offsets:
+            off = off + _eval_atom(off_node, d.data).values.flatten().astype(float)
+        self._offset = off
+        y_solve = y - off
+
         self.data = d.data
         self.X = X_df
         self.y = y
+        self._y_solve = y_solve
         self.Z = Z
         self.column_names = list(X_df.columns)
         self.n = n
@@ -222,8 +234,8 @@ class lme:
         Z_sp = csc_array(Z)
         eye_q_sp = eye_array(q, format="csc")
         XtX = X.T @ X
-        Xty = X.T @ y
-        yty = float(y @ y)
+        Xty = X.T @ y_solve
+        yty = float(y_solve @ y_solve)
         log2pi = float(np.log(2.0 * np.pi))
 
         # Cache pieces profile() and other post-fit methods reuse.
@@ -282,7 +294,9 @@ class lme:
         self.Lambda = Lt.T.toarray()
         self.L = F.L.toarray()
 
-        ZLty = np.asarray(ZL.T @ y).ravel()
+        # Use the offset-stripped response so this final β̂/û recompute is
+        # consistent with the cached Xty/yty the optimizer ran on.
+        ZLty = np.asarray(ZL.T @ y_solve).ravel()
         ZLtX = np.asarray(ZL.T @ X)
         M_inv_ZLty = F.solve(ZLty)
         M_inv_ZLtX = F.solve(ZLtX)
@@ -302,8 +316,9 @@ class lme:
         self.sigma = sigma
         self.sigma_squared = sigma2
 
-        # Fitted values ŷ = Xβ̂ + Z Λ û and residuals ε̂ = y − ŷ
-        self.fitted = np.einsum("ij,j->i", X, beta) + ZL @ self._u
+        # Fitted values ŷ = Xβ̂ + Z Λ û + offset (response scale).
+        # Residuals = y − ŷ = y_solve − Xβ̂ − Z Λ û (offset cancels).
+        self.fitted = np.einsum("ij,j->i", X, beta) + ZL @ self._u + off
         self.residuals = y - self.fitted
         # ε̂ / σ̂ — what lme4 calls Pearson / "Scaled residuals"
         self.scaled_residuals = self.residuals / sigma
@@ -393,8 +408,9 @@ class lme:
         adjusted by a fixed β_j, or ``X`` with a column removed).
 
         ``log|Lz|`` is computed as ½·``factor.logdet()`` since
-        ``Lz Lzᵀ = M`` means ``|M| = |Lz|²``."""
-        y = self.y if y is None else y
+        ``Lz Lzᵀ = M`` means ``|M| = |Lz|²``. ``y`` here is offset-stripped
+        (``y_solve``); cached ``Xty/yty`` are built from ``y_solve`` to match."""
+        y = self._y_solve if y is None else y
         X = self.X.to_numpy().astype(float) if X is None else X
         XtX = self._XtX if XtX is None else XtX
         Xty = self._Xty if Xty is None else Xty
@@ -499,7 +515,7 @@ class lme:
         ``sigma_fix=None`` profiles σ out (σ̂² = rss/n); pass it explicitly
         when σ was either pinned or optimized as a free variable upstream.
         """
-        y_ = self.y if y is None else y
+        y_ = self._y_solve if y is None else y
         X_ = self.X.to_numpy().astype(float) if X is None else X
         XtX_ = self._XtX if XtX is None else XtX
         Xty_ = self._Xty if Xty is None else Xty
@@ -538,7 +554,10 @@ class lme:
         X_full = self.X.to_numpy().astype(float)
         x_j = X_full[:, j]
         X_rest = np.delete(X_full, j, axis=1)
-        y_adj = self.y - x_j * beta_j_tgt
+        # ``self._y_solve`` already has the offset removed; subtracting
+        # x_j·β_j_tgt on top of that gives the correct adjusted response
+        # for the offset-stripped sub-fit.
+        y_adj = self._y_solve - x_j * beta_j_tgt
         XtX_rest = X_rest.T @ X_rest
         Xty_rest = X_rest.T @ y_adj
         yty_adj = float(y_adj @ y_adj)
