@@ -6,10 +6,12 @@ from .family import (
     Gaussian,
     InverseGaussian,
     Poisson,
+    Quasi,
     binomial,
     gaussian,
     inverse_gaussian,
     poisson,
+    quasi,
 )
 from .gam import gam
 from .glm import glm

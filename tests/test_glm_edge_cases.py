@@ -24,7 +24,7 @@ import polars as pl
 import pytest
 
 from conftest import load_dataset, load_glm_oracle
-from hea import Binomial, Gaussian, Poisson, glm
+from hea import Binomial, Gaussian, Poisson, Quasi, glm
 
 
 # ---------------------------------------------------------------------------
@@ -243,3 +243,44 @@ def test_factor_response_binomial_boolean():
     m = glm("y ~ x", d, family=Binomial())
     # FALSE=0, TRUE=1 — same as factor("a","b") above (alphabetical).
     np.testing.assert_allclose(m._bhat_arr, [-0.8822461, 0.1960547], atol=5e-7)
+
+
+# ---------------------------------------------------------------------------
+# 6.7 — Quasi family: variance="mu" + log link == quasi-Poisson.
+# Same point estimates as Poisson; dispersion estimated; t-tests for Wald.
+# ---------------------------------------------------------------------------
+
+
+def test_quasi_poisson_matches_poisson_betas_with_estimated_dispersion():
+    d = load_dataset("MASS", "quine")  # over-dispersed counts — Wood §3.3.5 territory
+    m_pois = glm("Days ~ Sex + Age + Eth + Lrn", d, family=Poisson(link="log"))
+    m_quasi = glm("Days ~ Sex + Age + Eth + Lrn", d, family=Quasi(link="log", variance="mu"))
+
+    # Point estimates must be identical (same IRLS path; scale only enters SE).
+    np.testing.assert_allclose(m_quasi._bhat_arr, m_pois._bhat_arr, atol=1e-10)
+    # Same deviance and df.
+    np.testing.assert_allclose(m_quasi.deviance, m_pois.deviance, atol=1e-10)
+    assert m_quasi.df_residual == m_pois.df_residual
+
+    # Dispersion: Poisson is fixed at 1; Quasi is the Pearson chi^2 / df_resid.
+    assert m_pois.dispersion == 1.0
+    assert m_quasi.dispersion != 1.0
+    assert m_quasi.dispersion > 1.0  # quine is overdispersed
+
+    # SE(quasi) == sqrt(disp) * SE(poisson).
+    np.testing.assert_allclose(
+        m_quasi._se_bhat_arr,
+        np.sqrt(m_quasi.dispersion) * m_pois._se_bhat_arr,
+        atol=1e-10,
+    )
+
+    # Quasi has no proper likelihood — AIC/BIC/logLik are NaN.
+    assert np.isnan(m_quasi.aic) and np.isnan(m_quasi.bic) and np.isnan(m_quasi.loglike)
+    # Wald tests use t-distribution because scale is unknown.
+    assert m_quasi._test_kind == "t"
+    assert m_pois._test_kind == "z"
+
+
+def test_quasi_rejects_unknown_variance():
+    with pytest.raises(ValueError, match="variance must be"):
+        Quasi(variance="bogus")

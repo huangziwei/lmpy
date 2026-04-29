@@ -638,12 +638,92 @@ class InverseGaussian(Family):
         return np.array([ls0, -0.5 * nobs, 0.0], dtype=float)
 
 
+# ---------------------------------------------------------------------------
+# Quasi: pure quasi-likelihood (no full likelihood, dispersion always
+# estimated). Variance functions and deviances coincide with the matching
+# parametric families, so we delegate to them rather than re-derive.
+# ---------------------------------------------------------------------------
+
+
+_QUASI_VARIANCE_FAMILIES = {
+    "constant": Gaussian,         # V(μ) = 1
+    "mu":       Poisson,          # V(μ) = μ
+    "mu^2":     Gamma,             # V(μ) = μ²
+    "mu^3":     InverseGaussian,  # V(μ) = μ³
+    "mu(1-mu)": Binomial,         # V(μ) = μ(1-μ)
+}
+
+
+class Quasi(Family):
+    """R's ``quasi(link, variance)``: pure quasi-likelihood.
+
+    The mean–variance relation is set by ``variance=`` (one of
+    ``"constant"``, ``"mu"``, ``"mu^2"``, ``"mu^3"``, ``"mu(1-mu)"``).
+    Dispersion is always estimated from the Pearson χ²/df_resid; there is
+    no proper likelihood, so ``aic`` and ``ls`` return NaN — Wald inference
+    uses the t-distribution because the scale is unknown.
+
+    Variance functions and deviances coincide with the matching parametric
+    families, so this class delegates ``variance/dvar/dev_resids/validmu``
+    to them. ``initialize`` matches R's ``quasi()`` (which differs from
+    Binomial's precision-weighted start when ``variance='mu(1-mu)'``).
+    """
+    name = "quasi"
+    canonical_link_name = "identity"  # R's quasi() default, regardless of variance
+    scale_known = False
+
+    def __init__(self, link=None, variance: str = "constant"):
+        if variance not in _QUASI_VARIANCE_FAMILIES:
+            raise ValueError(
+                f"quasi(): variance must be one of {list(_QUASI_VARIANCE_FAMILIES)}; "
+                f"got {variance!r}"
+            )
+        self.variance_name = variance
+        self._shadow = _QUASI_VARIANCE_FAMILIES[variance]()
+        super().__init__(link=link)
+
+    def variance(self, mu): return self._shadow.variance(mu)
+    def dvar(self, mu):     return self._shadow.dvar(mu)
+    def d2var(self, mu):    return self._shadow.d2var(mu)
+    def d3var(self, mu):    return self._shadow.d3var(mu)
+
+    def dev_resids(self, y, mu, wt):
+        return self._shadow.dev_resids(y, mu, wt)
+
+    def initialize(self, y, wt):
+        # R's quasi(variance='mu(1-mu)') uses (y+0.5)/2 — different from
+        # Binomial's (wt·y+0.5)/(wt+1). Other variance choices match their
+        # parametric counterpart's start.
+        if self.variance_name == "mu(1-mu)":
+            y = np.asarray(y, dtype=float)
+            if np.any(y < 0) or np.any(y > 1):
+                raise ValueError(
+                    "y values must be 0 <= y <= 1 for quasi(variance='mu(1-mu)')"
+                )
+            return (y + 0.5) / 2.0
+        return self._shadow.initialize(y, wt)
+
+    def validmu(self, mu):
+        return self._shadow.validmu(mu)
+
+    def aic(self, y, mu, dev, wt, n):
+        return float("nan")
+
+    def ls(self, y, wt, scale):
+        nan = float("nan")
+        return np.array([nan, nan, nan], dtype=float)
+
+    def __repr__(self) -> str:
+        return f"quasi(link={self.link.name}, variance={self.variance_name!r})"
+
+
 # Convenience exports — mirror R's lowercase/CapCase convention so user code
 # reads almost identically: ``gam(..., family=Gamma(link='log'))``.
 gaussian = Gaussian
 poisson = Poisson
 binomial = Binomial
 inverse_gaussian = InverseGaussian
+quasi = Quasi
 __all__ = [
     "Family", "Link",
     "Gaussian", "gaussian",
@@ -651,6 +731,7 @@ __all__ = [
     "Poisson", "poisson",
     "Binomial", "binomial",
     "InverseGaussian", "inverse_gaussian",
+    "Quasi", "quasi",
     "IdentityLink", "LogLink", "InverseLink",
     "SqrtLink", "LogitLink", "ProbitLink", "CauchitLink", "CloglogLink",
     "InverseSquareLink",
