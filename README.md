@@ -3,8 +3,8 @@
 > hea v. (Cantonese) 
 > 1. to kill time; to hang around  
 > 2. to do something without putting much care or effort into it. 
-> 
-> This project started as an laid-back exercise of implementing R's `lm`, `lme`, `glm` and `gam` in Python, and later evolved into my private benchmark for coding agents, and it finally kind of working after trying with Opus 4.7.
+
+This project started as an laid-back exercise of implementing R's `lm`, `lme`, `glm` and `gam` in Python, and later evolved into my private benchmark for coding agents (and it finally gets some momentum after trying with Opus 4.7).
 
 ## Usage
 
