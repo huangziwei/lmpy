@@ -462,13 +462,15 @@ def test_pirls_init_canonical_inverse_gaussian():
     assert np.all(m.fitted > 0)
     assert np.all(m.linear_predictors > 0)
     # Phase 2.2 wiring: unknown-scale family ⇒ log φ enters the outer
-    # vector and `m._log_phi_hat` is finite. `m.scale = exp(log φ̂)` is
-    # the REML-optimized scale (mgcv's `reml.scale`), distinct from the
-    # post-fit Pearson estimate stored as `m._pearson_scale`.
+    # vector and `m._log_phi_hat` is finite. ``m.scale = m.sigma_squared``
+    # is the post-fit Pearson estimate (mgcv's ``m$sig2 = scale.est``,
+    # gam.fit3.r:606), reported regardless of method. The optimizer's
+    # converged scale ``exp(log φ̂)`` (mgcv's ``reml.scale``) lives on
+    # ``m._log_phi_hat`` — for REML the two coincide at the optimum
+    # (FOC); for ML they don't.
     assert m._log_phi_hat is not None
     assert np.isfinite(m._log_phi_hat)
-    np.testing.assert_allclose(m.scale, float(np.exp(m._log_phi_hat)),
-                               atol=0.0)
+    np.testing.assert_allclose(m.scale, m._pearson_scale, atol=0.0)
     assert np.isfinite(m._pearson_scale)
     assert m.sigma_squared > 0
     # Intercept ≈ link(mean(y)) = 1/mean(y)² for an intercept-only fit;
@@ -1118,3 +1120,80 @@ def test_select_true_binomial_summary_matches_mgcv():
             _allclose(pval, pv_t, atol=1e-5, name=f"p-value[{label}]")
         else:
             assert pval < 1e-15, f"p-value[{label}] not vanishing: {pval}"
+
+
+# ---------------------------------------------------------------------------
+# method="ML" — Laplace marginal likelihood (does not profile out fixed
+# effects, so scores are comparable across different fixed-effect structures
+# in `anova(m1, m2)` LRTs). Differs from REML by a `Mp·log(2π·φ)` constant
+# in the score formula (gam.fit3.r:616, remlInd=0).
+# ---------------------------------------------------------------------------
+
+
+def test_mcycle_tp_ML():
+    """gam(accel ~ s(times), data=mcycle, method="ML")"""
+    d = load_dataset("MASS", "mcycle")
+    m = gam("accel ~ s(times)", d, method="ML")
+
+    assert m.n == 133
+    _allclose(m.sp[0], 7.742109e-04, atol=5e-5, name="sp")
+    _allclose(m.edf_total, 9.625375, atol=5e-4, name="edf_total")
+    _allclose(m.sigma_squared, 506.3487, atol=5e-3, name="sigma2")
+    _allclose(m.ML_criterion / 2, 622.2919, atol=5e-3, name="ML/2")
+    _allclose(m.r_squared_adjusted, 0.7831502, atol=5e-4, name="r2adj")
+    _assert_param(m, "(Intercept)", -25.54586, atol=5e-3)
+    _allclose(m.edf_by_smooth["s(times)"], 8.625375, atol=5e-4, name="edf[s(times)]")
+
+
+def test_gamSim_eg1_four_smooths_ML():
+    """gam(y ~ s(x0)+s(x1)+s(x2)+s(x3), data=gamSim(eg=1), method="ML")"""
+    d = load_dataset("mgcv", "gamSim_eg1")
+    m = gam("y ~ s(x0) + s(x1) + s(x2) + s(x3)", d, method="ML")
+
+    assert m.n == 400
+    _allclose(m.edf_total, 15.44156, atol=5e-3, name="edf_total")
+    _allclose(m.sigma_squared, 3.897865, atol=5e-3, name="sigma2")
+    _allclose(m.ML_criterion / 2, 860.3114, atol=5e-3, name="ML/2")
+    _allclose(m.r_squared_adjusted, 0.7156318, atol=5e-3, name="r2adj")
+    _assert_param(m, "(Intercept)", 7.833279, atol=5e-3)
+
+    _allclose(m.edf_by_smooth["s(x0)"], 2.816760, atol=5e-3, name="edf[s(x0)]")
+    _allclose(m.edf_by_smooth["s(x1)"], 2.620159, atol=5e-3, name="edf[s(x1)]")
+    _allclose(m.edf_by_smooth["s(x2)"], 8.004539, atol=5e-3, name="edf[s(x2)]")
+    _allclose(m.edf_by_smooth["s(x3)"], 1.000098, atol=5e-2, name="edf[s(x3)]")
+
+
+def test_wesdr_binomial_ML():
+    """gam(ret ~ s(dur)+s(gly)+s(bmi), data=wesdr, family=binomial, method="ML")
+
+    Scale-known family. Even with φ ≡ 1, REML and ML pick *different* sp
+    because the Hessian log-det differs (REML uses log|H+S|; ML uses
+    log|H_pp+S_pp|, the range-only block — see mgcv ``MLpenalty1`` in
+    gdi.c:1532-1680). mgcv's pins:
+        REML sp ≈ (0.0565, 4205, 0.1277), edf 9.117, score 386.350
+        ML   sp ≈ (0.0787, 34055, 0.2153), edf 8.417, score 384.004
+    """
+    from hea import Binomial
+    d = load_dataset("gamair", "wesdr")
+    m_ml = gam("ret ~ s(dur) + s(gly) + s(bmi)",
+               d, family=Binomial(), method="ML")
+
+    _allclose(m_ml.ML_criterion / 2, 384.0036, atol=5e-3, name="ML/2")
+    _allclose(m_ml.edf_total, 8.416686, atol=5e-3, name="edf_total")
+    _assert_param(m_ml, "(Intercept)", -0.4176841, atol=5e-3)
+    _allclose(m_ml.sp[0], 0.07866319, atol=5e-3, name="sp[s(dur)]")
+    _allclose(m_ml.sp[2], 0.2152721,  atol=5e-3, name="sp[s(bmi)]")
+    # sp[1] for s(gly) is on a ~flat ridge (mgcv 34055, hea > 1e7) — both
+    # are effectively "fully smoothed", so don't pin its absolute value;
+    # the resulting fit (edf, score) is what matches.
+
+
+def test_method_validation():
+    """gam() rejects bogus method strings before doing any work."""
+    d = load_dataset("MASS", "mcycle")
+    with pytest.raises(ValueError, match="REML.*ML.*GCV"):
+        gam("accel ~ s(times)", d, method="UBRE")
+    with pytest.raises(ValueError, match="REML.*ML.*GCV"):
+        gam("accel ~ s(times)", d, method="GACV.Cp")
+    with pytest.raises(ValueError, match="REML.*ML.*GCV"):
+        gam("accel ~ s(times)", d, method="P-REML")

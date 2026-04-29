@@ -67,8 +67,12 @@ class gam:
     data : polars.DataFrame
         Data table; rows with NA in any referenced column are dropped
         before fitting.
-    method : {"REML", "GCV.Cp"}, default "REML"
-        Smoothing-parameter selection criterion.
+    method : {"REML", "ML", "GCV.Cp"}, default "REML"
+        Smoothing-parameter selection criterion. ``"ML"`` is Laplace
+        marginal likelihood — like REML but does not profile out the
+        unpenalized fixed effects. Useful for ``anova(m1, m2)``-style
+        likelihood-ratio comparisons across different fixed-effect
+        structures, where REML scores aren't comparable.
     sp : None or array-like, optional
         If given, fix smoothing parameters at these (non-negative)
         values and skip optimization. Length must match the total number
@@ -143,6 +147,13 @@ class gam:
     REML_criterion : float
         Optimized Laplace-approximate REML criterion, ``-2·V_R(ρ̂)``.
 
+    Attributes (method="ML" only)
+    -----------------------------
+    ML_criterion : float
+        Optimized Laplace-approximate ML criterion, ``-2·V_ML(ρ̂)``.
+        Differs from ``REML_criterion`` by a ``Mp·log(2π·φ)`` constant
+        — comparable across different fixed-effect structures.
+
     Attributes (method="GCV.Cp" only)
     ---------------------------------
     GCV_score : float
@@ -161,8 +172,10 @@ class gam:
         gamma: float = 1.0,
         select: bool = False,
     ):
-        if method not in ("REML", "GCV.Cp"):
-            raise ValueError(f"method must be 'REML' or 'GCV.Cp', got {method!r}")
+        if method not in ("REML", "ML", "GCV.Cp"):
+            raise ValueError(
+                f"method must be 'REML', 'ML', or 'GCV.Cp', got {method!r}"
+            )
         if not (np.isfinite(gamma) and gamma > 0):
             raise ValueError(f"gamma must be a positive finite number, got {gamma!r}")
 
@@ -329,16 +342,18 @@ class gam:
             rho_hat = np.log(np.maximum(sp_arr, 1e-10))
             self.sp = sp_arr
             fit = self._fit_given_rho(rho_hat)
-            # For unknown-scale families fit by REML, set log φ̂ to the
-            # profile-out value log(Dp/(n−Mp)) — the same value the
-            # (ρ, log φ) outer optimizer would converge to at this sp.
-            # Keeps `sigma_squared` and `REML_criterion` consistent with the
-            # free-optimization path bit-for-bit when sp= is fed back in.
-            if (not self.family.scale_known) and method == "REML":
+            # For unknown-scale families fit by (RE)ML, set log φ̂ to the
+            # profile-out value — the same value the (ρ, log φ) outer
+            # optimizer would converge to at this sp. Keeps `sigma_squared`
+            # and the score consistent with the free-optimization path
+            # bit-for-bit when sp= is fed back in.
+            #   REML: φ̂ = Dp/(n−Mp)  (Mp·log φ in score; profiles out fixed effects)
+            #   ML:   φ̂ = Dp/n      (no Mp·log φ; treats β as deterministic)
+            if (not self.family.scale_known) and method in ("REML", "ML"):
                 Dp = float(fit.dev + fit.pen)
-                n_minus_mp = max(float(n - self._Mp), 1.0)
+                denom = max(float(n - self._Mp), 1.0) if method == "REML" else max(float(n), 1.0)
                 self._log_phi_hat = float(
-                    np.log(max(Dp / n_minus_mp, 1e-300))
+                    np.log(max(Dp / denom, 1e-300))
                 )
         else:
             # Unified outer optimization. PIRLS inner solve + general
@@ -347,7 +362,7 @@ class gam:
             # IG): θ = (ρ, log φ). False for known-scale (Poisson, Binomial):
             # θ = ρ with log φ ≡ 0. mgcv's gam.outer behaves the same way.
             family = self.family
-            include_log_phi = (not family.scale_known) and method == "REML"
+            include_log_phi = (not family.scale_known) and method in ("REML", "ML")
             n_lp = 1 if include_log_phi else 0
             theta_dim = n_sp + n_lp
 
@@ -375,7 +390,7 @@ class gam:
                 ))
                 return float(np.log(max(pearson / df_resid_seed, 1e-12)))
 
-            if method == "REML":
+            if method in ("REML", "ML"):
                 cur_rho = np.zeros(n_sp)
                 cur_logphi = _pearson_log_phi(cur_rho)
             else:
@@ -390,7 +405,7 @@ class gam:
 
             theta_hat = self._outer_newton(
                 theta0,
-                criterion=method if method == "REML" else "GCV",
+                criterion="REML" if method in ("REML", "ML") else "GCV",
                 include_log_phi=include_log_phi,
             )
 
@@ -447,14 +462,13 @@ class gam:
         self._wt = np.ones(n)
         wt = self._wt
         # df.residual used in mgcv = n - edf_total. For unknown-scale
-        # families fit by REML through the (ρ, log φ) outer optimizer, mgcv
-        # reports `m$scale = reml.scale = exp(log φ̂)` (gam.fit3.r:639). The
-        # Pearson estimator Σwt·(y-μ)²/V(μ)/df_resid is also kept around
-        # under `m._pearson_scale` since it's mgcv's `scale.est` and is
-        # what the GCV path returns. For Gaussian-identity (φ profiled out
-        # of the outer vector, _log_phi_hat=None) this falls through to the
-        # Pearson formula, which for V=1/wt=1 collapses to rss/df_resid —
-        # bit-identical to the pre-Phase-2 Gaussian flow.
+        # families, mgcv reports `m$sig2 = m$scale = scale.est` (the
+        # Pearson/deviance estimator, gam.fit3.r:606), regardless of method.
+        # This differs from `m$reml.scale = exp(log φ̂)` — the optimizer's
+        # converged scale that enters the score formula. For REML on
+        # Gaussian-identity the two coincide at the optimum (FOC enforces
+        # Dp/(n−Mp) = dev/(n−edf)); for ML they differ since φ̂_ML = Dp/n.
+        # ``_log_phi_hat`` is preserved separately for score evaluation.
         df_resid = float(n - edf_total)
         if df_resid > 0 and not self.family.scale_known:
             V = self.family.variance(fit.mu)
@@ -462,12 +476,7 @@ class gam:
         else:
             pearson_scale = 1.0 if self.family.scale_known else float("nan")
         self._pearson_scale = pearson_scale
-        if self.family.scale_known:
-            scale = 1.0
-        elif self._log_phi_hat is not None:
-            scale = float(np.exp(self._log_phi_hat))
-        else:
-            scale = pearson_scale
+        scale = 1.0 if self.family.scale_known else pearson_scale
         sigma_squared = scale                 # alias kept for back-compat
         sigma = float(np.sqrt(sigma_squared)) if np.isfinite(sigma_squared) and sigma_squared >= 0 else float("nan")
 
@@ -623,7 +632,7 @@ class gam:
         # cached. For GCV / no-smooth / non-finite σ², leave as None and
         # the consumers fall back to whatever they can do.
         if (
-            method == "REML"
+            method in ("REML", "ML")
             and n_sp > 0
             and np.isfinite(sigma_squared)
             and sigma_squared > 0
@@ -683,20 +692,23 @@ class gam:
         self.BIC = -2.0 * logLik + float(np.log(n)) * df_for_aic
         self._mgcv_aic = float(mgcv_aic)                           # mgcv's m$aic (different from AIC!)
 
-        if method == "REML":
+        if method in ("REML", "ML"):
             if n_sp > 0:
-                # `_reml` returns -2·V_R; `summary()`'s `/2` recovers
-                # mgcv's `-REML` display value. Scale-known families (Poisson,
-                # Binomial) substitute log φ = 0; scale-unknown read the
-                # outer-optimizer's (or sp= path's profile-out) log φ̂.
+                # `_reml` returns -2·V_R (REML) or -2·V_ML (ML); `summary()`'s
+                # `/2` recovers mgcv's `-REML`/`-ML` display value. Scale-known
+                # families (Poisson, Binomial) substitute log φ = 0; scale-
+                # unknown read the outer-optimizer's (or sp= path's profile-out)
+                # log φ̂.
                 log_phi_hat = (
                     self._log_phi_hat if self._log_phi_hat is not None else 0.0
                 )
-                self.REML_criterion = float(
-                    self._reml(rho_hat, log_phi_hat, fit=fit)
-                )
+                score = float(self._reml(rho_hat, log_phi_hat, fit=fit))
             else:
-                self.REML_criterion = float("nan")
+                score = float("nan")
+            if method == "REML":
+                self.REML_criterion = score
+            else:
+                self.ML_criterion = score
         else:
             if n_sp > 0:
                 self.GCV_score = float(self._gcv(rho_hat))
@@ -1014,33 +1026,84 @@ class gam:
         top = np.clip(top, 1e-300, None)
         return float(np.sum(np.log(top)))
 
+    def _ml_logdet_adj(self, fit: "_FitState"):
+        """Adjustment to convert log|H+S| (REML) → log|H_pp+S_pp| (ML).
+
+        Direct port of mgcv ``MLpenalty1`` (gdi.c:1532-1680): for ML the
+        Laplace approximation marginalises only over the *range* of Sλ
+        (dropping Mp null-space columns of the QR factor R before the
+        log-det). For REML it uses the full Hessian.
+
+        Identity used here (block determinant on (range, null) basis):
+
+            log|A_pp| = log|A| + log|U_nᵀ A⁻¹ U_n|
+
+        where U_n is an orthonormal basis for null(Sλ), Mp = dim null(Sλ).
+
+        Returns (logdet_adj, M_inv, B) with B = A⁻¹U_n (q×Mp) and
+        M = U_nᵀ B (Mp×Mp). The latter two feed the gradient correction
+        in ``_dlog_det_H_drho_ml``. ``logdet_adj = log|M|`` is added to
+        ``fit.log_det_A`` to obtain log|H_pp + S_pp|.
+        """
+        Mp = self._Mp
+        if Mp == 0:
+            return 0.0, None, None
+        # Null basis from eigendecomp of Sλ. Bottom Mp eigenvalues are
+        # exactly 0 by construction (structural null space), so taking the
+        # bottom-Mp eigenvectors picks out a stable U_n regardless of ρ.
+        Sλ_sym = 0.5 * (fit.S_full + fit.S_full.T)
+        w, V = np.linalg.eigh(Sλ_sym)
+        U_n = V[:, :Mp]
+        B = cho_solve((fit.A_chol, fit.A_chol_lower), U_n)
+        M = U_n.T @ B
+        sign, logdet_M = np.linalg.slogdet(M)
+        if sign <= 0 or not np.isfinite(logdet_M):
+            return 0.0, None, None
+        M_inv = np.linalg.inv(M)
+        return float(logdet_M), M_inv, B
+
     def _reml(self, rho: np.ndarray, log_phi: float = 0.0,
                       fit: "_FitState | None" = None) -> float:
-        """Laplace-approximate REML in 2·V_R units, family/link-agnostic.
+        """Laplace-approximate (RE)ML in 2·V units, family/link-agnostic.
 
-        Direct port of mgcv's gam.fit3.r:616 (γ=1, remlInd=1):
+        Direct port of mgcv's gam.fit3.r:616 with `remlInd ∈ {1, 0}`:
 
-            2·V_R = Dp/φ − 2·ls0 + log|X'WX + Sλ| − log|Sλ|_+ − Mp·log(2π·φ)
+            2·V = Dp/φ − 2·ls0 + log|H_*| − log|Sλ|_+
+                  − remlInd·Mp·(log(2π·φ) − log γ)
 
-        with Dp = fit.dev + β̂'Sλβ̂ at PIRLS-converged β̂ and
+        where the Hessian log-determinant differs by method:
+
+            REML: log|H_*| = log|X'WX + Sλ|             (full)
+            ML  : log|H_*| = log|U_rᵀ(X'WX + Sλ)U_r|    (range only)
+
+        with U_r an orthonormal basis for range(Sλ). For ML the Laplace
+        approximation marginalises only over the penalised subspace, so
+        the Mp null-space directions are dropped — see mgcv's
+        ``MLpenalty1`` in gdi.c:1532-1680. We compute the range-space
+        log-det as ``fit.log_det_A + log|U_nᵀ A⁻¹ U_n|`` (block
+        determinant identity, with U_n the null basis).
+
+        ``remlInd = 1`` for ``method="REML"`` (mgcv's default; profiles
+        out the unpenalized fixed-effect null-space prior of dimension
+        Mp). ``remlInd = 0`` for ``method="ML"`` (treats those β as
+        deterministic — score is comparable across different fixed-
+        effect structures, suitable for likelihood-ratio tests).
+
+        Dp = fit.dev + β̂'Sλβ̂ at PIRLS-converged β̂ and
         ls0 = family.ls(y, wt, φ)[0]. ``fit.log_det_A`` is the un-φ-scaled
         log|X'WX + Sλ|; the φ-coefficients of the prior-normalisation term
         and the Hessian/penalty Jacobi cancel everywhere except the
         −Mp·log(2π·φ) prior-rank term — see the Laplace derivation in
         Wood 2017 §6.6.
 
-        Reduction-to-Gaussian: profile out φ̂ = Dp/(n−Mp) and substitute.
-        With Gaussian ls0 = −n·log(2πφ)/2 (wt=1 ⇒ Σlog wt = 0),
+        Reduction-to-Gaussian (REML): profile out φ̂ = Dp/(n−Mp) and
+        substitute. With Gaussian ls0 = −n·log(2πφ)/2 (wt=1),
 
             2·V_R(φ̂) = (n−Mp)·(1 + log(2π·Dp/(n−Mp)))
                        + log|A| − log|S|_+
 
-        which equals ``_reml(rho)`` exactly. Verified numerically by
-        ``test_reml_reduces_to_profiled_gaussian``.
-
-        For scale-known families (Poisson, Binomial) φ ≡ 1 ⇒ log_phi=0
-        ⇒ ``Mp·log(2π·φ)`` = Mp·log(2π); ls0 then carries the entire
-        likelihood contribution, which is exactly mgcv's behaviour.
+        which equals ``_reml(rho)`` exactly under method="REML". For
+        method="ML" the analogous profile-out is φ̂ = Dp/n.
         """
         if fit is None:
             fit = self._fit_given_rho(rho)
@@ -1059,17 +1122,24 @@ class gam:
         wt = np.ones(self.n)
         ls0 = float(self.family.ls(self._y_arr, wt, phi)[0])
         log_det_S = self._log_det_S_pos(rho)
+        log_det_H = fit.log_det_A
+        if self.method == "ML":
+            adj, _, _ = self._ml_logdet_adj(fit)
+            log_det_H = log_det_H + adj
         # mgcv (gam.fit3.r:622): ``gamma`` divides the data-fit piece
         # (Dp/φ − 2·ls0) and adds a +Mp·log(γ) constant to compensate the
         # −Mp·log(2πφ) prior-rank term so the criterion stays consistent
-        # with the partially-profiled likelihood interpretation.
+        # with the partially-profiled likelihood interpretation. For
+        # method="ML", remlInd=0 drops both Mp pieces — β is treated as
+        # deterministic, so there is no fixed-effect prior to integrate out.
         gamma = self._gamma
+        reml_ind = 1.0 if self.method == "REML" else 0.0
         return (
             (Dp / phi - 2.0 * ls0) / gamma
-            + fit.log_det_A
+            + log_det_H
             - log_det_S
-            - Mp * float(np.log(2.0 * np.pi * phi))
-            + Mp * float(np.log(gamma))
+            - reml_ind * (Mp * float(np.log(2.0 * np.pi * phi))
+                          - Mp * float(np.log(gamma)))
         )
 
     def _reml_grad(self, rho: np.ndarray, log_phi: float = 0.0,
@@ -1101,6 +1171,35 @@ class gam:
             dDp = self._dDp_drho(fit, rho)
             dlog_H = self._dlog_det_H_drho(fit, rho)
             dlog_S = self._dlog_det_S_drho(rho, S_full=fit.S_full)
+            # method="ML" uses the range-only Hessian log-det. With the
+            # block-determinant identity log|H_pp+S_pp| = log|H+S| + log|M|
+            # (M = U_nᵀ A⁻¹ U_n), the gradient picks up
+            #     ∂log|M|/∂ρ_k = −tr(M⁻¹ · B′(∂A/∂ρ_k)B)
+            # ∂A/∂ρ_k = X′·diag(∂w/∂ρ_k)·X + λ_k·S_k (the W-dep term is
+            # nonzero for non-canonical families like binomial), so the
+            # correction has two pieces. Mirrors mgcv's ``MLpenalty1`` →
+            # ``get_ddetXWXpS`` in gdi.c, which fills trA1 with the
+            # ML-version derivatives via the same projected-Hessian logic.
+            if self.method == "ML":
+                _, M_inv, B = self._ml_logdet_adj(fit)
+                if M_inv is not None:
+                    sp = np.exp(rho)
+                    Y = self._X_full @ B                  # (n, Mp)
+                    Y_Minv = Y @ M_inv                    # (n, Mp)
+                    q = np.einsum("ij,ij->i", Y, Y_Minv)  # (n,) y_i' M⁻¹ y_i
+                    dw_deta = self._dw_deta(fit)
+                    db_drho = self._dbeta_drho(fit, rho)
+                    deta_drho = self._X_full @ db_drho     # (n, n_sp)
+                    dw_drho = dw_deta[:, None] * deta_drho # (n, n_sp)
+                    for k, slot in enumerate(self._slots):
+                        a, b = slot.col_start, slot.col_end
+                        Bk = B[a:b, :]
+                        Pk = Bk.T @ slot.S @ Bk
+                        # −tr(M⁻¹ Y′ diag(dw/dρ_k) Y) − λ_k tr(M⁻¹ P_k)
+                        dlog_H[k] += (
+                            -float(np.sum(dw_drho[:, k] * q))
+                            - sp[k] * float(np.einsum("ij,ji->", M_inv, Pk))
+                        )
             # ∂Dp/∂ρ comes from the data-fit term, so γ divides it; the
             # log|H| / log|S|+ Jacobi pieces are γ-independent.
             grad_rho = dDp / (phi * gamma) + dlog_H - dlog_S
@@ -1114,8 +1213,10 @@ class gam:
         ls = np.asarray(self.family.ls(self._y_arr, wt, phi), dtype=float)
         ls1 = float(ls[1])    # d ls / d(log φ), already chain-ruled
         # Data-fit pieces (-Dp/φ - 2·ls1) divide by γ; the -Mp piece comes
-        # from -Mp·log(2πφ) (γ-independent).
-        d_logphi = (-Dp / phi - 2.0 * ls1) / gamma - Mp
+        # from -Mp·log(2πφ) (γ-independent) and is REML-only — under
+        # method="ML" remlInd=0 drops it (gam.fit3.r:628).
+        reml_ind = 1.0 if self.method == "REML" else 0.0
+        d_logphi = (-Dp / phi - 2.0 * ls1) / gamma - reml_ind * Mp
         return np.concatenate([grad_rho, [d_logphi]])
 
     def _reml_hessian(self, rho: np.ndarray, log_phi: float = 0.0,
@@ -2589,7 +2690,7 @@ class gam:
 
         # GCV / point-estimate-only path: no Hessian-derived CIs.
         H = self._H_aug
-        if H is None or self.method != "REML" or not np.isfinite(self.sigma_squared):
+        if H is None or self.method not in ("REML", "ML") or not np.isfinite(self.sigma_squared):
             nan_col = [float("nan")] * len(sd)
             return pl.DataFrame({
                 "name": names, "std_dev": sd.tolist(),
@@ -3072,6 +3173,11 @@ class gam:
         if self.method == "REML":
             out.append(
                 f"-REML = {self.REML_criterion / 2:.5g}  "
+                f"Scale est. = {self.sigma_squared:.5g}  n = {self.n}"
+            )
+        elif self.method == "ML":
+            out.append(
+                f"-ML = {self.ML_criterion / 2:.5g}  "
                 f"Scale est. = {self.sigma_squared:.5g}  n = {self.n}"
             )
         else:
