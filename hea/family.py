@@ -710,8 +710,25 @@ class Quasi(Family):
         return float("nan")
 
     def ls(self, y, wt, scale):
-        nan = float("nan")
-        return np.array([nan, nan, nan], dtype=float)
+        # Extended quasi-likelihood saturated piece (Nelder & Pregibon 1987;
+        # McCullagh & Nelder 1989, §9.6). mgcv's ``quasi$ls`` drops both the
+        # log(2π) and log V(y) constants — neither depends on φ or ρ, so they
+        # don't affect REML's argmin; dropping log V(y) also sidesteps log 0
+        # when y is at the support boundary (e.g. count zeros under
+        # variance='mu'). What's left is the Gaussian φ-shape:
+        #
+        #     ls0 = -n_obs/2 · log φ + ½·Σ_{w>0} log w
+        #     d/dφ ls = -n_obs/(2φ),  d²/dφ² ls = n_obs/(2φ²)
+        #
+        # Chain-ruled to log φ (hea's convention):
+        #     d/dlog φ  = -n_obs/2
+        #     d²/dlog φ² = -n_obs/2 + n_obs/2 = 0
+        wt = np.asarray(wt, dtype=float)
+        good = wt > 0
+        nobs = int(np.sum(good))
+        ls0 = (-0.5 * nobs * np.log(scale)
+               + 0.5 * float(np.sum(np.log(wt[good]))))
+        return np.array([ls0, -0.5 * nobs, 0.0], dtype=float)
 
     def __repr__(self) -> str:
         return f"quasi(link={self.link.name}, variance={self.variance_name!r})"

@@ -30,7 +30,7 @@ from sksparse.cholmod import (
     eye_array,
 )
 
-from .formula import materialize_bars
+from .formula import _eval_atom, materialize_bars
 from .design import prepare_design
 from .lm import _label_top_n, _lowess, _qq_plot
 from .utils import format_df, format_signif, format_signif_jointly
