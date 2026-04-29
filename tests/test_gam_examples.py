@@ -840,6 +840,51 @@ def test_gam_offset_kwarg_equivalent_to_formula_offset():
     np.testing.assert_allclose(a.deviance, b.deviance, atol=1e-10)
 
 
+def test_gam_gamma_kwarg_matches_mgcv_on_trees():
+    """``gamma=`` (mgcv's smoothing-strength multiplier) — Wood §4.6 cites
+    ``gamma=1.4`` as a reasonable default for over-fit protection.
+
+    Pinned: trees + Gamma(log), GCV.Cp and REML, both γ=1 and γ=1.4.
+    Criterion values come from mgcv 1.9.4 directly.
+    """
+    from hea import Gamma
+    trees = load_dataset("mgcv", "trees")
+
+    # GCV.Cp path
+    m_gcv_1 = gam("Volume ~ s(Height) + s(Girth)",
+                  family=Gamma(link="log"), data=trees,
+                  method="GCV.Cp", gamma=1.0)
+    np.testing.assert_allclose(m_gcv_1.GCV_score, 0.008082356, atol=1e-6)
+    np.testing.assert_allclose(m_gcv_1.sp[1], 0.342711, atol=1e-4)
+
+    m_gcv_14 = gam("Volume ~ s(Height) + s(Girth)",
+                   family=Gamma(link="log"), data=trees,
+                   method="GCV.Cp", gamma=1.4)
+    np.testing.assert_allclose(m_gcv_14.GCV_score, 0.009228008, atol=1e-6)
+    np.testing.assert_allclose(m_gcv_14.sp[1], 0.524542, atol=1e-4)
+    # γ>1 produces smoother fits — sp[1] (Girth) increases.
+    assert m_gcv_14.sp[1] > m_gcv_1.sp[1]
+
+    # REML path — hea's REML_criterion is -2·V_R; mgcv's b$gcv.ubre is V_R.
+    m_reml_1 = gam("Volume ~ s(Height) + s(Girth)",
+                   family=Gamma(link="log"), data=trees,
+                   method="REML", gamma=1.0)
+    np.testing.assert_allclose(m_reml_1.REML_criterion / 2, 78.00469, atol=1e-3)
+
+    m_reml_14 = gam("Volume ~ s(Height) + s(Girth)",
+                    family=Gamma(link="log"), data=trees,
+                    method="REML", gamma=1.4)
+    np.testing.assert_allclose(m_reml_14.REML_criterion / 2, 59.35457, atol=1e-3)
+
+
+def test_gam_gamma_validation():
+    d = load_dataset("R", "iris")
+    with pytest.raises(ValueError, match="gamma"):
+        gam("Sepal.Length ~ s(Petal.Length)", d, gamma=0.0)
+    with pytest.raises(ValueError, match="gamma"):
+        gam("Sepal.Length ~ s(Petal.Length)", d, gamma=-0.5)
+
+
 def test_gam_predict_reevaluates_offset_on_newdata():
     """predict.gam re-evaluates formula offset(...) atoms on newdata."""
     rng = np.random.default_rng(0)

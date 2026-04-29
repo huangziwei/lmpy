@@ -152,12 +152,22 @@ class gam:
         sp: np.ndarray | None = None,
         family: Family | None = None,
         offset: np.ndarray | list | None = None,
+        gamma: float = 1.0,
     ):
         if method not in ("REML", "GCV.Cp"):
             raise ValueError(f"method must be 'REML' or 'GCV.Cp', got {method!r}")
+        if not (np.isfinite(gamma) and gamma > 0):
+            raise ValueError(f"gamma must be a positive finite number, got {gamma!r}")
 
         self.formula = formula
         self.method = method
+        # mgcv's smoothing-strength multiplier. ``gamma > 1`` produces
+        # smoother fits by inflating the apparent edf cost in the GCV/UBRE
+        # criterion, or by dividing the data-fit term in REML. Wood §4.6
+        # recommends ``gamma=1.4`` as a reasonable default for over-fitting
+        # protection. Stored on self and threaded into the criterion
+        # functions (_reml, _gcv, ...) and their gradients/hessians.
+        self._gamma = float(gamma)
         self.family = Gaussian() if family is None else family
         # GCV.Cp dispatches by family.scale_known: scale-unknown (Gaussian,
         # Gamma, IG) → GCV `n·D/(n−τ)²`; scale-known (Poisson, Binomial) →
@@ -1019,12 +1029,17 @@ class gam:
         wt = np.ones(self.n)
         ls0 = float(self.family.ls(self._y_arr, wt, phi)[0])
         log_det_S = self._log_det_S_pos(rho)
+        # mgcv (gam.fit3.r:622): ``gamma`` divides the data-fit piece
+        # (Dp/φ − 2·ls0) and adds a +Mp·log(γ) constant to compensate the
+        # −Mp·log(2πφ) prior-rank term so the criterion stays consistent
+        # with the partially-profiled likelihood interpretation.
+        gamma = self._gamma
         return (
-            Dp / phi
-            - 2.0 * ls0
+            (Dp / phi - 2.0 * ls0) / gamma
             + fit.log_det_A
             - log_det_S
             - Mp * float(np.log(2.0 * np.pi * phi))
+            + Mp * float(np.log(gamma))
         )
 
     def _reml_grad(self, rho: np.ndarray, log_phi: float = 0.0,
@@ -1049,13 +1064,16 @@ class gam:
             size = n_sp + (1 if include_log_phi else 0)
             return np.full(size, 1e15)
 
+        gamma = self._gamma
         if n_sp == 0:
             grad_rho = np.zeros(0)
         else:
             dDp = self._dDp_drho(fit, rho)
             dlog_H = self._dlog_det_H_drho(fit, rho)
             dlog_S = self._dlog_det_S_drho(rho, S_full=fit.S_full)
-            grad_rho = dDp / phi + dlog_H - dlog_S
+            # ∂Dp/∂ρ comes from the data-fit term, so γ divides it; the
+            # log|H| / log|S|+ Jacobi pieces are γ-independent.
+            grad_rho = dDp / (phi * gamma) + dlog_H - dlog_S
 
         if not include_log_phi:
             return grad_rho
@@ -1065,7 +1083,9 @@ class gam:
         Dp = fit.dev + fit.pen
         ls = np.asarray(self.family.ls(self._y_arr, wt, phi), dtype=float)
         ls1 = float(ls[1])    # d ls / d(log φ), already chain-ruled
-        d_logphi = -Dp / phi - 2.0 * ls1 - Mp
+        # Data-fit pieces (-Dp/φ - 2·ls1) divide by γ; the -Mp piece comes
+        # from -Mp·log(2πφ) (γ-independent).
+        d_logphi = (-Dp / phi - 2.0 * ls1) / gamma - Mp
         return np.concatenate([grad_rho, [d_logphi]])
 
     def _reml_hessian(self, rho: np.ndarray, log_phi: float = 0.0,
@@ -1114,13 +1134,14 @@ class gam:
         size = n_sp + (1 if include_log_phi else 0)
         if not (np.isfinite(phi) and phi > 0):
             return np.full((size, size), 1e15)
+        gamma = self._gamma
         if n_sp == 0:
             H = np.zeros((size, size))
             if include_log_phi:
                 Dp0 = fit.dev + fit.pen
                 ls = np.asarray(self.family.ls(self._y_arr,
                                                np.ones(self.n), phi))
-                H[0, 0] = Dp0 / phi - 2.0 * float(ls[2])
+                H[0, 0] = (Dp0 / phi - 2.0 * float(ls[2])) / gamma
             return H
 
         p = self.p
@@ -1218,14 +1239,14 @@ class gam:
                 ))
                 d2logS_ij = -sp[i] * sp[j] * tr_SpSiSpSj
 
-                cross_2VR = d2Dp / phi + d2logH_ij - d2logS_ij
+                cross_2VR = d2Dp / (phi * gamma) + d2logH_ij - d2logS_ij
                 if i == j:
                     # Diagonal also picks up the δ_lk·g_k from ∂²Dp,
                     # δ_lk·λ_l·tr(H⁻¹·S_l) from ∂²H, and δ_lk·λ_k·tr(S⁺ S_k)
-                    # from ∂²log|S|+.
+                    # from ∂²log|S|+. Only the ∂²Dp piece is γ-scaled.
                     H2[i, i] = (
                         cross_2VR
-                        + g[i] / phi
+                        + g[i] / (phi * gamma)
                         + sp[i] * tr_AinvS[i]
                         - sp[i] * tr_SpinvS[i]
                     )
@@ -1235,16 +1256,17 @@ class gam:
         if not include_log_phi:
             return H2
 
-        # Augment with log φ row/col.
+        # Augment with log φ row/col. Cross / log φ² come from the data-fit
+        # term (Dp/φ − 2·ls0), so they scale by 1/γ.
         H_aug = np.zeros((n_sp + 1, n_sp + 1))
         H_aug[:n_sp, :n_sp] = H2
         for k in range(n_sp):
-            cross = -g[k] / phi
+            cross = -g[k] / (phi * gamma)
             H_aug[k, n_sp] = cross
             H_aug[n_sp, k] = cross
         Dp = fit.dev + fit.pen
         ls = np.asarray(self.family.ls(self._y_arr, np.ones(self.n), phi))
-        H_aug[n_sp, n_sp] = Dp / phi - 2.0 * float(ls[2])
+        H_aug[n_sp, n_sp] = (Dp / phi - 2.0 * float(ls[2])) / gamma
         return H_aug
 
     def _outer_newton(
@@ -1841,9 +1863,12 @@ class gam:
             XtWX = Xw.T @ Xw
         A_inv = cho_solve((fit_F.A_chol, fit_F.A_chol_lower), np.eye(self.p))
         edf_total = float(np.trace(A_inv @ XtWX))
+        # mgcv (gam.fit3.r): ``gamma`` inflates the apparent edf cost in
+        # the criterion: V_g = n·D / (n − γ·τ)²; V_u = D/n + 2·γ·τ/n − 1.
+        gamma = self._gamma
         if self.family.scale_known:
-            return fit.dev / n + 2.0 * edf_total / n - 1.0
-        denom = n - edf_total
+            return fit.dev / n + 2.0 * gamma * edf_total / n - 1.0
+        denom = n - gamma * edf_total
         if denom <= 0:
             return 1e15
         return n * fit.dev / (denom * denom)
@@ -1930,14 +1955,17 @@ class gam:
 
         dtau_drho = w_piece + pen_piece
 
+        # ``gamma`` inflates τ in the criterion: V_g = n·D/(n−γ·τ)²,
+        # V_u = D/n + 2γτ/n − 1. Chain-rule the τ-derivative pieces by γ.
+        gamma = self._gamma
         if family.scale_known:
-            return dD_drho / n + 2.0 * dtau_drho / n
-        denom = n - edf_total
+            return dD_drho / n + 2.0 * gamma * dtau_drho / n
+        denom = n - gamma * edf_total
         if denom <= 0:
             return np.zeros(n_sp)
         return (
             n * dD_drho / (denom * denom)
-            + 2.0 * n * fit.dev * dtau_drho / (denom**3)
+            + 2.0 * n * gamma * fit.dev * dtau_drho / (denom**3)
         )
 
     def _gcv_hessian(self, rho: np.ndarray,
@@ -2108,10 +2136,13 @@ class gam:
         d2tau = 0.5 * (d2tau + d2tau.T)
 
         # ---- Compose criterion Hessian --------------------------------
+        # ``gamma`` inflates the τ-coefficient in V_u and V_g; chain-rule
+        # picks up γ at every τ-derivative encounter.
+        gamma = self._gamma
         if family.scale_known:
-            return d2D / n + 2.0 * d2tau / n
+            return d2D / n + 2.0 * gamma * d2tau / n
 
-        denom = n - edf_total
+        denom = n - gamma * edf_total
         if denom <= 0:
             return np.full((n_sp, n_sp), 1e15)
 
@@ -2120,9 +2151,9 @@ class gam:
         dτ_dτ = np.outer(dtau_drho, dtau_drho)
         H = (
             n * d2D / (denom * denom)
-            + 2.0 * n * (dD_dτ + dD_dτ.T) / (denom**3)
-            + 2.0 * n * Dn * d2tau / (denom**3)
-            + 6.0 * n * Dn * dτ_dτ / (denom**4)
+            + 2.0 * n * gamma * (dD_dτ + dD_dτ.T) / (denom**3)
+            + 2.0 * n * gamma * Dn * d2tau / (denom**3)
+            + 6.0 * n * (gamma ** 2) * Dn * dτ_dτ / (denom**4)
         )
         return H
 
