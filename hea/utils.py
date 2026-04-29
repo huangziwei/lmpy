@@ -5,9 +5,9 @@
 * ``format_df`` / ``format_signif`` / ``format_pval`` — pandas-style
   printers used by every model's ``summary()``.
 
-Dataset loading and ``factor()`` live in ``lmpy.data``; the formula →
-fitting-ready design pipeline lives in ``lmpy.design``; model-comparison
-helpers (``anova``, ``AIC``, ``BIC``) in ``lmpy.compare``.
+Dataset loading and ``factor()`` live in ``hea.data``; the formula →
+fitting-ready design pipeline lives in ``hea.design``; model-comparison
+helpers (``anova``, ``AIC``, ``BIC``) in ``hea.compare``.
 """
 
 from __future__ import annotations

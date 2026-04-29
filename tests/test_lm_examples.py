@@ -1,5 +1,5 @@
 """
-Notebook examples → regression tests for lmpy.lm.
+Notebook examples → regression tests for hea.lm.
 
 Pins the printed numerical outputs of example/lm.ipynb so the
 formulaic→formula.py migration can be validated against book-standard
@@ -17,7 +17,7 @@ import numpy as np
 from scipy.stats import f as f_dist
 
 from conftest import load_dataset
-from lmpy import lm
+from hea import lm
 
 
 def _assert_coef(m, col, est, se=None, tval=None, pval=None):
@@ -340,7 +340,7 @@ def test_wood_2_1_1_stomata_rank_deficient_anova():
     one aliased tree dummy via dqrdc2 pivoting. Verify the F-test in
     anova(m0, m1) matches the book: Df=4 (not 5), F=6.665 (not 5.025),
     Res.Df_full=18 (not 17)."""
-    from lmpy import anova  # noqa: F401 — keeps import close to use
+    from hea import anova  # noqa: F401 — keeps import close to use
     df = load_dataset("gamair", "stomata")
     m1 = lm("area ~ CO2 + tree", data=df)
     m0 = lm("area ~ CO2", data=df)
@@ -348,7 +348,7 @@ def test_wood_2_1_1_stomata_rank_deficient_anova():
     assert m0.df_residuals == 22
     assert len(m1._aliased_cols) == 1
     # R surfaces the alias only when the model is printed — check the
-    # header line appears in repr() (lmpy's summary() prints to stdout).
+    # header line appears in repr() (hea's summary() prints to stdout).
     assert "(1 not defined because of singularities)" in repr(m1)
     np.testing.assert_allclose(m1.rss, 0.8604, atol=5e-3)
     np.testing.assert_allclose(m0.rss, 2.1348, atol=5e-3)
@@ -360,7 +360,7 @@ def test_wood_2_1_1_stomata_anova_single_model_sequential(capsys):
     """anova(lm) for a single fit — sequential (Type I) SS, R parity.
     Wood §2.1.1: anova(lm(area ~ CO2 + tree)) decomposes into CO2 + tree
     incremental F-tests; pinned to R's anova.lm output."""
-    from lmpy import anova
+    from hea import anova
     df = load_dataset("gamair", "stomata")
     m = lm("area ~ CO2 + tree", data=df)
     anova(m)

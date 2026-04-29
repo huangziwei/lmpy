@@ -25,7 +25,7 @@ from .formula_eval import eval_side
 
 def _require_ax(ax, fname: str):
     if ax is None:
-        raise ValueError(f"{fname}(): `ax=` is required (lmpy.plot has no current-axes state)")
+        raise ValueError(f"{fname}(): `ax=` is required (hea.plot has no current-axes state)")
 
 
 def _is_lm_like(obj) -> bool:

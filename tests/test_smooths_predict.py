@@ -29,7 +29,7 @@ from conftest import (
     fixtures_by_kind,
     load_dataset,
 )
-from lmpy.formula import (
+from hea.formula import (
     _canonicalize_fs_null_basis,
     _factor_levels,
     _fs_find_factor,

@@ -24,7 +24,7 @@ import polars as pl
 import pytest
 
 from conftest import load_dataset, load_glm_oracle
-from lmpy import Binomial, Gaussian, Poisson, glm
+from hea import Binomial, Gaussian, Poisson, glm
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ from lmpy import Binomial, Gaussian, Poisson, glm
 
 def test_cbind_lhs_matches_proportion_weights_form():
     """``cbind(s, f) ~ x`` and ``p ~ x, weights=s+f`` must produce the
-    same fit, since lmpy rewrites the former into the latter internally.
+    same fit, since hea rewrites the former into the latter internally.
     """
     d = pl.DataFrame({
         "s": [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -56,7 +56,7 @@ def test_cbind_lhs_matches_proportion_weights_form():
 
 def test_cbind_lhs_matches_menarche_oracle():
     """The R menarche oracle was generated from ``cbind(Menarche, Total -
-    Menarche) ~ Age`` with logit. lmpy's cbind path must reproduce the
+    Menarche) ~ Age`` with logit. hea's cbind path must reproduce the
     same coefficients and deviance as R."""
     o = load_glm_oracle("binomial_logit_menarche")
     d = load_dataset("MASS", "menarche")
@@ -98,7 +98,7 @@ def test_formula_offset_matches_kwarg_offset():
 
 def test_formula_offset_sums_with_kwarg_offset():
     """When both are present, R sums them (η = Xβ + Σ formula_offsets +
-    kwarg_offset). Verify lmpy does the same by checking that splitting an
+    kwarg_offset). Verify hea does the same by checking that splitting an
     offset between formula and kwarg gives the same fit as putting it all
     on one side."""
     d = pl.DataFrame({
@@ -166,7 +166,7 @@ def test_intercept_only_poisson():
 def test_rank_deficient_x_drops_to_NA_slot():
     """``y ~ x + z`` with z = 2x is rank-deficient. R sets the dropped
     coef to NA, lowers the model rank, and bumps df_residual accordingly.
-    lmpy does the same via the QR pivot."""
+    hea does the same via the QR pivot."""
     n = 8
     rng = np.random.default_rng(0)
     x = rng.normal(size=n)

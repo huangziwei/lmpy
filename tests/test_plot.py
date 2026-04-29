@@ -1,4 +1,4 @@
-"""Phase 1 of ``lmpy.plot``: dispatch + scatter + boxplot + diagnostic.
+"""Phase 1 of ``hea.plot``: dispatch + scatter + boxplot + diagnostic.
 
 These tests use the Agg backend so they run headless. Each one checks the
 *structural* result (axes returned, labels set, dtype-driven dispatch
@@ -17,8 +17,8 @@ import numpy as np
 import polars as pl
 import pytest
 
-from lmpy import factor, lm
-from lmpy import plot as lmplot
+from hea import factor, lm
+from hea import plot as lmplot
 
 
 @pytest.fixture
@@ -486,7 +486,7 @@ def test_plot_leverage_constant_swaps_to_factor_levels():
     has h_ii = 1/n_g for every row → constant leverage. R's plot.lm swaps
     panel 5 from 'Residuals vs Leverage' to 'Constant Leverage: Residuals
     vs Factor Levels'. Match that."""
-    from lmpy import data
+    from hea import data
     pg = data("PlantGrowth")
     m = lm("weight ~ group", data=pg)
     fig, ax = plt.subplots()
@@ -569,7 +569,7 @@ def test_pairs_rows_share_y_limits_off_diag_under_hist(numeric_df):
 def test_interaction_plot_matches_r_cell_means():
     """interaction_plot cell means match R's tapply on Pinheiro & Bates'
     Machines data — Worker on trace, Machine on x, score on y."""
-    from lmpy import data
+    from hea import data
     m = data("Machines", "nlme")
     ax = lmplot.interaction_plot("Machine", "Worker", "score", data=m)
     assert ax.get_xlabel() == "Machine"
@@ -593,7 +593,7 @@ def test_interaction_plot_matches_r_cell_means():
 
 def test_interaction_plot_series_input_form():
     """Series form: pass each Series directly without data=."""
-    from lmpy import data
+    from hea import data
     m = data("Machines", "nlme")
     ax = lmplot.interaction_plot(m["Machine"], m["Worker"], m["score"])
     assert len(ax.lines) == 6

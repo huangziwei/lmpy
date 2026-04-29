@@ -1,4 +1,4 @@
-"""Shared low-level helpers for the lmpy.plot package."""
+"""Shared low-level helpers for the hea.plot package."""
 
 from __future__ import annotations
 

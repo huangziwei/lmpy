@@ -6,7 +6,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "lmpy"
+name = "hea"
 version = "0.1.0"
 description = "Linear Models with Python"
 authors = []

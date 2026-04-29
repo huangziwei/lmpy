@@ -1,5 +1,5 @@
 """
-Round-trip every corpus formula through lmpy.formula.parse.
+Round-trip every corpus formula through hea.formula.parse.
 
 One test per (corpus, case id). Failures show which formulas still break
 the parser — there are no xfail markers, a failing test is the signal
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from lmpy.formula import ParseError, parse
+from hea.formula import ParseError, parse
 
 CORPUS_DIR = Path(__file__).resolve().parent / "corpus"
 CORPORA = ("wr", "lme4", "mgcv", "curated")

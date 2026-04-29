@@ -191,7 +191,7 @@ def _anova_lm_single(m: lm):
     attributing each step's drop in RSS to that term. F = MS_term /
     MS_residual_full, p = upper-tail F. R uses QR-incremental SS, which
     is bit-equivalent for full-rank designs; refitting is conceptually
-    simpler and reuses lmpy's existing rank-deficiency handling.
+    simpler and reuses hea's existing rank-deficiency handling.
     """
     terms = m._expanded.terms
     if not terms:

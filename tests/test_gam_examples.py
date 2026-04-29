@@ -1,8 +1,8 @@
 """
-mgcv-oracle regression tests for lmpy.gam.
+mgcv-oracle regression tests for hea.gam.
 
 Each test pins the printed numerical outputs of `mgcv::gam(..., method=...)`
-on a fixed dataset so the lmpy port can be validated against the canonical
+on a fixed dataset so the hea port can be validated against the canonical
 R/mgcv results. Coverage spans:
 
   - tp / cr / ps basis types
@@ -24,7 +24,7 @@ import polars as pl
 import pytest
 
 from conftest import load_dataset
-from lmpy import gam
+from hea import gam
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ def test_gamSim_eg1_overlap_gamSide_REML():
 
     The REML surface has multiple near-equivalent optima differing in how
     they distribute penalty between the te marginals and the main-effect
-    s(x1)/s(x2). lmpy and mgcv land at different optima, so the per-marginal
+    s(x1)/s(x2). hea and mgcv land at different optima, so the per-marginal
     sp's diverge. Overall fit quantities (σ², REML, r², intercept, x0)
     still agree closely, and edfs land within ~0.34.
     """
@@ -232,7 +232,7 @@ def test_gamSim_eg1_overlap_gamSide_REML():
     _assert_param(m, "(Intercept)", 7.642771, atol=5e-3)
     _assert_param(m, "x0", 0.394401, atol=5e-3)
 
-    # Looser: edfs (multi-modal sp surface — mgcv vs lmpy land at different optima)
+    # Looser: edfs (multi-modal sp surface — mgcv vs hea land at different optima)
     _allclose(m.edf_total, 13.836828, atol=5e-1, name="edf_total")
     _allclose(m.edf_by_smooth["s(x1)"], 2.790683, atol=2e-1, name="edf[s(x1)]")
     _allclose(m.edf_by_smooth["s(x2)"], 8.044964, atol=5e-2, name="edf[s(x2)]")
@@ -273,9 +273,9 @@ def test_machines_re_smooths_REML():
     assert b1.n == 54
     assert b1.p == 27  # full mgcv design, no gam.side surgery on re smooths
     # mgcv reference (mgcv 1.9-4, REML, gam.vcomp). Tolerances are tighter
-    # than mgcv-printed-precision because lmpy's analytical Newton path
+    # than mgcv-printed-precision because hea's analytical Newton path
     # converges to |grad|<1e-10 (vs mgcv's ~3e-5 stopping criterion);
-    # residual lmpy↔mgcv drift is dominated by mgcv's noise floor.
+    # residual hea↔mgcv drift is dominated by mgcv's noise floor.
     _allclose(b1.edf_total,  17.76461, atol=5e-5, name="b1.edf")
     # edf < edf2 < edf1 — sp uncertainty inflates df, capped by tr(2F-F²).
     _allclose(b1.edf1_total, 17.99523, atol=5e-5, name="b1.edf1")
@@ -336,13 +336,13 @@ def test_machines_re_smooths_REML():
 
 
 def test_data_helper_applies_schema_sidecar():
-    """`lmpy.data()` must restore R's factor type via the JSON schema sidecar.
+    """`hea.data()` must restore R's factor type via the JSON schema sidecar.
 
     Without it, factor columns come back from CSV as Int64/Utf8 and bs='re'
     / by=factor / fs / sz smooths silently take the non-factor fallthrough
     path — which is the Machines b1/b2 footgun (AIC ~337 instead of ~165).
     """
-    from lmpy import data
+    from hea import data
     d = data("Machines", "nlme")
     assert isinstance(d.schema["Worker"], pl.Enum), \
         f"Worker should be pl.Enum, got {d.schema['Worker']}"
@@ -351,13 +351,13 @@ def test_data_helper_applies_schema_sidecar():
 
 
 def test_factor_helper():
-    """`lmpy.factor()` is the polars equivalent of R's factor() — the
+    """`hea.factor()` is the polars equivalent of R's factor() — the
     user-side fix for wild-data Int64-stored factor columns.
     """
-    from lmpy import factor
-    from lmpy.formula import _ORDERED_COLS_CV, set_ordered_cols
+    from hea import factor
+    from hea.formula import _ORDERED_COLS_CV, set_ordered_cols
 
-    # Bypass `lmpy.data` (which applies our schema sidecar) to simulate the
+    # Bypass `hea.data` (which applies our schema sidecar) to simulate the
     # wild-data scenario where factor info has been stripped — exactly what
     # rdatasets gives us out of the box.
     import rdatasets
@@ -446,7 +446,7 @@ def test_predict_inSample_matches_fitted():
 
 def test_pirls_init_canonical_inverse_gaussian():
     """IG canonical fit on Wald-distributed data must converge."""
-    from lmpy import inverse_gaussian
+    from hea import inverse_gaussian
     rng = np.random.default_rng(0)
     n = 200
     x = rng.uniform(0.0, 1.0, n)
@@ -483,16 +483,16 @@ def test_pirls_init_canonical_inverse_gaussian():
 # small-n GLM example; mgcv's r.sq, deviance_explained, and null_deviance only
 # depend on (y, μ, wt, family) and family.dev_resids, so those land at mgcv's
 # values even before the REML score is family-aware (Phase 2). sp/edf/AIC
-# still depend on the (Gaussian-only) REML score, so they're pinned at lmpy's
+# still depend on the (Gaussian-only) REML score, so they're pinned at hea's
 # current values with a TODO — Phase 4's mgcv-oracle battery tightens them.
 # ---------------------------------------------------------------------------
 
 
 def test_trees_gamma_log_smoke():
     """trees + Gamma(log), method='REML': pin family-agnostic post-fit values
-    against mgcv (those that don't depend on sp), and lmpy's current
+    against mgcv (those that don't depend on sp), and hea's current
     sp-dependent values as a regression guard until Phase 2 lands."""
-    from lmpy import Gamma
+    from hea import Gamma
     d = load_dataset("R", "trees")
     m = gam("Volume ~ s(Height) + s(Girth)", d, family=Gamma(link="log"),
             method="REML")
@@ -605,9 +605,9 @@ def test_gaussian_residual_identities_and_aic_self_consistency():
 
 def test_reml_finite_for_trees_gamma_log():
     """Sanity: for the converged Gamma(log) fit, `_reml` returns a
-    finite value at the lmpy-current sp. (Phase 2.2 makes φ̂ a joint outer
+    finite value at the hea-current sp. (Phase 2.2 makes φ̂ a joint outer
     variable; this just ensures the formula is wired up correctly.)"""
-    from lmpy import Gamma, gam
+    from hea import Gamma, gam
     d = load_dataset("R", "trees")
     m = gam("Volume ~ s(Height) + s(Girth)", d,
             family=Gamma(link="log"), method="REML")

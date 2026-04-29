@@ -11,7 +11,7 @@ Spec
   no ``par(mfrow)`` shim. Pass an ``axes[i, j]`` to each call.
 - Categorical kwargs (``pch=``, ``col=``) accept polars Series/Enum
   directly; integer codes are derived internally via ``to_physical()``.
-- Formula evaluation routes through ``lmpy.formula.parse``. Both LHS
+- Formula evaluation routes through ``hea.formula.parse``. Both LHS
   and RHS may be expressions (``residuals(m) ~ fitted(m)``,
   ``log(NOx) ~ E``, ``tail(r,n-1) ~ head(r,n-1)``). The evaluator pulls
   column names from ``data=`` and free variables (model objects, etc.)

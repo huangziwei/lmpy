@@ -1,6 +1,6 @@
 """Formula → fitting-ready design bundle.
 
-The orchestration layer that sits between ``lmpy.formula`` (parse trees,
+The orchestration layer that sits between ``hea.formula`` (parse trees,
 term algebra, basis construction) and the model classes. Given a formula
 string and a polars DataFrame, ``prepare_design``:
 
@@ -14,7 +14,7 @@ string and a polars DataFrame, ``prepare_design``:
    they see fit.
 
 User-facing data prep — ``data()`` and ``factor()`` — lives in
-``lmpy.data``.
+``hea.data``.
 """
 
 from __future__ import annotations

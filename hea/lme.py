@@ -1,6 +1,6 @@
 """Linear mixed-effects model — lme4-style profiled deviance.
 
-Built on lmpy.formula's ``parse → expand → materialize / materialize_bars``
+Built on hea.formula's ``parse → expand → materialize / materialize_bars``
 pipeline. The fixed-effect side comes from ``materialize`` (R-canonical
 column names). The random-effect side comes from ``materialize_bars``,
 which returns ``Z``, an integer ``Λᵀ`` template, and an initial ``θ``.

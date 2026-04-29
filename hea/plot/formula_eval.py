@@ -1,8 +1,8 @@
-"""Evaluate an ``lmpy.formula`` AST node against a polars frame + env.
+"""Evaluate an ``hea.formula`` AST node against a polars frame + env.
 
 Faraway's book uses formulas with arbitrary expression LHS/RHS:
 ``residuals(lmod) ~ year``, ``log(NOx) ~ E``, ``tail(r,n-1) ~ head(r,n-1)``.
-``lmpy.formula.parse`` already produces the AST; this module turns each
+``hea.formula.parse`` already produces the AST; this module turns each
 side into a numpy array.
 
 The evaluator looks up names against (in order):
@@ -10,7 +10,7 @@ The evaluator looks up names against (in order):
 2. the user-supplied ``env`` mapping (caller's locals/globals when
    ``plot()`` builds it via frame inspection)
 3. ``DEFAULT_ENV`` — math functions and ``residuals``/``fitted``/``coef``
-   that work on lmpy fit objects.
+   that work on hea fit objects.
 """
 
 from __future__ import annotations
@@ -87,7 +87,7 @@ def _arr(x):
 
 
 def eval_node(node, data: pl.DataFrame | None, env: dict):
-    """Walk an ``lmpy.formula`` AST node and return a numpy array (or scalar)."""
+    """Walk an ``hea.formula`` AST node and return a numpy array (or scalar)."""
     if isinstance(node, Name):
         if data is not None and node.ident in data.columns:
             return data[node.ident]  # keep as polars Series so dtype check works
@@ -148,7 +148,7 @@ def eval_side(node, data: pl.DataFrame | None, env: dict | None = None):
     ``values`` is a polars Series (when the result is a raw column — preserves
     dtype for downstream dispatch) or a numpy array (for any computed expression).
     ``label`` is a string suitable for an axis label, derived via
-    ``lmpy.formula.deparse``.
+    ``hea.formula.deparse``.
     """
     from ..formula import deparse
 

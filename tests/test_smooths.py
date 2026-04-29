@@ -1,5 +1,5 @@
 """
-Compare lmpy.formula.materialize_smooths() against R/mgcv per-smooth fixtures.
+Compare hea.formula.materialize_smooths() against R/mgcv per-smooth fixtures.
 
 Per mgcv fixture: parse + expand + materialize_smooths, then for each
 smooth/block assert X and S (penalty) match R. Fixtures where R itself
@@ -20,7 +20,7 @@ import pytest
 from scipy.io import mmread
 
 from conftest import FIXTURE_ROOT, fixture_meta, fixtures_by_kind, load_dataset
-from lmpy.formula import (
+from hea.formula import (
     _canonicalize_fs_null_basis,
     _factor_levels,
     _fs_find_factor,
@@ -31,11 +31,11 @@ from lmpy.formula import (
 
 
 def _canonicalize_fs_reference(X_ref, r_meta, data):
-    """Apply lmpy's canonical null-basis rotation to mgcv's fs X output.
+    """Apply hea's canonical null-basis rotation to mgcv's fs X output.
 
     mgcv's raw fs X uses whatever null-basis its LAPACK chose (R's netlib
     dsyevr). Extract the per-level template Xr from X_ref's block structure,
-    rotate Xr's null cols by the canonical W (same rule used in lmpy), then
+    rotate Xr's null cols by the canonical W (same rule used in hea), then
     rebuild the block-duplicated X. See `_canonicalize_fs_null_basis`.
     """
     term = r_meta["term"] if isinstance(r_meta["term"], list) else [r_meta["term"]]
@@ -109,12 +109,12 @@ def test_mgcv_smooths_match_R(fx_id: str):
             )
 
             # fs.interaction: null eigenspace rotation is LAPACK-dependent
-            # (R's netlib vs scipy's Accelerate). lmpy canonicalizes its own
+            # (R's netlib vs scipy's Accelerate). hea canonicalizes its own
             # output inside `_build_fs_smooth`; apply the same rotation to
             # R's reference per-level block so the comparison is basis-agnostic.
             # The row-sums of X (and thus scale.penalty's maXX = max|row-sum|^2)
             # change with the null rotation, so rescale each S_ref by the ratio
-            # maXX(canonical)/maXX(R) — lmpy's penalty values end up consistent
+            # maXX(canonical)/maXX(R) — hea's penalty values end up consistent
             # with the canonical basis.
             S_scale = 1.0
             if r_meta["class"] == "fs.smooth.spec":
@@ -124,7 +124,7 @@ def test_mgcv_smooths_match_R(fx_id: str):
                 S_scale = maXX_canon / maXX_R if maXX_R > 0 else 1.0
 
             # mgcv's Lanczos uses an arbitrary per-eigenvector sign convention;
-            # lmpy's np.linalg.eigh uses its own. Match each column up to sign,
+            # hea's np.linalg.eigh uses its own. Match each column up to sign,
             # then apply the same flip to S.
             signs = np.ones(blk.X.shape[1])
             X_got = blk.X.copy()

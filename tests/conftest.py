@@ -4,7 +4,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from lmpy.formula import set_ordered_cols
+from hea.formula import set_ordered_cols
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures"
 DATA_ROOT = Path(__file__).parent.parent / "datasets"
@@ -38,7 +38,7 @@ def _apply_schema(df: pl.DataFrame, pkg: str, name: str) -> pl.DataFrame:
     re-attach factor types to ``predict_data.csv`` fixtures, which lose them
     on CSV round-trip just like the source datasets do.
     """
-    from lmpy.data import _apply_dataset_schema
+    from hea.data import _apply_dataset_schema
     schema_path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
     return _apply_dataset_schema(df, schema_path)
 
@@ -48,7 +48,7 @@ def ordered_schema_cols(pkg: str, name: str) -> frozenset[str]:
 
     The ``ordered`` flag is plumbed separately from level order — pl.Enum
     carries levels for both ordered and unordered factors, so this is what
-    drives `lmpy.formula.with_ordered_cols(...)` for poly contrasts.
+    drives `hea.formula.with_ordered_cols(...)` for poly contrasts.
     """
     path = DATA_ROOT / _pkg_subdir(pkg) / f"{name}.schema.json"
     if not path.exists():
@@ -63,25 +63,25 @@ _current_ordered_cols: "set[str]" = set()
 
 
 def load_dataset(pkg: str, name: str) -> pl.DataFrame:
-    """Test-side dataset loader. Delegates to ``lmpy.data.data`` (which
+    """Test-side dataset loader. Delegates to ``hea.data.data`` (which
     routes to ``rdatasets`` when covered, bundled CSV otherwise) and caches
     the result so repeated fixture loads are cheap.
 
     Drops the ``rowname`` column (R's row.names preserved on the bundled-CSV
     side, ``rownames`` injected on the rdatasets side). All R-side fixtures
     were generated without it, so ``y ~ .`` expansions and column lists
-    would mismatch otherwise. User-facing ``lmpy.data.data`` keeps the
+    would mismatch otherwise. User-facing ``hea.data.data`` keeps the
     column — that's the whole point of preserving meaningful row names
     like the Galápagos island IDs in ``faraway::gala``.
     """
-    from lmpy.data import data as _data
+    from hea.data import data as _data
     key = (pkg, name)
     if key not in _data_cache:
         df = _data(name, _pkg_subdir(pkg))
         if "rowname" in df.columns:
             df = df.drop("rowname")
         _data_cache[key] = df
-    # `lmpy.data` already registers ordered-factor columns globally, but the
+    # `hea.data` already registers ordered-factor columns globally, but the
     # autouse `_reset_ordered_cols` fixture clears them per-test. Re-register
     # here so the contextvar accumulates across multiple loads inside one test.
     ordered = ordered_schema_cols(pkg, name)

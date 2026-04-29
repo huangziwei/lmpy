@@ -21,7 +21,7 @@ For a non-canonical link the PIRLS Newton step uses
 so that the converged ``H = X'WX + Sλ`` is the **observed** penalized
 Hessian, not the Fisher one. That makes ``∂β̂/∂ρ_k = -exp(ρ_k) H⁻¹ S_k β̂``
 valid even for non-canonical links — the same identity that drives the
-Gaussian REML derivatives in :mod:`lmpy.gam`.
+Gaussian REML derivatives in :mod:`hea.gam`.
 """
 
 from __future__ import annotations
@@ -441,7 +441,7 @@ class Gamma(Family):
 
     def ls(self, y, wt, scale):
         # Direct port of mgcv:::fix.family.ls's Gamma branch (raw d/dφ form),
-        # then a log-scale chain rule to match the lmpy convention:
+        # then a log-scale chain rule to match the hea convention:
         #   d/dlogφ  = φ · d/dφ
         #   d²/dlogφ² = φ · d/dφ + φ² · d²/dφ²
         y = np.asarray(y, dtype=float); wt = np.asarray(wt, dtype=float)

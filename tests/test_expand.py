@@ -1,5 +1,5 @@
 """
-Compare lmpy.formula.expand() against R's X_meta.json ground truth.
+Compare hea.formula.expand() against R's X_meta.json ground truth.
 
 Per WR fixture: parse + expand, then assert `intercept` and `term_labels`
 match R exactly. One test per fixture.
@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from conftest import fixture_meta, fixtures_by_kind, load_dataset
-from lmpy.formula import expand, parse
+from hea.formula import expand, parse
 
 WR_FIXTURES = fixtures_by_kind("wr")
 WR_IDS = [e["id"] for e in WR_FIXTURES]

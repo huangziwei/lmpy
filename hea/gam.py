@@ -1,7 +1,7 @@
 """Generalized additive model — mgcv-style penalized regression with
 REML/GCV smoothing-parameter selection.
 
-Built on lmpy.formula's ``parse → expand → materialize / materialize_smooths``
+Built on hea.formula's ``parse → expand → materialize / materialize_smooths``
 pipeline: the parametric side comes from ``materialize`` (R-canonical
 column names); each smooth call (``s``/``te``/``ti``/``t2``) is passed to
 ``materialize_smooths`` which mirrors mgcv's ``smoothCon(..., absorb.cons=
@@ -1011,10 +1011,10 @@ class gam:
         appended. Wood 2011 §4 + mgcv gam.fit3.r:622, 630:
 
             ∂(2·V_R)/∂ρ_k    = (∂Dp/∂ρ_k)/φ + ∂log|H|/∂ρ_k − ∂log|S|+/∂ρ_k
-            ∂(2·V_R)/∂log φ  = −Dp/φ − 2·ls'_lmpy − Mp
+            ∂(2·V_R)/∂log φ  = −Dp/φ − 2·ls'_hea − Mp
 
-        ls'_lmpy is the d/d(log φ) chain-rule output from `family.ls(y, wt, φ)[1]`
-        (lmpy convention, see family.py:338 docstring).
+        ls'_hea is the d/d(log φ) chain-rule output from `family.ls(y, wt, φ)[1]`
+        (hea convention, see family.py:338 docstring).
         """
         if fit is None:
             fit = self._fit_given_rho(rho)
@@ -1073,9 +1073,9 @@ class gam:
         Cross-derivatives wrt log φ:
 
           ∂²(2·V_R)/∂ρ_k∂log φ = −g_k / φ
-          ∂²(2·V_R)/∂log φ²    = Dp/φ − 2·ls'_lmpy_2
+          ∂²(2·V_R)/∂log φ²    = Dp/φ − 2·ls'_hea_2
 
-        where ``ls'_lmpy_2 = family.ls(y, wt, φ)[2]`` (chain-ruled to log φ).
+        where ``ls'_hea_2 = family.ls(y, wt, φ)[2]`` (chain-ruled to log φ).
 
         For Gaussian-identity (h' ≡ h'' ≡ 0) only the SS Wood block and the
         Gaussian Dp/log|S|+ pieces survive, so the result equals 2·`_reml_hessian`
@@ -2328,7 +2328,7 @@ class gam:
     def _compute_Vc2(self, rho: np.ndarray, fit: "_FitState",
                      Vr: np.ndarray, sigma_squared: float) -> np.ndarray:
         """Cholesky-derivative correction Vc2 = σ² Σ_{i,j} Vr[i,j] M_i M_j^T,
-        where M_k = ∂L^{-T}/∂ρ_k and A = L L^T is lmpy's lower-Cholesky of
+        where M_k = ∂L^{-T}/∂ρ_k and A = L L^T is hea's lower-Cholesky of
         ``X'X + Sλ``.
 
         Differentiating L L^T = A gives ``L^{-1} dA L^{-T}`` whose lower
@@ -2867,7 +2867,7 @@ class gam:
         Multi-D smooths: average over the 3 nearest neighbours by
         Euclidean distance in raw covariate space. mgcv additionally
         rescales axes for tensor smooths via ``PredictMat`` gradient
-        norms; lmpy has no PredictMat yet, so tensor (``te``/``ti``/
+        norms; hea has no PredictMat yet, so tensor (``te``/``ti``/
         ``t2``) k-indexes are not on mgcv's rescaled axes — the
         qualitative "k-index < 1" warning still applies.
 
@@ -3181,7 +3181,7 @@ class gam:
         rug=True,
         partial_residuals=False,
     ):
-        """Per-smooth effect curves — the lmpy port of mgcv's ``plot.gam``.
+        """Per-smooth effect curves — the hea port of mgcv's ``plot.gam``.
 
         For each 1D smooth ``s(x)``, plot ``f̂(x_i) ± 2·SE(f̂(x_i))`` against
         the observed covariate values, with a rug at the bottom. Multi-block

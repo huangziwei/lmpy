@@ -15,7 +15,7 @@ suppressPackageStartupMessages({
 OUT_ROOT <- "datasets"
 # Packages we still bundle as CSVs because rdatasets doesn't carry them.
 # MASS, nlme, datasets, and most of lme4 are sourced from rdatasets at runtime
-# (see lmpy/data.py and the cleanup in /Users/ziweih/Works/lmpy/datasets/),
+# (see hea/data.py and the cleanup in /Users/ziweih/Works/hea/datasets/),
 # so re-exporting them here would just re-fill slots we just deleted.
 PKGS <- c("mgcv", "faraway", "gamair", "splines", "stats")
 # A few lme4 datasets aren't carried by rdatasets — keep these bundled.
@@ -130,7 +130,7 @@ for (pkg in PKGS) {
 }
 
 # 1b. lme4 — only the items rdatasets doesn't carry. Most of lme4 is sourced
-# from rdatasets at runtime (see _RDATASETS_PKG_ALIAS in lmpy/data.py).
+# from rdatasets at runtime (see _RDATASETS_PKG_ALIAS in hea/data.py).
 if (requireNamespace("lme4", quietly = TRUE)) {
   for (name in LME4_KEEP) {
     path <- file.path(OUT_ROOT, "lme4", paste0(name, ".csv"))

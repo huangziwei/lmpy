@@ -1,4 +1,4 @@
-"""mgcv-oracle regression tests for lmpy.family.
+"""mgcv-oracle regression tests for hea.family.
 
 Pins per-link and per-family numerics against the canonical R/mgcv values
 generated with stats::make.link / stats::<family>() / mgcv:::fix.family.*
@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lmpy.family import (
+from hea.family import (
     Binomial,
     CauchitLink,
     CloglogLink,

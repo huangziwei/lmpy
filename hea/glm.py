@@ -1,7 +1,7 @@
 """Parametric generalized linear models — port of R's ``stats::glm``.
 
-Fisher-scored IRLS using the family/link primitives in :mod:`lmpy.family`.
-Output API mirrors :class:`lmpy.lm` (so ``bhat``, ``se_bhat``, ``ci_bhat``,
+Fisher-scored IRLS using the family/link primitives in :mod:`hea.family`.
+Output API mirrors :class:`hea.lm` (so ``bhat``, ``se_bhat``, ``ci_bhat``,
 ``yhat`` exist as 1-row :class:`polars.DataFrame`s) and adds the GLM-specific
 fields that ``summary.glm`` reports: ``deviance``, ``null_deviance``,
 ``df_residual``, ``df_null``, ``dispersion``, ``aic``, ``iter``, ``converged``.
@@ -270,7 +270,7 @@ class glm:
     data : polars.DataFrame
         Input data; rows with NA in any referenced column are dropped
         (R's ``na.action = na.omit``).
-    family : :class:`lmpy.family.Family`, optional
+    family : :class:`hea.family.Family`, optional
         Defaults to :class:`Gaussian` (= identity link). Pass e.g.
         ``Poisson()``, ``Gamma(link="log")``, ``Binomial(link="probit")``.
     weights : array-like or None
@@ -343,7 +343,7 @@ class glm:
             tot = s + f
             with np.errstate(divide="ignore", invalid="ignore"):
                 p = np.where(tot > 0, s / tot, 0.0)
-            data = data.with_columns(pl.Series("_lmpy_cbind_p", p))
+            data = data.with_columns(pl.Series("_hea_cbind_p", p))
             cb_w = tot
             # Multiply onto caller-supplied weights (R's frequency-weight
             # convention), defaulting to ones.
@@ -351,7 +351,7 @@ class glm:
                 weights = cb_w
             else:
                 weights = np.asarray(weights, dtype=float).flatten() * cb_w
-            formula = f"_lmpy_cbind_p ~ {deparse(f_parsed.rhs)}"
+            formula = f"_hea_cbind_p ~ {deparse(f_parsed.rhs)}"
 
         d = prepare_design(formula, data)
         self._expanded = d.expanded
@@ -478,7 +478,7 @@ class glm:
         # Then stats:::BIC.default uses df from logLik:  -2·loglik + log(n)·df.
         # And stats:::glm.fit's `aic` field is `family$aic + 2·rank` — where
         # family$aic already includes a "+2" for the dispersion df on
-        # Gaussian/Gamma/IG (see lmpy/family.py). So the dispersion df enters
+        # Gaussian/Gamma/IG (see hea/family.py). So the dispersion df enters
         # once via family$aic (not a second time via rank), but the *npar*
         # used by logLik/BIC explicitly counts it.
         self.npar = fit.rank + (0 if self.family.scale_known else 1)

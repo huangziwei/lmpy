@@ -1,4 +1,4 @@
-"""Tests for ``gam.vis()`` — the lmpy port of mgcv's ``vis.gam``.
+"""Tests for ``gam.vis()`` — the hea port of mgcv's ``vis.gam``.
 
 The correctness invariant for ``vis()`` is ``vis(view) == predict(grid)``: the
 method just calls ``predict`` on a regular grid over two view variables, with
@@ -24,8 +24,8 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, str(Path(__file__).parent))
 from conftest import load_dataset
 
-from lmpy import gam
-from lmpy.gam import VisResult
+from hea import gam
+from hea.gam import VisResult
 
 
 @pytest.fixture(scope="module")

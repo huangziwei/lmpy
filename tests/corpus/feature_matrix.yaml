@@ -1,5 +1,5 @@
 # =============================================================================
-# Feature matrix for the lmpy formula corpus.
+# Feature matrix for the hea formula corpus.
 #
 # Purpose: enumerate every formula-feature *axis* the Python formula compiler
 # must reproduce, so the test corpus can be audited for coverage. Each axis
@@ -30,7 +30,7 @@ meta:
       - {pkg: datasets, name: iris}        # num + factor + multivariate
       - {pkg: datasets, name: mtcars}      # num + ordered + interactions
       - {pkg: datasets, name: ToothGrowth} # 2x num + 2-level factor
-      - {pkg: faraway,  name: gala}        # the lmpy textbook example
+      - {pkg: faraway,  name: gala}        # the hea textbook example
       - {pkg: faraway,  name: chicago}     # multi-numeric
     lme4:
       - {pkg: lme4, name: sleepstudy}      # classical (Days|Subject)

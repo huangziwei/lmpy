@@ -11,7 +11,7 @@
   contrasts.
 
 Both run *before* a model is fit; the formula → design pipeline lives in
-``lmpy.design`` and consumes whatever data() / factor() produce.
+``hea.design`` and consumes whatever data() / factor() produce.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from .formula import set_ordered_cols
 __all__ = ["data", "factor"]
 
 
-# Our only label rewrite for rdatasets: ``"R"`` (lmpy's name for R's
+# Our only label rewrite for rdatasets: ``"R"`` (hea's name for R's
 # built-in ``datasets`` package — mirrors our ``datasets/R/`` folder, which
 # avoids the ``datasets/datasets/`` path duplication). Every other package
 # label is passed straight through to rdatasets.
@@ -68,10 +68,10 @@ def factor(
         e.g. ``factor(s, labels={0: "no", 1: "yes"})`` collapses cast +
         rename into one pass. Mutually exclusive with ``levels``.
     ordered : bool, optional
-        If True, also register the series's name in lmpy's ordered-cols
+        If True, also register the series's name in hea's ordered-cols
         contextvar so subsequent ``gam``/``lm``/``lme`` calls in this
         session apply poly contrasts. Process-global; pair with
-        ``lmpy.formula.with_ordered_cols`` if you need scoped use.
+        ``hea.formula.with_ordered_cols`` if you need scoped use.
         ``ordered=False`` does NOT remove an already-registered name —
         call ``set_ordered_cols(frozenset())`` to clear.
     """
@@ -109,7 +109,7 @@ def _find_bundled_dataset(package: str, name: str) -> Path | None:
     """Walk up from CWD looking for a bundled ``datasets/{package}/{name}.csv``.
 
     Returns the first match in CWD or any ancestor, or ``None`` if no
-    bundled copy exists anywhere up the tree (e.g. when ``lmpy`` is
+    bundled copy exists anywhere up the tree (e.g. when ``hea`` is
     installed as a package and the caller is outside the source repo).
     """
     rel = Path("datasets") / package / f"{name}.csv"
@@ -178,7 +178,7 @@ def _try_load_rdatasets(package: str, name: str) -> pl.DataFrame | None:
 
 # Accumulator for ordered-factor columns across data() calls within a session,
 # mirroring tests/conftest.py. Polars has no per-column "ordered" flag, so
-# ordered factors are tracked via a contextvar that lmpy.formula consults when
+# ordered factors are tracked via a contextvar that hea.formula consults when
 # building contrasts. This set lets multiple data() calls coexist without one
 # clobbering another's ordered registrations.
 _data_ordered_cols: set[str] = set()
@@ -238,7 +238,7 @@ def data(name: str, package: str = "R", save_to: str = "./data",
        (not in rdatasets) and the few items rdatasets doesn't carry
        (e.g. ``lme4::ergoStool``).
     3. CSV download into ``save_to/{package}/{name}.csv`` — last resort,
-       used when ``lmpy`` is installed outside the source repo and no
+       used when ``hea`` is installed outside the source repo and no
        bundled CSV exists. Pass ``overwrite=True`` to force a re-fetch.
 
     A JSON schema sidecar (``datasets/{package}/{name}.schema.json``) is
@@ -268,7 +268,7 @@ def data(name: str, package: str = "R", save_to: str = "./data",
             created_dirs = [Path(p) for p in (save_to, datapath) if not os.path.exists(p)]
             os.makedirs(datapath, exist_ok=True)
             print(f"Downloading {name} (from {package})...")
-            base = f"https://raw.githubusercontent.com/huangziwei/lmpy/main/datasets/{package}/{name}"
+            base = f"https://raw.githubusercontent.com/huangziwei/hea/main/datasets/{package}/{name}"
             try:
                 urllib.request.urlretrieve(f"{base}.csv", csv_path)
             except Exception:

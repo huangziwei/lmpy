@@ -1,5 +1,5 @@
 """
-Notebook examples → regression tests for lmpy.lme.
+Notebook examples → regression tests for hea.lme.
 
 Pins printed numerical outputs from Bates, "lme4: Mixed-effects Modeling
 with R" (lMMwR.pdf, in example/data/) so the formulae→formula.py
@@ -31,7 +31,7 @@ import pytest
 from scipy.stats import chi2
 
 from conftest import load_dataset
-from lmpy.lme import lme
+from hea.lme import lme
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +283,7 @@ def test_bates_1_4_dyestuff_fm01_ML_plot_density(fm01ML_profile):
         x, y = ax.get_lines()[0].get_xdata(), ax.get_lines()[0].get_ydata()
         peaks[ax.get_title()] = (float(y.max()), float(x[np.argmax(y)]))
     # lme4:::dens reference, npts=201, upper=0.999. Peak heights agree to
-    # ~1e-3; peak x can differ a bit (lme4 uses cubic spline, lmpy uses
+    # ~1e-3; peak x can differ a bit (lme4 uses cubic spline, hea uses
     # monotone PCHIP) so widen the location tolerance.
     for name, (h_ref, x_ref), x_atol in [
         (".sig01",      (0.0287, 33.095),  1.0),

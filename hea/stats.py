@@ -1,4 +1,4 @@
-"""R-style ``stats`` package wrappers for use alongside :class:`lmpy.lm`.
+"""R-style ``stats`` package wrappers for use alongside :class:`hea.lm`.
 
 The point isn't a parallel inference engine — it's so notebooks comparing
 "common tests as linear models" (Lindeløv 2019) can write the same call
@@ -484,7 +484,7 @@ def _chisq_table(tbl: np.ndarray, *, correct: bool, name: str) -> HTest:
 
 
 # ---------------------------------------------------------------------------
-# aov — a thin wrapper over lmpy.lm that produces an Anova table
+# aov — a thin wrapper over hea.lm that produces an Anova table
 # ---------------------------------------------------------------------------
 
 
@@ -494,7 +494,7 @@ def aov(formula: str, data: pl.DataFrame, *, type: str = "II") -> AnovaTable:
     Computes Type-II sums of squares by dropping one top-level term at a
     time and comparing ``ΔRSS``. Works for either form the notebook uses:
     factor formulas (``value ~ group``) or explicit-dummy formulas
-    (``value ~ 1 + group_b + group_c``) — both go through ``lmpy.lm``,
+    (``value ~ 1 + group_b + group_c``) — both go through ``hea.lm``,
     so the term grouping comes from the formula's own ``term_labels``.
     """
     from .lm import lm  # local import to avoid circular at package load

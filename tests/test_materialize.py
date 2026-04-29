@@ -1,5 +1,5 @@
 """
-Compare lmpy.formula.materialize() against R's X.csv fixture by fixture.
+Compare hea.formula.materialize() against R's X.csv fixture by fixture.
 
 Per WR fixture: parse + expand + materialize, then assert shape and values
 match R's stats::model.matrix output. Replaces the legacy
@@ -13,8 +13,8 @@ import polars as pl
 import pytest
 
 from conftest import FIXTURE_ROOT, fixture_meta, fixtures_by_kind, load_dataset
-from lmpy.formula import expand, materialize, parse, referenced_columns
-from lmpy.design import prepare_design
+from hea.formula import expand, materialize, parse, referenced_columns
+from hea.design import prepare_design
 
 WR_FIXTURES = fixtures_by_kind("wr")
 WR_IDS = [e["id"] for e in WR_FIXTURES]

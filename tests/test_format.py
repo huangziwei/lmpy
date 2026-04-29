@@ -1,4 +1,4 @@
-"""Tests for the R-style numeric/p-value formatters in lmpy.utils.
+"""Tests for the R-style numeric/p-value formatters in hea.utils.
 
 Each case is anchored to what R's ``format()`` / ``format.pval()`` produce
 (the targets of these helpers).
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 
-from lmpy.utils import format_pval, format_signif, format_signif_jointly
+from hea.utils import format_pval, format_signif, format_signif_jointly
 
 
 def test_signif_jointly_smaller_drives_decimals():

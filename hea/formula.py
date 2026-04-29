@@ -903,13 +903,13 @@ from scipy.linalg import eigh_tridiagonal as _eigh_tridiagonal  # noqa: E402
 
 
 # Polars 1.40+ made pl.Categorical process-global (shared string cache across
-# DataFrames), so lmpy can no longer use pl.Enum vs pl.Categorical as the
+# DataFrames), so hea can no longer use pl.Enum vs pl.Categorical as the
 # ordered-vs-unordered factor signal — only pl.Enum preserves per-column level
 # order. Callers instead declare ordered columns via `with_ordered_cols(...)`
 # (or the helper `set_ordered_cols`) before materializing. `_factor_from_series`
 # consults this context to decide whether a factor should use poly contrasts.
 _ORDERED_COLS_CV: contextvars.ContextVar[frozenset[str]] = contextvars.ContextVar(
-    "_lmpy_ordered_cols", default=frozenset()
+    "_hea_ordered_cols", default=frozenset()
 )
 
 
@@ -1874,7 +1874,7 @@ def referenced_columns(expanded: ExpandedFormula) -> set[str]:
     """Every data-column Name referenced by any term, bar, offset, or smooth.
 
     Public helper used by the NA-omit paths in ``materialize`` /
-    ``materialize_bars`` and by ``lmpy.design.prepare_design`` (so prepare
+    ``materialize_bars`` and by ``hea.design.prepare_design`` (so prepare
     can align the response to the NA-cleaned X without relying on a
     shared index — polars has none). Smooths must be included so that
     ``prepare_design`` drops NAs on smooth-only variables (e.g.
@@ -2223,7 +2223,7 @@ class SmoothBlock:
     block under a given smooth.spec.
 
     `spec` carries the predict-time state (raw-basis evaluator + optional
-    `by=` and absorb-constraint replays). It is the lmpy port of mgcv's
+    `by=` and absorb-constraint replays). It is the hea port of mgcv's
     `Predict.matrix.<class>` dispatch — calling `spec.predict_mat(new_data)`
     rebuilds the design rows for new x in the same parameterization the fit
     used.
@@ -4818,7 +4818,7 @@ def _build_fs_smooth(call: Call, data: pl.DataFrame) -> list[SmoothBlock]:
     # nat.param(type=1) — make the base penalty an identity on its range.
     Xr, D, P = _nat_param(Xb, Sb, rank=rank, type_=1, unit_fnorm=True)
     # mgcv inherits its LAPACK's rotation of the degenerate null eigenspace;
-    # re-rotate to a canonical basis so lmpy's output is deterministic.
+    # re-rotate to a canonical basis so hea's output is deterministic.
     Xr, null_rot, null_signs = _canonicalize_fs_null_basis(Xr, rank)
     p = Xr.shape[1]
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Generate stats::glm() oracle outputs for the lmpy.glm parity tests.
+# Generate stats::glm() oracle outputs for the hea.glm parity tests.
 #
 # Reads:
 #   datasets/<pkg>/<name>.csv
@@ -43,8 +43,8 @@ prep_quine <- function() {
 prep_insurance <- function() {
   d <- load_csv("MASS", "Insurance")
   # MASS::Insurance: District = unordered factor; Group, Age = ordered.
-  # Mirrors the dataset's own schema (and lmpy's datasets/MASS/Insurance.schema.json).
-  # R glm() uses contr.poly for ordered factors by default; lmpy applies
+  # Mirrors the dataset's own schema (and hea's datasets/MASS/Insurance.schema.json).
+  # R glm() uses contr.poly for ordered factors by default; hea applies
   # the same poly contrasts when the column is registered ordered via
   # the conftest's `set_ordered_cols`.
   d$District <- factor(d$District, levels = c("1", "2", "3", "4"))
@@ -171,7 +171,7 @@ fit_and_dump <- function(case) {
   pred_link <- predict(m, type = "link", se.fit = TRUE)
   pred_resp <- predict(m, type = "response", se.fit = TRUE)
 
-  # 95% Wald CI from confint.default — this is the lm-style CI lmpy returns
+  # 95% Wald CI from confint.default — this is the lm-style CI hea returns
   # (NOT the profile-likelihood confint.glm).
   ci <- suppressWarnings(confint.default(m, level = 0.95))
 

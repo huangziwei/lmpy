@@ -1,5 +1,5 @@
 """
-Compare lmpy.formula.materialize_bars() against R/lme4's Z, Lambdat, theta.
+Compare hea.formula.materialize_bars() against R/lme4's Z, Lambdat, theta.
 
 Per lme4 fixture: parse + expand + materialize_bars, then assert Z (dense),
 Lambdat template (integer-indexed), and theta match R's output.
@@ -13,7 +13,7 @@ import pytest
 from scipy.io import mmread
 
 from conftest import FIXTURE_ROOT, fixture_meta, fixtures_by_kind, load_dataset
-from lmpy.formula import expand, materialize_bars, parse
+from hea.formula import expand, materialize_bars, parse
 
 LME4_FIXTURES = fixtures_by_kind("lme4")
 LME4_IDS = [e["id"] for e in LME4_FIXTURES]

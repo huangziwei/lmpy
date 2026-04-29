@@ -393,7 +393,7 @@ make_mgcv_fixture <- function(case, data, out_dir) {
                  file.path(out_dir, sprintf("%s_S_%d.mtx", prefix, j)))
       }
       # Predict.matrix output on `predict_data` — what predict.gam invokes
-      # internally per smooth block. lmpy's BasisSpec.predict_mat targets
+      # internally per smooth block. hea's BasisSpec.predict_mat targets
       # this exact matrix.
       Xpred <- tryCatch(mgcv::PredictMat(s, data = predict_data),
                         error = function(e) NULL)
