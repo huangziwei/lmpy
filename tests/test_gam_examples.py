@@ -877,6 +877,34 @@ def test_gam_gamma_kwarg_matches_mgcv_on_trees():
     np.testing.assert_allclose(m_reml_14.REML_criterion / 2, 59.35457, atol=1e-3)
 
 
+def test_plot_smooth_dispatches_2d_to_contour():
+    """``plot_smooth`` should auto-render contour for 2D smooths
+    (Wood 2017 Fig. 4.14 — bold/dashed/dotted contours + data scatter)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    from hea import Gamma
+    trees = load_dataset("mgcv", "trees")
+    ct5 = gam("Volume ~ s(Height, Girth, k=25)",
+              family=Gamma(link="log"), data=trees)
+    fig = ct5.plot_smooth(too_far=0.1)
+    assert len(fig.axes) == 1
+    ax = fig.axes[0]
+    # Title should carry the smooth label + edf, mgcv-style.
+    assert "s(Height,Girth," in ax.get_title()
+    assert ax.get_xlabel() == "Height"
+    assert ax.get_ylabel() == "Girth"
+
+    # Mixed 1D + 2D: panel 0 is 1D (no title, ylabel carries the label),
+    # panel 1 is 2D (title carries the label).
+    m = gam("Volume ~ s(Height) + s(Height, Girth, k=20)",
+            family=Gamma(link="log"), data=trees)
+    fig2 = m.plot_smooth(too_far=0.1)
+    assert len(fig2.axes) == 2
+    assert fig2.axes[0].get_title() == ""        # 1D panel
+    assert "s(Height," in fig2.axes[0].get_ylabel()
+    assert "s(Height,Girth," in fig2.axes[1].get_title()  # 2D panel
+
+
 def test_gam_gamma_validation():
     d = load_dataset("R", "iris")
     with pytest.raises(ValueError, match="gamma"):

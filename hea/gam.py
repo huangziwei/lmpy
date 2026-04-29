@@ -3261,43 +3261,67 @@ class gam:
         band_alpha=0.2,
         rug=True,
         partial_residuals=False,
+        n_grid: int = 40,
+        too_far: float = 0.0,
+        ax=None,
     ):
-        """Per-smooth effect curves — the hea port of mgcv's ``plot.gam``.
+        """Per-smooth effect plots — the hea port of mgcv's ``plot.gam``.
 
-        For each 1D smooth ``s(x)``, plot ``f̂(x_i) ± 2·SE(f̂(x_i))`` against
-        the observed covariate values, with a rug at the bottom. Multi-block
-        factor-by smooths (e.g. ``s(x, by=g)`` for each level of ``g``)
-        appear as separate panels — that's how mgcv arranges them too.
+        Auto-dispatches by smooth dimensionality:
+
+        - **1D** ``s(x)`` → curve of ``f̂(x_i)`` with a 2·SE band, optional
+          rug and partial residuals.
+        - **2D** ``s(x,y)`` / ``te(x,y)`` → contour plot of ``f̂(x,y)``:
+          bold contours for the estimate, dashed for ``f̂ + SE``, dotted
+          for ``f̂ − SE`` (Wood 2017 Fig. 4.14 convention). Data locations
+          overlaid as a scatter.
+
+        Multi-block factor-by smooths (e.g. ``s(x, by=g)`` for each level
+        of ``g``) appear as separate panels — same as mgcv.
 
         Parameters
         ----------
         select : int | None
-            If set, plot just the ``select``-th 1D smooth (0-indexed in the
-            order they appear in the formula). Default plots every 1D
-            smooth in a grid.
+            If set, plot just the ``select``-th smooth (0-indexed in the
+            order they appear in the formula). Default plots every plottable
+            smooth in a grid. Required when ``ax=`` is given and the model
+            has more than one plottable smooth.
         n_cols : int
-            Columns in the grid layout when ``select`` is None.
+            Columns in the grid layout when ``select`` is None and ``ax`` is
+            None.
         partial_residuals : bool
-            Overlay partial residuals (working residual + ``f̂_i``).
+            (1D only) Overlay partial residuals (working residual + ``f̂_i``).
         rug : bool
-            Draw a rug of x-values at the bottom of each panel.
+            (1D only) Draw a rug of x-values at the bottom of each panel.
+        n_grid : int
+            (2D only) Per-axis grid resolution. Default 40 (mgcv uses 30).
+        too_far : float
+            (2D only) Mask grid points whose normalized distance to the
+            nearest data point exceeds this threshold (mgcv's
+            ``exclude.too.far``). 0 disables masking.
+        ax : matplotlib Axes | None
+            If given, draw the (single) selected smooth into this axes
+            instead of building a new figure. The model must resolve to
+            exactly one panel — either via ``select=`` or because there
+            is only one plottable smooth. Returns ``ax`` in that case
+            (single-panel return convention); otherwise returns ``fig``.
+
+        Returns
+        -------
+        Figure when building the multi-panel grid; Axes when ``ax=`` is
+        provided.
 
         Notes
         -----
-        Multivariate smooths (``te(x,y)``, ``s(x,y)``), factor-smooth
-        interactions (``bs="fs"``), and random-effect smooths
-        (``bs="re"``) are skipped here. ``vis.gam``-style 2D viewing
-        is a separate method.
-
-        Curves use the in-sample basis evaluated at each observation
-        (no PredictMat re-evaluation on a fine grid yet), so panels can
-        look jagged where the covariate is sparse.
+        Smooths of dimension ≥3, factor-smooth interactions (``bs="fs"``),
+        and random-effect smooths (``bs="re"``) are still skipped. For ≥3D
+        viewing use :meth:`vis` with ``view=`` to pick a 2D slice.
         """
         plottable: list[tuple[int, "SmoothBlock", int, int]] = []
         for idx, (b, (a, bcol)) in enumerate(
             zip(self._blocks, self._block_col_ranges)
         ):
-            if len(b.term) != 1:
+            if len(b.term) not in (1, 2):
                 continue
             if b.cls in ("re.smooth.spec", "fs.interaction", "sz.interaction"):
                 continue
@@ -3305,17 +3329,46 @@ class gam:
 
         if not plottable:
             raise ValueError(
-                "no plottable 1D smooths in this model; "
-                "multivariate / fs / re smooths aren't supported here"
+                "no plottable 1D or 2D smooths in this model; "
+                "≥3D / fs / re smooths aren't supported here — try vis() instead"
             )
 
         if select is not None:
             if not (0 <= select < len(plottable)):
                 raise IndexError(
                     f"select={select} out of range; "
-                    f"have {len(plottable)} 1D smooth(s)"
+                    f"have {len(plottable)} plottable smooth(s)"
                 )
             plottable = [plottable[select]]
+
+        # Single-panel target: draw into the user-supplied ax and return it.
+        if ax is not None:
+            if len(plottable) != 1:
+                raise ValueError(
+                    f"ax= requires exactly one panel; have {len(plottable)} "
+                    f"plottable smooth(s). Pass select= to pick one."
+                )
+            _, block, a, bcol = plottable[0]
+            edf_b = float(self.edf[a:bcol].sum())
+            label_inner = block.label.rstrip(")")
+            title = f"{label_inner},{edf_b:.2f})"
+            wr_all = (
+                self.residuals_of("working") if partial_residuals else None
+            )
+            if len(block.term) == 1:
+                self._plot_smooth_1d(
+                    ax, block, a, bcol,
+                    color=color, band_color=band_color, band_alpha=band_alpha,
+                    rug=rug, partial_residuals=partial_residuals,
+                    wr_all=wr_all, ylabel=title,
+                )
+            else:
+                self._plot_smooth_2d(
+                    ax, block, a, bcol,
+                    color=color, n_grid=n_grid, too_far=too_far,
+                    title=title,
+                )
+            return ax
 
         n_plots = len(plottable)
         if n_plots == 1:
@@ -3339,56 +3392,23 @@ class gam:
         for plot_i, (_, block, a, bcol) in enumerate(plottable):
             r, c = divmod(plot_i, n_cols_eff)
             ax = axes_arr[r, c]
-
-            cov_name = block.term[0]
-            x = self.data[cov_name].to_numpy().astype(float).flatten()
-            B = block.X
-            beta = self._beta[a:bcol]
-            Vp = self.Vp[a:bcol, a:bcol]
-            fhat = B @ beta
-            # Var(f̂_i) = B_i · Vp · B_iᵀ; rowwise.
-            var_f = ((B @ Vp) * B).sum(axis=1)
-            se_f = np.sqrt(np.clip(var_f, 0.0, None))
-
-            # Factor-by basis is zero outside the level: filter to where
-            # the smooth is actually evaluated, otherwise we get a flat-0
-            # line through the masked rows.
-            active = np.any(np.abs(B) > 0, axis=1)
-            xa = x[active]
-            fa = fhat[active]
-            sa = se_f[active]
-
-            order = np.argsort(xa)
-            xs, fs, ses = xa[order], fa[order], sa[order]
-
-            ax.axhline(0, color="black", linestyle="--", linewidth=0.5)
-            ax.fill_between(
-                xs, fs - 2 * ses, fs + 2 * ses,
-                color=band_color, alpha=band_alpha, linewidth=0,
-            )
-            ax.plot(xs, fs, color=color, linewidth=1.0)
-
-            if partial_residuals:
-                pr = wr_all[active] + fa
-                ax.scatter(
-                    xa, pr, facecolor="none", edgecolor="grey",
-                    s=10, alpha=0.5,
-                )
-
-            if rug:
-                ymin = ax.get_ylim()[0]
-                ax.plot(
-                    xa, np.full_like(xa, ymin), "|",
-                    color="black", markersize=6, alpha=0.6,
-                )
-
-            # mgcv y-label is `s(x,edf)` — keep the prefix from block.label
-            # so factor-by labels like `s(x):levelA` print as
-            # `s(x):levelA,5.83`.
             edf_b = float(self.edf[a:bcol].sum())
             label_inner = block.label.rstrip(")")
-            ax.set_xlabel(cov_name)
-            ax.set_ylabel(f"{label_inner},{edf_b:.2f})")
+            title = f"{label_inner},{edf_b:.2f})"
+
+            if len(block.term) == 1:
+                self._plot_smooth_1d(
+                    ax, block, a, bcol,
+                    color=color, band_color=band_color, band_alpha=band_alpha,
+                    rug=rug, partial_residuals=partial_residuals,
+                    wr_all=wr_all, ylabel=title,
+                )
+            else:  # 2D
+                self._plot_smooth_2d(
+                    ax, block, a, bcol,
+                    color=color, n_grid=n_grid, too_far=too_far,
+                    title=title,
+                )
 
         # Hide unused grid cells.
         for plot_i in range(n_plots, axes_arr.size):
@@ -3397,6 +3417,104 @@ class gam:
 
         fig.tight_layout()
         return fig
+
+    def _plot_smooth_1d(
+        self, ax, block, a, bcol, *,
+        color, band_color, band_alpha, rug, partial_residuals,
+        wr_all, ylabel,
+    ):
+        """1D smooth panel: curve + 2·SE band + optional rug / partial residuals."""
+        cov_name = block.term[0]
+        x = self.data[cov_name].to_numpy().astype(float).flatten()
+        B = block.X
+        beta = self._beta[a:bcol]
+        Vp = self.Vp[a:bcol, a:bcol]
+        fhat = B @ beta
+        # Var(f̂_i) = B_i · Vp · B_iᵀ; rowwise.
+        var_f = ((B @ Vp) * B).sum(axis=1)
+        se_f = np.sqrt(np.clip(var_f, 0.0, None))
+
+        # Factor-by basis is zero outside the level: filter to where
+        # the smooth is actually evaluated, otherwise we get a flat-0
+        # line through the masked rows.
+        active = np.any(np.abs(B) > 0, axis=1)
+        xa = x[active]
+        fa = fhat[active]
+        sa = se_f[active]
+
+        order = np.argsort(xa)
+        xs, fs, ses = xa[order], fa[order], sa[order]
+
+        ax.axhline(0, color="black", linestyle="--", linewidth=0.5)
+        ax.fill_between(
+            xs, fs - 2 * ses, fs + 2 * ses,
+            color=band_color, alpha=band_alpha, linewidth=0,
+        )
+        ax.plot(xs, fs, color=color, linewidth=1.0)
+
+        if partial_residuals:
+            pr = wr_all[active] + fa
+            ax.scatter(
+                xa, pr, facecolor="none", edgecolor="grey",
+                s=10, alpha=0.5,
+            )
+
+        if rug:
+            ymin = ax.get_ylim()[0]
+            ax.plot(
+                xa, np.full_like(xa, ymin), "|",
+                color="black", markersize=6, alpha=0.6,
+            )
+
+        ax.set_xlabel(cov_name)
+        ax.set_ylabel(ylabel)
+
+    def _plot_smooth_2d(
+        self, ax, block, a, bcol, *,
+        color, n_grid, too_far, title,
+    ):
+        """2D smooth panel: three-contour view (estimate / +SE / −SE) plus
+        data-location scatter. Mirrors mgcv's ``plot.gam`` for ``s(x,y)`` /
+        ``te(x,y)`` smooths (Wood 2017 Fig. 4.14).
+        """
+        x_name, y_name = block.term
+        x_data = self.data[x_name].to_numpy().astype(float)
+        y_data = self.data[y_name].to_numpy().astype(float)
+
+        x_grid = np.linspace(np.nanmin(x_data), np.nanmax(x_data), n_grid)
+        y_grid = np.linspace(np.nanmin(y_data), np.nanmax(y_data), n_grid)
+        XX, YY = np.meshgrid(x_grid, y_grid)
+        grid_df = pl.DataFrame({
+            x_name: XX.flatten(),
+            y_name: YY.flatten(),
+        })
+
+        # Smooth-only basis at the grid; β and Vp slices restricted to the
+        # block so the contours show f̂(x,y), not the full η.
+        B = np.asarray(block.spec.predict_mat(grid_df), dtype=float)
+        beta = self._beta[a:bcol]
+        Vp = self.Vp[a:bcol, a:bcol]
+        fit = (B @ beta).reshape(XX.shape)
+        var_f = np.einsum("ij,jk,ik->i", B, Vp, B).reshape(XX.shape)
+        se_f = np.sqrt(np.maximum(var_f, 0.0))
+
+        if too_far > 0.0:
+            mask = _too_far_mask(
+                XX.flatten(), YY.flatten(),
+                self.data[x_name], self.data[y_name], too_far,
+            ).reshape(XX.shape)
+            fit = np.where(mask, np.nan, fit)
+            se_f = np.where(mask, np.nan, se_f)
+
+        ax.contour(XX, YY, fit,         colors=color, linewidths=1.4)
+        ax.contour(XX, YY, fit + se_f,  colors=color, linestyles="--",
+                   linewidths=0.6)
+        ax.contour(XX, YY, fit - se_f,  colors=color, linestyles=":",
+                   linewidths=0.6)
+        ax.scatter(x_data, y_data, s=10, color=color)
+        ax.set_xlabel(x_name)
+        ax.set_ylabel(y_name)
+        ax.set_title(title)
 
     def plot(self, figsize=None, smooth=True, label_n=3):
         """4-panel diagnostic, matching the graphical part of gam.check.
