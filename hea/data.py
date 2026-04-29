@@ -24,6 +24,7 @@ from pathlib import Path
 
 import polars as pl
 
+from .dataframe import DataFrame
 from .formula import set_ordered_cols
 
 __all__ = ["data", "factor"]
@@ -222,7 +223,7 @@ def _apply_dataset_schema(df: pl.DataFrame, schema_path: Path | None) -> pl.Data
 
 
 def data(name: str, package: str = "R", save_to: str = "./data",
-         overwrite: bool = False) -> pl.DataFrame:
+         overwrite: bool = False) -> DataFrame:
     """Load a named dataset.
 
     Resolution order:
@@ -287,4 +288,5 @@ def data(name: str, package: str = "R", save_to: str = "./data",
                 pass
         df = pl.read_csv(csv_path, null_values="NA")
 
-    return _apply_dataset_schema(df, _find_schema(package, name))
+    df = _apply_dataset_schema(df, _find_schema(package, name))
+    return DataFrame._from_pydf(df._df)
