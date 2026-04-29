@@ -553,6 +553,232 @@ def test_groupby_slice_sample(df):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Chapter 5 — pivots and pull
+# ---------------------------------------------------------------------------
+
+
+def test_pivot_longer_basic():
+    """Smallest example from the chapter: bp1/bp2 columns → long.
+
+    Row-major output matches dplyr: each input row's pivoted values
+    appear contiguously, in the original column order.
+    """
+    d = DataFrame({"id": ["A", "B", "C"], "bp1": [100, 140, 120], "bp2": [120, 115, 125]})
+    out = d.pivot_longer(
+        ["bp1", "bp2"],
+        names_to="measurement",
+        values_to="value",
+    )
+    assert out.shape == (6, 3)
+    assert out.columns == ["id", "measurement", "value"]
+    assert out["id"].to_list() == ["A", "A", "B", "B", "C", "C"]
+    assert out["measurement"].to_list() == ["bp1", "bp2", "bp1", "bp2", "bp1", "bp2"]
+
+
+def test_pivot_longer_billboard_row_order():
+    """dplyr orders pivoted rows so all weeks for one song come first.
+
+    Polars' raw ``unpivot`` is column-major (all-of-wk1 first); we
+    reorder by tagging the input row index and sorting at the end.
+    """
+    billboard = hea.data("billboard", package="tidyr")
+    out = (
+        billboard.pivot_longer(
+            pl.selectors.starts_with("wk"),
+            names_to="week",
+            values_to="rank",
+        )
+        .slice_head(76)  # all weeks of the first song
+    )
+    # All 76 rows belong to the first artist (2 Pac).
+    assert out["artist"].n_unique() == 1
+    assert out["week"].to_list()[:3] == ["wk1", "wk2", "wk3"]
+
+
+def test_pivot_longer_billboard():
+    """The chapter's billboard example end-to-end."""
+    billboard = hea.data("billboard", package="tidyr")
+    long = billboard.pivot_longer(
+        pl.selectors.starts_with("wk"),
+        names_to="week",
+        values_to="rank",
+        values_drop_na=True,
+    )
+    # 76 wk-cols, 317 songs, but with values_drop_na the result is much smaller.
+    assert "week" in long.columns and "rank" in long.columns
+    assert long["rank"].null_count() == 0
+    # The drop_na collapse must remove rows; raw billboard has 317*76 = 24092
+    # cells but only ~5300 have non-null rank.
+    assert long.height < 24092
+    assert long.height > 1000
+
+
+def test_pivot_longer_names_prefix():
+    """``names_prefix`` strips a regex prefix from each name before assignment."""
+    d = DataFrame({"id": [1], "wk1": [10], "wk2": [20], "wk3": [30]})
+    out = d.pivot_longer(
+        pl.selectors.starts_with("wk"),
+        names_to="week",
+        values_to="rank",
+        names_prefix="wk",
+    )
+    assert out["week"].to_list() == ["1", "2", "3"]
+
+
+def test_pivot_longer_names_sep_multi():
+    """The who2 case: multi-piece name split into multiple new columns."""
+    d = DataFrame({
+        "country": ["X", "X"],
+        "year": [2000, 2001],
+        "sp_m_014": [1, 5],
+        "sp_f_014": [2, 6],
+        "ep_m_014": [3, 7],
+        "ep_f_014": [4, 8],
+    })
+    out = d.pivot_longer(
+        pl.exclude(["country", "year"]),
+        names_to=["diagnosis", "gender", "age"],
+        names_sep="_",
+        values_to="count",
+    )
+    # 4 pivoted cols × 2 rows = 8 long rows
+    assert out.height == 8
+    assert {"diagnosis", "gender", "age", "count"}.issubset(out.columns)
+    assert sorted(out["diagnosis"].unique().to_list()) == ["ep", "sp"]
+    assert sorted(out["gender"].unique().to_list()) == ["f", "m"]
+
+
+def test_pivot_longer_names_pattern():
+    """``names_pattern`` regex extracts groups into the listed names."""
+    d = DataFrame({"id": [1, 2], "a_2020": [10, 30], "a_2021": [20, 40]})
+    out = d.pivot_longer(
+        pl.exclude("id"),
+        names_to=["letter", "year"],
+        names_pattern=r"([a-z]+)_(\d+)",
+        values_to="value",
+    )
+    assert out.height == 4
+    assert sorted(out["year"].unique().to_list()) == ["2020", "2021"]
+    assert out["letter"].unique().to_list() == ["a"]
+
+
+def test_pivot_longer_dot_value_sentinel():
+    """The household example: ``.value`` makes name-pieces into output columns."""
+    d = DataFrame({
+        "family": [1, 2],
+        "name_child1": ["A", "C"],
+        "name_child2": ["B", None],
+        "dob_child1": ["2000", "2001"],
+        "dob_child2": ["2010", None],
+    })
+    out = d.pivot_longer(
+        pl.exclude("family"),
+        names_to=[".value", "child"],
+        names_sep="_",
+        values_drop_na=True,
+    )
+    # Two original "values" columns (name, dob) survive as output columns.
+    # child column gets the second piece of each name.
+    assert set(out.columns) == {"family", "child", "name", "dob"}
+    # Family 2 had child2 = null name+dob → drop_na keeps only child1.
+    fam2 = out.filter(pl.col("family") == 2)
+    assert fam2.height == 1
+    assert fam2["child"].item() == "child1"
+
+
+def test_pivot_longer_rejects_both_sep_and_pattern():
+    d = DataFrame({"id": [1], "a_1": [10]})
+    with pytest.raises(ValueError, match="names_sep or names_pattern"):
+        d.pivot_longer(
+            ["a_1"],
+            names_to=["x", "y"],
+            names_sep="_",
+            names_pattern=r"(\w+)_(\d+)",
+        )
+
+
+def test_pivot_longer_requires_split_when_multi():
+    d = DataFrame({"id": [1], "a_1": [10]})
+    with pytest.raises(ValueError, match="names_sep= or names_pattern="):
+        d.pivot_longer(["a_1"], names_to=["x", "y"])
+
+
+def test_pivot_wider_basic():
+    """Inverse of pivot_longer for the same bp dataset."""
+    long = DataFrame({
+        "id": ["A", "B", "B", "A", "A"],
+        "measurement": ["bp1", "bp1", "bp2", "bp2", "bp3"],
+        "value": [100, 140, 115, 120, 105],
+    })
+    wide = long.pivot_wider(names_from="measurement", values_from="value")
+    assert wide.height == 2
+    assert {"id", "bp1", "bp2", "bp3"}.issubset(wide.columns)
+
+
+def test_pivot_wider_id_cols_selector():
+    """``id_cols`` accepts a selector — the cms example pattern."""
+    d = DataFrame({
+        "org_id": [1, 1, 2, 2],
+        "org_name": ["a", "a", "b", "b"],
+        "metric": ["x", "y", "x", "y"],
+        "score": [10, 20, 30, 40],
+    })
+    out = d.pivot_wider(
+        id_cols=pl.selectors.starts_with("org"),
+        names_from="metric",
+        values_from="score",
+    )
+    assert out.height == 2
+    assert set(out.columns) == {"org_id", "org_name", "x", "y"}
+
+
+def test_pivot_wider_values_fill():
+    long = DataFrame({"id": [1, 1, 2], "k": ["a", "b", "a"], "v": [10, 20, 30]})
+    out = long.pivot_wider(names_from="k", values_from="v", values_fill=0)
+    # Row 2 has no "b" → filled with 0.
+    assert out.filter(pl.col("id") == 2)["b"].item() == 0
+
+
+def test_pivot_wider_names_prefix():
+    long = DataFrame({"id": [1, 2], "k": ["a", "b"], "v": [10, 20]})
+    out = long.pivot_wider(names_from="k", values_from="v", names_prefix="m_")
+    assert "m_a" in out.columns and "m_b" in out.columns
+
+
+def test_pivot_round_trip():
+    """longer → wider returns the original frame (modulo column order)."""
+    wide = DataFrame({"id": [1, 2, 3], "x": [10, 20, 30], "y": [100, 200, 300]})
+    long = wide.pivot_longer(["x", "y"], names_to="k", values_to="v")
+    back = long.pivot_wider(names_from="k", values_from="v")
+    assert back.sort("id").select(["id", "x", "y"]).equals(
+        wide.sort("id").select(["id", "x", "y"])
+    )
+
+
+def test_pull_by_name(df):
+    s = df.pull("x")
+    assert isinstance(s, pl.Series)
+    assert s.to_list() == [1, 2, 3, 4, 5, 6]
+
+
+def test_pull_default_last_column(df):
+    """No arg: dplyr default returns the last column."""
+    s = df.pull()
+    assert s.name == "y"
+
+
+def test_pull_int_position(df):
+    """1-indexed position; negative counts from the right."""
+    assert df.pull(1).name == "g"
+    assert df.pull(-1).name == "y"
+
+
+# ---------------------------------------------------------------------------
+# End-to-end integration with hea.lm
+# ---------------------------------------------------------------------------
+
+
 def test_chain_then_lm():
     """A full tidyverse chain still produces something hea.lm accepts."""
     gala = hea.data("gala", package="faraway")

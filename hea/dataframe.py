@@ -1,9 +1,13 @@
 """Tidyverse-flavored verbs as a thin subclass of ``pl.DataFrame``.
 
-Ports the data-transformation chapter of *R for Data Science* (chapter 3,
-``data-transform.qmd``) onto polars: ``filter``, ``arrange``,
-``distinct``, ``mutate``, ``select``, ``rename``, ``relocate``,
-``group_by``, ``summarize``, ``slice_*``, ``count``, ``ungroup``.
+Ports two *R for Data Science* chapters onto polars:
+
+* Chapter 3 — data transformation: ``filter``, ``arrange``,
+  ``distinct``, ``mutate``, ``select``, ``rename``, ``relocate``,
+  ``group_by``, ``summarize``, ``slice_*``, ``count``, ``ungroup``.
+* Chapter 5 — tidy data: ``pivot_longer`` (with ``names_sep`` /
+  ``names_pattern`` / the ``.value`` sentinel), ``pivot_wider``,
+  ``pull``.
 
 Design choices:
 
@@ -555,6 +559,261 @@ class DataFrame(pl.DataFrame):
         return self._wrap(
             super().sample(n=n, fraction=prop, with_replacement=replace, seed=seed)
         )
+
+    # ---- pivots / pull (chapter 5) -----------------------------------
+
+    def _resolve_cols(self, cols: Any) -> list[str]:
+        """Turn a ``cols`` argument into a flat list of existing column names.
+
+        Accepts: a string (single name), a list/tuple of strings /
+        selectors / exprs, a polars selector, a polars expression
+        (e.g. ``pl.exclude("a")`` — resolved against the frame), or
+        ``None`` (returns ``[]``).
+        """
+        import polars.selectors as cs
+
+        def expand_one(c: Any) -> list[str]:
+            if isinstance(c, str):
+                return [c]
+            if cs.is_selector(c):
+                return list(cs.expand_selector(self, c))
+            if isinstance(c, pl.Expr):
+                # ``pl.exclude(...)`` and similar non-selector exprs:
+                # resolve by asking polars which columns they cover.
+                return list(pl.DataFrame.select(self, c).columns)
+            raise TypeError(f"unsupported cols element: {type(c).__name__}")
+
+        if cols is None:
+            return []
+        if isinstance(cols, (list, tuple)):
+            out: list[str] = []
+            for c in cols:
+                out.extend(expand_one(c))
+            return out
+        return expand_one(cols)
+
+    def pivot_longer(
+        self,
+        cols: Any,
+        *,
+        names_to: str | list[str] = "name",
+        values_to: str = "value",
+        names_prefix: str | None = None,
+        names_sep: str | None = None,
+        names_pattern: str | None = None,
+        values_drop_na: bool = False,
+    ) -> "DataFrame":
+        """Wide → long reshape — tidyr's ``pivot_longer``.
+
+        Parameters
+        ----------
+        cols
+            Columns to pivot. Accepts a list of names, a polars selector
+            (e.g. ``pl.selectors.starts_with("wk")``), or the result of
+            :meth:`cols_between`.
+        names_to
+            Name of the new column that will hold the pivoted column
+            names. Pass a list to split each name into multiple new
+            columns — requires ``names_sep`` or ``names_pattern``.
+            Use the special string ``".value"`` in the list to indicate
+            that piece becomes the output column name (the chapter-5
+            ``household`` example).
+        values_to
+            Name for the new value column. Ignored when ``".value"`` is
+            in ``names_to`` (the original values get spread back across
+            the .value-derived columns).
+        names_prefix
+            Regex prefix to strip from each name before splitting (e.g.
+            ``"wk"`` to turn ``"wk1"`` into ``"1"``).
+        names_sep, names_pattern
+            How to split each pivoted name when ``names_to`` is a list.
+            Mutually exclusive. ``names_sep`` is a literal separator
+            string passed to :meth:`polars.Expr.str.split_exact`;
+            ``names_pattern`` is a regex passed to
+            :meth:`polars.Expr.str.extract_groups` whose capture
+            groups become the new columns.
+        values_drop_na
+            Drop rows where the pivoted value is null. Useful when the
+            wide form has padding nulls (e.g. billboard's wk60–wk76).
+        """
+        on = self._resolve_cols(cols)
+        if not on:
+            raise ValueError("pivot_longer(): cols resolved to no columns.")
+        index = [c for c in self.columns if c not in on]
+
+        # Tag each input row with its original position so we can sort
+        # the result back into row-major order (dplyr's default — all
+        # weeks of song 1, then all of song 2, …). Polars' ``unpivot``
+        # outputs column-major (all rows of wk1, then all of wk2, …).
+        ROW_IDX = "__pivot_longer_row_idx__"
+        with_idx = pl.DataFrame.with_row_index(self, name=ROW_IDX)
+
+        # Step 1: unpivot to (index..., ROW_IDX, __name__, __value__).
+        long = pl.DataFrame.unpivot(
+            with_idx,
+            on=on,
+            index=[*index, ROW_IDX],
+            variable_name="__name__",
+            value_name="__value__",
+        )
+
+        # Step 2: drop padding nulls if requested.
+        if values_drop_na:
+            long = long.filter(pl.col("__value__").is_not_null())
+
+        # Step 3: strip prefix.
+        if names_prefix is not None:
+            long = long.with_columns(
+                pl.col("__name__").str.replace(f"^{names_prefix}", "")
+            )
+
+        # Normalize names_to.
+        names_to_list = [names_to] if isinstance(names_to, str) else list(names_to)
+
+        # Step 4: simple (single-name, no .value) case — just rename.
+        if len(names_to_list) == 1 and names_to_list[0] != ".value":
+            out = (
+                long.rename(
+                    {"__name__": names_to_list[0], "__value__": values_to}
+                )
+                .sort(ROW_IDX)
+                .drop(ROW_IDX)
+            )
+            return self._wrap(out)
+
+        # Step 5: split __name__ into pieces.
+        if names_sep is not None and names_pattern is not None:
+            raise ValueError(
+                "pivot_longer(): pass either names_sep or names_pattern, not both."
+            )
+        if names_sep is None and names_pattern is None:
+            raise ValueError(
+                "pivot_longer(): names_to has multiple elements (or includes "
+                "'.value'); set names_sep= or names_pattern=."
+            )
+
+        n_pieces = len(names_to_list)
+        if names_sep is not None:
+            long = long.with_columns(
+                pl.col("__name__")
+                .str.split_exact(names_sep, n_pieces - 1)
+                .alias("__parts__")
+            ).unnest("__parts__")
+        else:
+            long = long.with_columns(
+                pl.col("__name__")
+                .str.extract_groups(names_pattern)
+                .alias("__parts__")
+            ).unnest("__parts__")
+
+        long = long.drop("__name__")
+
+        # Identify the piece columns (everything new) and rename them.
+        kept = set(index) | {"__value__", ROW_IDX}
+        piece_cols = [c for c in long.columns if c not in kept]
+        if len(piece_cols) != n_pieces:
+            raise ValueError(
+                f"pivot_longer(): expected {n_pieces} pieces from name split, "
+                f"got {len(piece_cols)} ({piece_cols!r}). "
+                "Check names_sep / names_pattern matches the column names."
+            )
+        long = long.rename(dict(zip(piece_cols, names_to_list)))
+
+        # Step 6: handle the .value sentinel — pivot wider on that piece.
+        if ".value" in names_to_list:
+            non_value = [n for n in names_to_list if n != ".value"]
+            out = long.pivot(
+                on=".value",
+                index=[*index, ROW_IDX, *non_value],
+                values="__value__",
+            )
+            out = out.sort(ROW_IDX).drop(ROW_IDX)
+            return self._wrap(out)
+
+        out = (
+            long.rename({"__value__": values_to})
+            .sort(ROW_IDX)
+            .drop(ROW_IDX)
+        )
+        return self._wrap(out)
+
+    def pivot_wider(
+        self,
+        *,
+        id_cols: Any = None,
+        names_from: str | list[str] = "name",
+        values_from: str | list[str] = "value",
+        values_fill: Any = None,
+        names_prefix: str = "",
+        names_sep: str = "_",
+    ) -> "DataFrame":
+        """Long → wide reshape — tidyr's ``pivot_wider``.
+
+        Parameters
+        ----------
+        id_cols
+            Columns that uniquely identify each output row. Defaults to
+            all columns not in ``names_from`` or ``values_from`` (matches
+            tidyr).
+        names_from
+            Column(s) whose unique values become new column names. Pass
+            a list to combine multiple columns; combined with
+            ``names_sep``.
+        values_from
+            Column(s) whose values fill the new columns.
+        values_fill
+            Replace null cells with this value. Single value applied to
+            every new column.
+        names_prefix
+            String to prepend to every new column name.
+        names_sep
+            Separator used when ``names_from`` has multiple columns
+            (also used by polars to format struct-style compound names).
+        """
+        names_from_list = (
+            [names_from] if isinstance(names_from, str) else list(names_from)
+        )
+        values_from_list = (
+            [values_from] if isinstance(values_from, str) else list(values_from)
+        )
+        if id_cols is None:
+            excluded = set(names_from_list) | set(values_from_list)
+            id_list = [c for c in self.columns if c not in excluded]
+        else:
+            id_list = self._resolve_cols(id_cols)
+
+        out = pl.DataFrame.pivot(
+            self,
+            on=names_from_list,
+            index=id_list,
+            values=values_from_list,
+            aggregate_function=None,
+            separator=names_sep,
+        )
+
+        new_cols = [c for c in out.columns if c not in id_list]
+        if names_prefix:
+            out = out.rename({c: names_prefix + c for c in new_cols})
+            new_cols = [names_prefix + c for c in new_cols]
+        if values_fill is not None:
+            out = out.with_columns(
+                [pl.col(c).fill_null(values_fill) for c in new_cols]
+            )
+        return self._wrap(out)
+
+    def pull(self, col: str | int | None = None) -> pl.Series:
+        """Extract a single column as a polars ``Series``.
+
+        Without ``col`` returns the last column (dplyr default), so
+        ``df |> distinct(x) |> pull()`` works. Pass a column name or a
+        1-indexed position; negative positions count from the right.
+        """
+        if col is None:
+            return self.to_series(self.width - 1)
+        if isinstance(col, int):
+            idx = col - 1 if col > 0 else self.width + col
+            return self.to_series(idx)
+        return self.get_column(col)
 
 
 class GroupBy:
