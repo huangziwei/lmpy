@@ -3671,10 +3671,13 @@ class gam:
             for (start, end) in regions:
                 ax.axvline(start, color=col_diff, linestyle=":", linewidth=1)
                 ax.axvline(end, color=col_diff, linestyle=":", linewidth=1)
-            # Top-of-axis tick bars (itsadug's `addInterval` at top edge).
+            # Bottom-of-axis tick bars — itsadug uses
+            # ``addInterval(pos=getFigCoords("p")[3], ...)`` and in R's
+            # ``c(xleft, xright, ybottom, ytop)`` convention index 3 is
+            # ``ybottom``, so the bar sits *along the x-axis*, not at the top.
             trans = blended_transform_factory(ax.transData, ax.transAxes)
             for (start, end) in regions:
-                ax.plot([start, end], [1.0, 1.0], transform=trans,
+                ax.plot([start, end], [0.0, 0.0], transform=trans,
                         color=col_diff, linewidth=2.0,
                         clip_on=False, solid_capstyle="butt")
 
@@ -3701,8 +3704,11 @@ class gam:
                 label += ", excl. random"
             if sim_ci:
                 label += ", simult.CI"
-            ax.text(1.0, 1.01, label, transform=ax.transAxes,
-                    ha="right", va="bottom", fontsize=8, color="gray")
+            # itsadug uses ``mtext(side=4)`` (vertical, right margin); we
+            # anchor inside the axes' top-right so the label coexists with
+            # ``set_title`` and a tight subplot grid without overlap.
+            ax.text(0.99, 0.985, label, transform=ax.transAxes,
+                    ha="right", va="top", fontsize=8, color="#595959")
 
         if print_summary:
             if regions:
