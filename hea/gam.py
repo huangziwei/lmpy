@@ -1479,21 +1479,40 @@ class gam:
         self, theta0: np.ndarray, *, include_log_phi: bool,
         criterion: str = "REML",
         max_iter: int = 200, conv_tol: float = 1e-6,
-        max_step: float = 5.0, max_half: int = 30,
+        max_step: float = 5.0, max_sd_step: float = 2.0,
+        max_half: int = 30, qerror_thresh: float = 0.8,
     ) -> np.ndarray:
         """Unified analytical Newton on V_R(ρ, log φ) or V_g/V_u(ρ) — mgcv's gam.outer.
 
-        Damped Newton with eigen-clamp on H, step cap, backtracking line
-        search, and mgcv's two-part outer convergence test (Newton.r):
+        Direct port of mgcv's ``newton`` (gam.fit3.r:1290-1719). Each
+        outer iteration:
 
-            max(|g_k|)   ≤ score_scale · conv_tol · 5
-            |Δscore|     ≤ score_scale · conv_tol
+        1. Eigendecompose H, flag ``pdef`` (no negative or floor-clamped
+           eigenvalues) and ``indef`` (any meaningfully negative one,
+           threshold ``|λ_max|·√eps``). Set ``d ← |λ|`` then floor at
+           ``max(d)·eps^0.7`` (Gill-Murray-Wright, gam.fit3.r:1447-1453).
+        2. Newton direction ``Nstep = −V·diag(1/d)·V'·grad`` (using
+           clamped d), capped to ``max_step``.
+        3. Accept Nstep at α=1 only if ``score_change < 0`` AND ``pdef``
+           AND quadratic-error gate ``qerror < qerror_thresh`` with
+           ``qerror = |pred − actual| / (max(|pred|,|actual|) + score_scale·conv_tol)``.
+           Otherwise step-halve: at the 4th halving (and ``it<10``)
+           switch to the steepest-descent direction at the same length;
+           after ``max_half/2`` halvings drop the qerror requirement
+           (gam.fit3.r:1518-1572).
+        4. If ``!pdef`` AND SD not yet tried, run a separate SD line
+           search (start at ``2·max_sd_step``, halve up to 40 times,
+           keep best descent that satisfies qerror) and replace the
+           accepted step with SD-best if it scored lower
+           (gam.fit3.r:1580-1641). This is what stops Newton from
+           sliding into UBRE/GCV saturation tails on flat smooths when
+           the seed Hessian is fully indefinite.
 
-        with ``score_scale = |scale.est| + |score|`` for GCV/UBRE and
-        ``score_scale = |log(scale.est)| + |score|`` for REML.  The
-        tolerance default ``1e-6`` matches mgcv's ``newton$conv.tol``.
-        Works for any family — PIRLS inner solve degenerates to one
-        Cholesky for Gaussian-identity (W=I, z=y).
+        Convergence (gam.fit3.r:1646-1658) requires ``!indef``,
+        ``max(|grad|) ≤ score_scale·conv_tol·5``, AND
+        ``|Δscore| ≤ score_scale·conv_tol``, with
+        ``score_scale = |scale.est| + |score|`` (GCV/UBRE) or
+        ``|log(scale.est)| + |score|`` (REML).
 
         ``theta`` layout: ρ first, then a single log φ column when
         ``include_log_phi`` is set (unknown-scale REML). For known-scale
@@ -1603,51 +1622,158 @@ class gam:
             H = _hess(rho, log_phi, fit)
             H = 0.5 * (H + H.T)
             last_grad, last_hess = grad, H
+            score_scale = _score_scale(fit, f_prev)
 
-            # Eigen-clamp to PD: |w| with a tiny floor so the quadratic
-            # model is positive-definite even on saddle/flat regions.
-            w_eig, V_eig = np.linalg.eigh(H)
-            w_max = float(np.abs(w_eig).max()) if w_eig.size > 0 else 1.0
-            eps = max(w_max * 1e-7, 1e-12)
-            w_pd = np.where(np.abs(w_eig) > eps, np.abs(w_eig), eps)
-            d = -V_eig @ ((V_eig.T @ grad) / w_pd)
+            # Eigen analysis with mgcv's pdef/indef flags
+            # (gam.fit3.r:1438-1455). ``indef`` triggers the SD-fallback;
+            # ``pdef`` False blocks immediate-step acceptance.
+            if H.size > 0:
+                w_eig, V_eig = np.linalg.eigh(H)
+                d_max_abs = float(np.abs(w_eig).max())
+                sqrt_eps = float(np.finfo(float).eps ** 0.5)
+                if d_max_abs > 0:
+                    indef = bool(np.any(-w_eig > d_max_abs * sqrt_eps))
+                else:
+                    indef = False
+                # 1-D special case: a tiny single eigenvalue can register
+                # as indefinite at the |λ_max|·√eps threshold; require it
+                # be meaningfully negative on the score-scale instead.
+                if indef and w_eig.size == 1:
+                    indef = bool(w_eig[0] < -score_scale * sqrt_eps)
+                d = np.abs(w_eig)
+                pdef = bool(np.all(w_eig > 0))
+                low_d = d.max() * (np.finfo(float).eps ** 0.7) if d.size else 0.0
+                clamp_mask = d < low_d
+                if np.any(clamp_mask):
+                    pdef = False
+                    d = np.where(clamp_mask, low_d, d)
+                d_inv = np.where(d > 0, 1.0 / d, 0.0)
+                Nstep = -V_eig @ (d_inv * (V_eig.T @ grad))
+            else:
+                Nstep = np.zeros_like(grad)
+                pdef = True
+                indef = False
 
-            d_norm = float(np.abs(d).max())
-            if d_norm > max_step:
-                d *= max_step / d_norm
+            # Cap Newton step length
+            ms = float(np.abs(Nstep).max()) if Nstep.size else 0.0
+            if ms > max_step:
+                Nstep = Nstep * (max_step / ms)
 
-            alpha = 1.0
-            descent = False
-            for _ in range(max_half):
-                theta_try = theta + alpha * d
-                f_try, fit_try = _eval(theta_try)
-                if np.isfinite(f_try) and f_try < f_prev - 1e-14 * abs(f_prev):
-                    descent = True
-                    break
-                alpha *= 0.5
+            # Steepest descent direction (length-1 in max-norm).
+            gmax = float(np.abs(grad).max()) if grad.size else 0.0
+            Sstep = (-grad / gmax) if gmax > 0 else np.zeros_like(grad)
 
-            if not descent:
+            def _qerror(step, score_change):
+                if step.size == 0:
+                    return 0.0
+                pred = float(grad @ step + 0.5 * step @ (H @ step))
+                denom = max(abs(pred), abs(score_change)) + score_scale * conv_tol
+                return abs(pred - score_change) / denom if denom > 0 else 0.0
+
+            # ----- step acceptance (gam.fit3.r:1492-1573) -----
+            accepted_step = None
+            accepted_f = float("inf")
+            accepted_fit = None
+            sd_unused = True
+
+            f_try, fit_try = _eval(theta + Nstep)
+            score_change = f_try - f_prev
+            qerror = _qerror(Nstep, score_change)
+            if (
+                np.isfinite(f_try) and score_change < -1e-14 * abs(f_prev)
+                and pdef and qerror < qerror_thresh
+            ):
+                accepted_step, accepted_f, accepted_fit = Nstep.copy(), f_try, fit_try
+            else:
+                step = Nstep.copy()
+                for ii in range(max_half):
+                    if ii == 3 and it < 10:
+                        # Newton failing — switch to SD direction at the
+                        # current step length (gam.fit3.r:1521).
+                        s_length = min(float(np.linalg.norm(step)), max_sd_step)
+                        sd_norm = float(np.linalg.norm(Sstep))
+                        if sd_norm > 0:
+                            step = Sstep * (s_length / sd_norm)
+                            sd_unused = False
+                    else:
+                        step = step / 2
+                    f_try, fit_try = _eval(theta + step)
+                    score_change = f_try - f_prev
+                    if ii > min(4, max_half // 2):
+                        qerror = qerror_thresh / 2  # drop qerror requirement
+                    else:
+                        qerror = _qerror(step, score_change)
+                    if (
+                        np.isfinite(f_try)
+                        and score_change < -1e-14 * abs(f_prev)
+                        and qerror < qerror_thresh
+                    ):
+                        accepted_step = step.copy()
+                        accepted_f, accepted_fit = f_try, fit_try
+                        break
+
+            # ----- indefinite SD fallback (gam.fit3.r:1580-1641) -----
+            # If the Hessian wasn't PD and we haven't already used the SD
+            # direction in step-halving, run an independent SD line
+            # search and pick whichever direction scored lower. This is
+            # what keeps Newton out of UBRE/GCV saturation tails when
+            # the seed lies near a local maximum (all-negative eig).
+            if (not pdef) and sd_unused and Sstep.size > 0:
+                sd_best_step = None
+                sd_best_f = float("inf")
+                sd_best_fit = None
+                sd_step = Sstep * (max_sd_step * 2)
+                for kk in range(40):
+                    sd_step = sd_step / 2
+                    f_sd, fit_sd = _eval(theta + sd_step)
+                    score_change_sd = f_sd - f_prev
+                    qerror_sd = _qerror(sd_step, score_change_sd)
+                    accept_sd = (
+                        np.isfinite(f_sd)
+                        and (
+                            sd_best_step is None
+                            or (f_sd <= sd_best_f and qerror_sd < qerror_thresh)
+                        )
+                    )
+                    if accept_sd:
+                        sd_best_step = sd_step.copy()
+                        sd_best_f, sd_best_fit = f_sd, fit_sd
+                    # Stop once we've found descent and a shorter step
+                    # makes things worse.
+                    if (
+                        sd_best_step is not None and sd_best_f < f_prev
+                        and np.isfinite(f_sd) and f_sd > sd_best_f
+                    ):
+                        break
+                if sd_best_step is not None and sd_best_f < accepted_f:
+                    accepted_step = sd_best_step
+                    accepted_f = sd_best_f
+                    accepted_fit = sd_best_fit
+
+            if accepted_step is None:
                 conv_text = "step failed"
                 it_done = it + 1
                 break
-            theta = theta_try
-            df = abs(f_try - f_prev)
+            theta = theta + accepted_step
+            df = abs(accepted_f - f_prev)
             f_old = f_prev
-            f_prev = f_try
-            fit = fit_try
+            f_prev = accepted_f
+            fit = accepted_fit
             it_done = it + 1
 
-            # mgcv's two-part stopping test (Newton.r):
-            #   max(|grad|) ≤ score_scale·conv_tol·5
-            #   |Δscore|    ≤ score_scale·conv_tol
+            # mgcv's outer convergence test (gam.fit3.r:1647-1658):
+            # require non-indefinite Hessian, max(|grad|) ≤ 5·score_scale·conv_tol,
+            # AND |Δscore| ≤ score_scale·conv_tol.
             score_scale = _score_scale(fit, f_prev)
-            if (
-                float(np.abs(grad).max()) <= score_scale * conv_tol * 5.0
-                and df <= score_scale * conv_tol
-            ):
+            converged = not indef
+            if grad.size > 0 and float(np.abs(grad).max()) > score_scale * conv_tol * 5.0:
+                converged = False
+            if df > score_scale * conv_tol:
+                converged = False
+            if converged:
                 conv_text = "full convergence"
                 break
-            if df < 1e-12 * (1.0 + abs(f_prev)):
+            if df < 1e-12 * (1.0 + abs(f_prev)) and not indef:
                 conv_text = "full convergence"
                 break
 
@@ -3256,8 +3382,13 @@ class gam:
                 f"Scale est. = {self.sigma_squared:.5g}  n = {self.n}"
             )
         else:
+            # method="GCV.Cp" dispatches by family.scale_known: scale-known
+            # (Poisson, Binomial) optimizes UBRE, scale-unknown optimizes
+            # GCV. mgcv's summary.gam labels the printed score with the
+            # criterion that was actually optimized.
+            label = "UBRE" if self.family.scale_known else "GCV"
             out.append(
-                f"GCV = {self.GCV_score:.5g}  "
+                f"{label} = {self.GCV_score:.5g}  "
                 f"Scale est. = {self.sigma_squared:.5g}  n = {self.n}"
             )
         print("\n".join(out))
