@@ -197,7 +197,15 @@ class gam:
         # under method="GCV.Cp".
         d = prepare_design(formula, data)
         self._expanded = d.expanded
-        self.data = d.data
+        # Materialise smooth-arg expressions once into ``self.data`` so the
+        # synth columns (``s(I(b.depth^.5))`` ⇒ ``"I(b.depth^0.5)"``) are
+        # visible to every downstream consumer — plot_smooth's rug, partial
+        # residuals, summary, residuals_of, etc. — without each having to
+        # re-evaluate the expression. ``materialize_smooths`` will idempotently
+        # see the columns already present and skip the work.
+        from .formula import _apply_smooth_arg_exprs, _smooth_arg_expr_map
+        _expr_map = _smooth_arg_expr_map(self._expanded)
+        self.data = _apply_smooth_arg_exprs(d.data, _expr_map) if _expr_map else d.data
         X_param_df = d.X
         y = d.y.to_numpy().astype(float)
         X_param = X_param_df.to_numpy().astype(float)
