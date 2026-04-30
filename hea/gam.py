@@ -660,7 +660,7 @@ class gam:
         # edf1 = tr(2F-F²) is the upper bound; cap edf2 at edf1 in total
         # only. sc.p = 1 if scale is estimated, 0 if known (mgcv convention).
         if n_sp > 0:
-            edf2_per_coef, edf1_per_coef = self._compute_edf12(
+            edf2_per_coef, edf1_per_coef, Vc_corr = self._compute_edf12(
                 rho_hat, fit, sigma_squared, A_inv, A_inv_XtWX, edf, H_aug,
             )
             self.edf1 = edf1_per_coef
@@ -672,6 +672,11 @@ class gam:
             self.edf2 = edf.copy()
             self.edf1_total = edf_total
             self.edf2_total = edf_total
+            Vc_corr = np.zeros_like(Vp)
+        # mgcv's `model$Vc`: Vp + sp-uncertainty correction. Returned by
+        # `vcov(model, unconditional=TRUE)`. Used by itsadug's plot_diff /
+        # get_difference for the simultaneous-CI envelope.
+        self.Vc = Vp + Vc_corr
 
         # AIC / logLik via mgcv's logLik.gam machinery (mgcv.r:4420):
         #   m$aic = family.aic(y, μ, dev1, wt, n) + 2·sum(edf)         (mgcv.r:1843)
@@ -2722,7 +2727,10 @@ class gam:
                        A_inv_XtWX: np.ndarray, edf: np.ndarray,
                        H_aug: np.ndarray | None):
         """mgcv's edf1 (frequentist tr(2F−F²) bound) and edf2 (sp-uncertainty
-        corrected). Wood 2017 §6.11.3. Returns ``(edf2_per_coef, edf1_per_coef)``.
+        corrected). Wood 2017 §6.11.3. Returns ``(edf2_per_coef, edf1_per_coef,
+        Vc_correction)`` where ``Vc_correction = Vc1 + Vc2`` (the smoothing-
+        parameter-uncertainty correction to ``Vp``). Caller adds it to ``Vp``
+        to get mgcv's ``model$Vc`` (the ``unconditional=TRUE`` covariance).
 
         edf2 = diag((σ² A⁻¹ + Vc1 + Vc2) · X'WX) / σ², where
 
@@ -2740,10 +2748,11 @@ class gam:
         """
         F = A_inv_XtWX
         edf1 = 2.0 * np.diag(F) - np.einsum("ij,ji->i", F, F)
+        p = F.shape[0]
 
         n_sp = len(self._slots)
         if n_sp == 0:
-            return edf.copy(), edf1
+            return edf.copy(), edf1, np.zeros((p, p))
 
         db = self._db_drho(rho, fit.beta, fit.A_chol, fit.A_chol_lower)
         Vr = self._compute_Vr(rho, H_aug)
@@ -2773,9 +2782,10 @@ class gam:
             Xw = self._X_full * np.sqrt(W_F_view)[:, None]
             XtWX = Xw.T @ Xw
         if sigma_squared > 0 and np.isfinite(sigma_squared):
-            Vc = Vc1 + Vc2
-            edf2 = edf + np.einsum("ij,ij->i", Vc, XtWX) / sigma_squared
+            Vc_corr = Vc1 + Vc2
+            edf2 = edf + np.einsum("ij,ij->i", Vc_corr, XtWX) / sigma_squared
         else:
+            Vc_corr = np.zeros_like(Vc1)
             edf2 = edf.copy()
 
         # Total-sum cap only. mgcv's gam.fit3.post.proc deliberately does
@@ -2785,7 +2795,7 @@ class gam:
         # sum(edf), the wrong direction for an sp-uncertainty correction.
         if edf2.sum() > edf1.sum():
             edf2 = edf1.copy()
-        return edf2, edf1
+        return edf2, edf1, Vc_corr
 
     def _compute_Vr(self, rho: np.ndarray,
                     H_aug: np.ndarray | None,
@@ -3019,11 +3029,15 @@ class gam:
         """Predict from the fitted GAM — :func:`predict.gam` parity.
 
         ``type='response'`` returns ``μ̂ = g⁻¹(X_new β̂ + offset)``;
-        ``type='link'`` returns ``η̂ = X_new β̂ + offset``. With
-        ``se_fit=True``, also returns the standard error: link-scale SE is
-        ``√diag(X · Vp · Xᵀ)`` (offset is constant so it doesn't affect
-        SE); response-scale SE multiplies by ``|dμ/dη|`` (delta method,
-        same as mgcv).
+        ``type='link'`` returns ``η̂ = X_new β̂ + offset``;
+        ``type='lpmatrix'`` returns the linear-predictor design matrix
+        ``X_new`` itself (no β multiplication, no offset addition — offset
+        is added at the η level, not in X). With ``se_fit=True``, also
+        returns the standard error: link-scale SE is ``√diag(X · Vp · Xᵀ)``
+        (offset is constant so it doesn't affect SE); response-scale SE
+        multiplies by ``|dμ/dη|`` (delta method, same as mgcv).
+        ``se_fit=True`` is not allowed with ``type='lpmatrix'`` — the
+        matrix is the SE building block, not an estimate.
 
         ``Vp`` is the Bayesian posterior covariance (``self.Vp``) — mgcv's
         default for ``se.fit`` since smoothing-parameter shrinkage makes the
@@ -3033,9 +3047,13 @@ class gam:
         against ``newdata`` (mirrors ``predict.gam``). Pass ``offset=`` to
         override or to add an offset on top of the formula offset.
         """
-        if type not in ("link", "response"):
+        if type not in ("link", "response", "lpmatrix"):
             raise ValueError(
-                f"type must be 'link' or 'response'; got {type!r}"
+                f"type must be 'link', 'response', or 'lpmatrix'; got {type!r}"
+            )
+        if type == "lpmatrix" and se_fit:
+            raise ValueError(
+                "se_fit=True is not allowed with type='lpmatrix'"
             )
 
         if newdata is None:
@@ -3069,6 +3087,8 @@ class gam:
                     f"offset must have length {off_new.shape[0]}, got {extra.shape}"
                 )
             off_new = off_new + extra
+        if type == "lpmatrix":
+            return X_new
         eta = X_new @ self._beta + off_new
 
         fit = eta if type == "link" else self.family.link.linkinv(eta)
@@ -3227,6 +3247,472 @@ class gam:
             se=se_grid,
             type=type,
         )
+
+    def get_difference(
+        self,
+        comp: dict,
+        cond: dict | None = None,
+        rm_ranef: bool | str | list | None = True,
+        se: bool = True,
+        f: float = 1.96,
+        sim_ci: bool = False,
+        n_sim: int = 10_000,
+        rng: np.random.Generator | int | None = None,
+        print_summary: bool = False,
+    ) -> "DiffResult":
+        """Estimate the difference between two conditions of a fitted GAM —
+        :func:`itsadug::get_difference` parity. The numerical engine behind
+        :meth:`plot_diff`; call this directly if you want the difference table
+        without plotting.
+
+        Builds two prediction grids that differ only in ``comp``, takes the
+        link-scale design-matrix difference ``X1 − X2``, and returns
+        ``(X1 − X2) β̂`` together with pointwise and (optionally)
+        simultaneous confidence bands.
+
+        Parameters
+        ----------
+        comp : dict
+            ``{predictor: (level_a, level_b)}``. The difference is fit-at-A
+            minus fit-at-B. itsadug allows ≥ 2 levels and silently keeps the
+            first two — same here, with a warning.
+        cond : dict, optional
+            Other variables held at user-specified values. Length-1 entries
+            broadcast across the grid; length-N entries (e.g. the x-axis
+            covariate inside :meth:`plot_diff`) define the grid axis. Any
+            variables not in ``comp`` or ``cond`` are held at the typical
+            value (median for numeric, mode for factor — same as mgcv's
+            ``variable.summary``). Variables that overlap with ``comp``
+            keys are dropped from ``cond`` with a warning.
+        rm_ranef : bool, str, list of str, or None
+            Smooth labels whose columns are zeroed in the design matrix
+            before computing the difference. ``True`` (default, matching
+            itsadug) zeros every smooth with ``null.space.dim == 0`` —
+            ``bs="re"`` random effects, ``bs="fs"`` factor smooths, ``bs=
+            "sz"`` sum-to-zero interactions. ``False``/``None`` zeros
+            nothing. A string or list selects by label-substring AND
+            null-space-0 (intersection — itsadug's two-pass grep). Note:
+            until GAMM support lands, models won't carry null-space-0
+            smooths so ``rm_ranef=True`` is a no-op.
+        se : bool
+            Compute pointwise CI half-width ``f · √diag((X1−X2) Vp (X1−X2)ᵀ)``.
+        f : float
+            SE multiplier for the pointwise CI. ``1.96`` ≈ 95%, ``2.58`` ≈ 99%.
+            Also drives the ``sim_ci`` envelope's coverage probability via
+            ``prob = 1 − round(2·(1 − Φ(f)), 2)`` (itsadug's exact rule —
+            the ``round(·, 2)`` snaps 1.96 → 0.95, 2.58 → 0.99).
+        sim_ci : bool
+            Add a simultaneous CI envelope (Wood 2017 §6.10). Uses
+            ``self.Vc`` (mgcv's ``unconditional=TRUE`` covariance) for the
+            posterior draws. ``n.grid`` is bumped to ≥ 200 by
+            :meth:`plot_diff`; this method itself trusts the caller.
+        n_sim : int
+            Number of MVN draws for the simultaneous envelope. Default
+            10,000, matching itsadug.
+        rng : numpy Generator | int | None
+            RNG for the simultaneous draws. ``None`` uses
+            ``np.random.default_rng()`` (non-deterministic).
+        print_summary : bool
+            Print a per-variable summary of the conditions used (mirror of
+            itsadug's ``print.summary``).
+        """
+        if not isinstance(comp, dict) or len(comp) == 0:
+            raise ValueError(
+                "comp must be a non-empty dict, e.g. comp={'Group': ('A', 'B')}"
+            )
+        cond = dict(cond) if cond else {}
+
+        # --- comp validation -------------------------------------------------
+        cols_data = self.data.columns
+        bad = [k for k in comp if k not in cols_data]
+        if bad:
+            raise ValueError(
+                f"Grouping predictor(s) not found in model: {', '.join(bad)}"
+            )
+        for k, v in list(comp.items()):
+            if not hasattr(v, "__len__") or len(v) < 2:
+                raise ValueError(
+                    f"Provide two levels for {k!r} to calculate the difference."
+                )
+            if len(v) > 2:
+                import warnings as _w
+                _w.warn(
+                    f"More than two levels provided for predictor {k!r}. "
+                    "Only first two levels are being used.",
+                    stacklevel=2,
+                )
+
+        # cond keys overlapping with comp keys: drop from cond with a warning
+        # (itsadug warns and drops; the comp value wins).
+        for k in [k for k in cond if k in comp]:
+            import warnings as _w
+            _w.warn(
+                f"Predictor {k!r} specified in comp and cond. "
+                "(The value in cond will be ignored.)",
+                stacklevel=2,
+            )
+            cond.pop(k)
+
+        # --- build the two grids ---------------------------------------------
+        su = self._var_summary()
+        # mgcv's variable.summary ranges over RHS-of-formula variables. For
+        # any RHS variable not in comp and not in cond, use the typical value
+        # (mode for factor, median for numeric). Variables in cond may be
+        # length-N (the x-axis grid that plot_diff prefills) — keep as-is
+        # in both grids.
+        new_cond1: dict[str, object] = {}
+        new_cond2: dict[str, object] = {}
+        for var in su:
+            if var in comp:
+                v = comp[var]
+                new_cond1[var] = [v[0]]
+                new_cond2[var] = [v[1]]
+            elif var in cond:
+                vals = cond[var]
+                if not hasattr(vals, "__len__") or isinstance(vals, str):
+                    vals = [vals]
+                new_cond1[var] = list(vals)
+                new_cond2[var] = list(vals)
+            else:
+                typ = su[var]
+                new_cond1[var] = [typ]
+                new_cond2[var] = [typ]
+        # Also honor cond entries for variables outside var.summary (defensive
+        # — su covers RHS-of-formula vars; user could pass an extra column
+        # name that's still referenced through some indirection).
+        for var in cond:
+            if var not in new_cond1:
+                vals = cond[var]
+                if not hasattr(vals, "__len__") or isinstance(vals, str):
+                    vals = [vals]
+                new_cond1[var] = list(vals)
+                new_cond2[var] = list(vals)
+
+        newd1 = _expand_grid(new_cond1)
+        newd2 = _expand_grid(new_cond2)
+        # Preserve schema from self.data so factor levels and dtypes match
+        # what predict() expects.
+        newd1 = _coerce_schema(newd1, self.data)
+        newd2 = _coerce_schema(newd2, self.data)
+
+        # --- lpmatrices ------------------------------------------------------
+        # Predict on a single combined frame to dodge a known limitation:
+        # ``materialize`` drops absent factor levels from new data (R's
+        # ``droplevels`` semantics — fine at fit time, wrong at predict
+        # time, since mgcv stores ``model$xlevels`` and we don't yet). By
+        # stacking newd1 + newd2 the comp variables regain both levels in
+        # one frame; stub rows then top up any non-comp factor still
+        # missing source levels (e.g. sex='F' when 'M' is the mode).
+        n1 = newd1.height
+        combined = pl.concat([newd1, newd2], how="vertical_relaxed")
+        combined, n_stubs = _add_factor_stub_rows(combined, self.data)
+        P = np.asarray(self.predict(combined, type="lpmatrix"), dtype=float)
+        if n_stubs > 0:
+            P = P[:-n_stubs]
+        p1 = P[:n1]
+        p2 = P[n1:]
+
+        # --- rm.ranef --------------------------------------------------------
+        # itsadug treats rm_ranef==False the same as None (no removal).
+        if rm_ranef is False:
+            rm_ranef = None
+        cancelled: list[str] = []
+        if rm_ranef is not None:
+            # null-space-dim==0 smooths in our codebase: re/fs/sz, mirroring
+            # mgcv's bs="re"/"fs"/"sz" (these are the fully penalized,
+            # "random-effect-like" smooths).
+            ns0_classes = ("re.smooth.spec", "fs.interaction", "sz.interaction")
+            ns0_blocks = [
+                (b, rng_)
+                for b, rng_ in zip(self._blocks, self._block_col_ranges)
+                if b.cls in ns0_classes
+            ]
+            if rm_ranef is True:
+                target_labels = [b.label for b, _ in ns0_blocks]
+            else:
+                if isinstance(rm_ranef, str):
+                    rm_ranef_list = [rm_ranef]
+                else:
+                    rm_ranef_list = list(rm_ranef)
+                # itsadug's two-pass grep: keep blocks that are null-space-0
+                # AND whose label contains a user-supplied substring.
+                target_labels = [
+                    b.label
+                    for b, _ in ns0_blocks
+                    if any(s in b.label for s in rm_ranef_list)
+                ]
+            for b, (a, bcol) in ns0_blocks:
+                if b.label in target_labels:
+                    p1[:, a:bcol] = 0.0
+                    p2[:, a:bcol] = 0.0
+                    cancelled.append(b.label)
+
+        # --- difference + CI -------------------------------------------------
+        p = p1 - p2
+        diff = p @ self._beta
+        ci = None
+        if se:
+            # √diag(p · Vp · pᵀ) — rowSums((p @ Vp) * p) is the same thing,
+            # and is what itsadug writes literally. The einsum is faster.
+            var_diff = np.einsum("ij,jk,ik->i", p, self.Vp, p)
+            ci = f * np.sqrt(np.maximum(var_diff, 0.0))
+
+        # --- simultaneous CI (Wood 2017 §6.10 / Marra & Wood 2012) ----------
+        sim_ci_arr = None
+        crit_val = None
+        if sim_ci:
+            Vb = self.Vc  # unconditional=TRUE covariance
+            var_fit = np.einsum("ij,jk,ik->i", p, Vb, p)
+            se_fit = np.sqrt(np.maximum(var_fit, 0.0))
+            if isinstance(rng, (int, np.integer)) or rng is None:
+                rng_obj = np.random.default_rng(rng)
+            else:
+                rng_obj = rng
+            # Draw from MVN(0, Vb). itsadug uses mgcv::rmvn which Cholesky-
+            # factors V; numpy's multivariate_normal uses SVD by default,
+            # which is also stable on near-PD matrices. n_sim defaults 10000.
+            mu0 = np.zeros(Vb.shape[0])
+            sim = rng_obj.multivariate_normal(mu0, Vb, size=n_sim,
+                                              method="cholesky")
+            # simDev[i, s] = (p · sim[s])[i] — deviation at grid point i for
+            # draw s. Standardize by se_fit, take row-wise max, then quantile.
+            simDev = p @ sim.T
+            absDev = np.abs(simDev / se_fit[:, None])
+            masd = absDev.max(axis=0)
+            # itsadug's exact prob: 1 − round(2·(1 − Φ(f)), 2). For f=1.96
+            # → 0.95; f=2.58 → 0.99. Using R's type-8 quantile (Hyndman-Fan)
+            # via numpy's "median_unbiased" method (equivalent).
+            prob = 1.0 - round(2.0 * (1.0 - float(norm.cdf(f))), 2)
+            crit_val = float(np.quantile(masd, prob, method="median_unbiased"))
+            sim_ci_arr = crit_val * se_fit
+
+        # --- print summary ---------------------------------------------------
+        if print_summary:
+            print(_format_difference_summary(
+                comp=comp, cond=cond, su=su, cancelled=cancelled,
+                rm_ranef=rm_ranef, sim_ci=sim_ci, f=f,
+            ))
+
+        # --- comp label string ----------------------------------------------
+        levels1 = ".".join(str(comp[k][0]) for k in comp)
+        levels2 = ".".join(str(comp[k][1]) for k in comp)
+        comp_label = f"{', '.join(f'{k}={tuple(v)[:2]}' for k, v in comp.items())}"
+
+        # Output grid: drop comp columns (itsadug does this in the data.frame
+        # output — comp is logged separately, not in the per-row table).
+        grid_out = newd1.drop(*[c for c in comp if c in newd1.columns])
+
+        return DiffResult(
+            xvar=None,
+            grid=grid_out,
+            difference=diff,
+            f=f if se else None,
+            ci=ci,
+            sim_ci=sim_ci_arr,
+            crit=crit_val,
+            comp_label=comp_label,
+            levels=(levels1, levels2),
+            rm_ranef_cancelled=cancelled,
+        )
+
+    def plot_diff(
+        self,
+        view: str,
+        comp: dict,
+        cond: dict | None = None,
+        se: float = 1.96,
+        sim_ci: bool = False,
+        n_grid: int = 100,
+        rm_ranef: bool | str | list | None = True,
+        mark_diff: bool = True,
+        col: str = "black",
+        col_diff: str = "red",
+        transform_view=None,
+        n_sim: int = 10_000,
+        rng: np.random.Generator | int | None = None,
+        print_summary: bool = False,
+        ax=None,
+        figsize: tuple | None = None,
+        xlim: tuple | None = None,
+        ylim: tuple | None = None,
+        xlab: str | None = None,
+        ylab: str | None = None,
+        title: str | None = None,
+        hide_label: bool = False,
+        shade: bool = True,
+        alpha: float = 0.25,
+    ):
+        """Plot the predicted difference between two conditions —
+        :func:`itsadug::plot_diff` parity.
+
+        Builds an n_grid grid over ``view``, calls :meth:`get_difference` to
+        get the link-scale ``(X1 − X2) β̂`` curve plus its CI, plots the
+        curve with a CI band, and (when ``mark_diff=True``) overlays the
+        x-windows where the band excludes zero.
+
+        Parameters
+        ----------
+        view : str
+            Name of the x-axis covariate. The grid is
+            ``np.linspace(min, max, n_grid)`` over the data column (NaNs
+            dropped). itsadug only takes the first element if ``view`` is
+            a vector and warns; multi-dimensional differences live in
+            ``plot_diff2`` (not implemented here yet).
+        comp : dict
+            Same as :meth:`get_difference`: ``{predictor: (level_a, level_b)}``.
+        cond : dict, optional
+            Other variables to hold fixed. If ``view`` is included here,
+            ``cond[view]`` overrides the auto-built grid (with a warning),
+            matching itsadug's behavior.
+        se : float
+            SE multiplier for the pointwise CI band. ``> 0`` draws the band;
+            ``≤ 0`` plots only the curve. Default ``1.96`` (≈ 95% pointwise).
+        sim_ci : bool
+            Use the simultaneous-CI envelope (Wood 2017 §6.10) instead of
+            the pointwise band for the visual band and the
+            ``mark_diff`` window detection. itsadug bumps ``n_grid`` to
+            at least 200 when this is on — same here.
+        n_grid : int
+            Grid resolution. Bumped to ≥ 200 if ``sim_ci=True`` (matches
+            itsadug — fewer points underestimate the simultaneous critical
+            value).
+        rm_ranef, n_sim, rng, print_summary : passed through.
+        mark_diff : bool
+            Shade the x-windows where the CI excludes 0 with vertical dotted
+            guides + a top-of-axis tick (matching itsadug's
+            ``addInterval`` + ``abline`` combo).
+        col, col_diff, transform_view, xlim, ylim, xlab, ylab, title,
+        hide_label, shade, alpha : visual knobs.
+
+        Returns the matplotlib ``Axes``.
+        """
+        # itsadug bumps to 200 for adequate sim-ci precision. Same here.
+        if sim_ci:
+            n_grid = max(n_grid, 200)
+
+        if view not in self.data.columns:
+            raise ValueError(
+                f"view variable {view!r} not in data; available: "
+                f"{list(self.data.columns)}"
+            )
+        cond = dict(cond) if cond else {}
+
+        # Build the x-axis grid. If view is in cond, itsadug warns and uses
+        # cond's values, ignoring the auto-built linspace. Mirror that.
+        if view in cond:
+            import warnings as _w
+            _w.warn(
+                f"Predictor {view!r} specified in view and cond. Values in "
+                f"cond being used, rather than the whole range of {view!r}.",
+                stacklevel=2,
+            )
+        else:
+            col_view = self.data[view].drop_nulls().to_numpy().astype(float)
+            if col_view.size == 0:
+                raise ValueError(
+                    f"view variable {view!r} has no non-null values"
+                )
+            cond[view] = np.linspace(col_view.min(), col_view.max(), n_grid)
+        if xlim is not None:
+            if len(xlim) != 2:
+                import warnings as _w
+                _w.warn(
+                    "Invalid xlim values specified. Argument xlim is being ignored.",
+                    stacklevel=2,
+                )
+            else:
+                cond[view] = np.linspace(xlim[0], xlim[1], n_grid)
+
+        result = self.get_difference(
+            comp=comp, cond=cond, rm_ranef=rm_ranef,
+            se=(se > 0), f=(se if se > 0 else 1.96),
+            sim_ci=sim_ci, n_sim=n_sim, rng=rng,
+            print_summary=print_summary,
+        )
+        result.xvar = view
+
+        # Optional x-axis transform — itsadug applies `transform.view` to the
+        # x values before plotting (for log-scaling, etc.).
+        x = np.asarray(result.grid[view].to_numpy(), dtype=float).copy()
+        if transform_view is not None:
+            try:
+                x = np.asarray([transform_view(xi) for xi in x], dtype=float)
+            except Exception as exc:
+                raise RuntimeError(
+                    "Error: the function specified in transform_view cannot be "
+                    "applied to x-values, because infinite or missing values "
+                    "are not allowed."
+                ) from exc
+            if not np.all(np.isfinite(x)):
+                raise RuntimeError(
+                    "Error: the function specified in transform_view cannot be "
+                    "applied to x-values, because infinite or missing values "
+                    "are not allowed."
+                )
+
+        # --- plotting --------------------------------------------------------
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=figsize or (6, 4))
+
+        diff = result.difference
+        band = result.sim_ci if (sim_ci and result.sim_ci is not None) else result.ci
+
+        if se > 0 and band is not None and shade:
+            ax.fill_between(x, diff - band, diff + band, color=col,
+                            alpha=alpha, linewidth=0)
+        ax.plot(x, diff, color=col, linewidth=1.5)
+        # h=0 reference line — itsadug's `par[["h0"]] <- 0` default.
+        ax.axhline(0.0, color="gray", linewidth=0.6, linestyle="-")
+
+        # mark.diff: shade x-windows where the band excludes 0
+        regions = result.regions(use_sim_ci=sim_ci) if mark_diff and band is not None else None
+        if regions:
+            ymin, ymax = ax.get_ylim()
+            for (start, end) in regions:
+                ax.axvline(start, color=col_diff, linestyle=":", linewidth=1)
+                ax.axvline(end, color=col_diff, linestyle=":", linewidth=1)
+            # Top-of-axis tick bars (itsadug's `addInterval` at top edge).
+            trans = blended_transform_factory(ax.transData, ax.transAxes)
+            for (start, end) in regions:
+                ax.plot([start, end], [1.0, 1.0], transform=trans,
+                        color=col_diff, linewidth=2.0,
+                        clip_on=False, solid_capstyle="butt")
+
+        if title is None:
+            title = f"Difference {result.levels[0]} − {result.levels[1]}"
+        ax.set_title(title)
+        # mgcv stores the response name on the LHS of the formula; pull
+        # the formula's lhs for the y-label like itsadug does.
+        lhs = self.formula.split("~", 1)[0].strip()
+        if ylab is None:
+            ylab = f"Est. difference in {lhs}"
+        if xlab is None:
+            xlab = view
+        ax.set_xlabel(xlab)
+        ax.set_ylabel(ylab)
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        if xlim is not None and len(xlim) == 2:
+            ax.set_xlim(xlim)
+
+        if not hide_label:
+            label = "difference"
+            if rm_ranef not in (None, False) and result.rm_ranef_cancelled:
+                label += ", excl. random"
+            if sim_ci:
+                label += ", simult.CI"
+            ax.text(1.0, 1.01, label, transform=ax.transAxes,
+                    ha="right", va="bottom", fontsize=8, color="gray")
+
+        if print_summary:
+            if regions:
+                print(f"\n{view} window(s) of significant difference(s):")
+                for (s, e) in regions:
+                    print(f"\t{s:f} - {e:f}")
+            else:
+                print("\nDifference is not significant.")
+
+        return ax
 
     def _var_summary(self) -> dict:
         """mgcv ``variable.summary`` parity: typical value per variable.
@@ -4901,3 +5387,244 @@ def _axis_for_plot(m: np.ndarray):
     if m.dtype.kind in ("U", "S", "O"):
         return np.arange(len(m), dtype=float), [str(v) for v in m]
     return np.asarray(m, dtype=float), None
+
+
+def _expand_grid(d: dict[str, list]) -> pl.DataFrame:
+    """Cartesian product of list-valued columns — R's :func:`expand.grid`.
+
+    Column order matches insertion order of ``d``. R's ``expand.grid``
+    iterates the *first* variable fastest; for our use case (one length-N
+    column, the rest length 1), the iteration order doesn't matter, but we
+    preserve the convention with ``meshgrid(indexing='ij')``.
+    """
+    if not d:
+        return pl.DataFrame()
+    keys = list(d.keys())
+    arrays = [np.asarray(d[k]) if not isinstance(d[k], np.ndarray) else d[k]
+              for k in keys]
+    grids = np.meshgrid(*arrays, indexing="ij")
+    cols = {k: g.ravel() for k, g in zip(keys, grids)}
+    return pl.DataFrame(cols)
+
+
+def _coerce_schema(grid: pl.DataFrame, src: pl.DataFrame) -> pl.DataFrame:
+    """Cast each grid column to the matching dtype in ``src`` (factor/string
+    columns need to come back as strings, numeric stays numeric). Mirrors
+    the schema-restoring loop in :meth:`gam.vis`.
+    """
+    out = grid
+    for name in out.columns:
+        if name in src.columns and src[name].dtype != out[name].dtype:
+            out = out.with_columns(out[name].cast(src[name].dtype))
+    return out
+
+
+def _add_factor_stub_rows(grid: pl.DataFrame, src: pl.DataFrame):
+    """Append one stub row per missing source-factor level so that
+    :meth:`gam.predict` (under the hood, :func:`materialize`) sees every
+    factor level the model was fit with.
+
+    Rationale: without this, ``materialize``'s droplevels behavior
+    (formula.py: line 1031–1037) collapses the contrast to only the levels
+    present in the new data, returning a design matrix with fewer columns
+    than ``self._beta``. mgcv side-steps this with ``model$xlevels``;
+    we'll wire that into predict eventually, but this keeps
+    ``get_difference`` correct in the interim.
+
+    Returns ``(grid_with_stubs, n_stubs)``. Stubs are appended at the
+    *end* — drop them via ``X[:-n_stubs]`` after predicting.
+    """
+    if grid.height == 0:
+        return grid, 0
+    stubs: list[dict] = []
+    # Each stub copies the first row's other-column values so the
+    # smooth bases evaluate at sensible points.
+    template = {col: grid[col][0] for col in grid.columns}
+    for name in grid.columns:
+        if name not in src.columns:
+            continue
+        src_col = src[name]
+        if not _is_factor_like_col(src_col):
+            continue
+        from .formula import _factor_levels  # local to avoid cycle
+        src_levels = list(_factor_levels(src_col))
+        if len(src_levels) <= 1:
+            continue
+        present = set(grid[name].drop_nulls().to_list())
+        for lv in src_levels:
+            if lv not in present:
+                row = dict(template)
+                row[name] = lv
+                stubs.append(row)
+                # Track that this stub also adds the level — so
+                # downstream factors don't double-stub for it.
+                present.add(lv)
+    if not stubs:
+        return grid, 0
+    stub_df = pl.DataFrame(stubs).select(grid.columns)
+    for col in stub_df.columns:
+        if stub_df[col].dtype != grid[col].dtype:
+            stub_df = stub_df.with_columns(stub_df[col].cast(grid[col].dtype))
+    return pl.concat([grid, stub_df], how="vertical_relaxed"), len(stubs)
+
+
+def _format_difference_summary(*, comp, cond, su, cancelled, rm_ranef,
+                                sim_ci, f) -> str:
+    """Itsadug-style ``print.summary`` text for :meth:`gam.get_difference`.
+
+    Lists each variable and the value(s) used: first level vs second level
+    for comp predictors, the cond array (or scalar) for cond predictors,
+    typical value for the rest. Reports cancelled random-effect labels
+    when ``rm_ranef`` is in effect. Not a parser — just an info dump.
+    """
+    lines = ["Summary:"]
+    for k, v in comp.items():
+        lines.append(f"\t* {k} : factor; set to the value(s): {v[0]}, {v[1]}.")
+    for k, v in cond.items():
+        if hasattr(v, "__len__") and not isinstance(v, str) and len(v) > 1:
+            lo, hi = float(np.min(v)), float(np.max(v))
+            lines.append(
+                f"\t* {k} : numeric; range from {lo:.6g} to {hi:.6g} "
+                f"(length {len(v)})."
+            )
+        else:
+            lines.append(f"\t* {k} : set to {v}.")
+    for k, v in su.items():
+        if k in comp or k in cond:
+            continue
+        lines.append(f"\t* {k} : held at typical value {v}.")
+    if rm_ranef not in (None, False):
+        if cancelled:
+            lines.append(
+                "\tNOTE: The following random effects columns are canceled: "
+                f"{', '.join(cancelled)}."
+            )
+        else:
+            lines.append("\tNOTE: No random effects in the model to cancel.")
+    if sim_ci:
+        pct = 100.0 * (1.0 - round(2.0 * (1.0 - float(norm.cdf(f))), 2))
+        lines.append(f"\tSimultaneous {pct:.0f}%-CI used.")
+    return "\n".join(lines)
+
+
+def _find_difference(mean: np.ndarray, se: np.ndarray,
+                     x_vals: np.ndarray | None = None,
+                     f: float = 1.0) -> dict | None:
+    """Return contiguous regions where ``[mean − f·se, mean + f·se]`` excludes 0
+    — direct port of itsadug's ``find_difference``.
+
+    Returns ``None`` if no such region (matches R's ``NULL``). Otherwise
+    a dict ``{"start": [...], "end": [...], "x_vals": bool}`` — element
+    pairs ``(start[i], end[i])`` give the inclusive boundaries of one
+    region. With ``x_vals`` provided and length-aligned, boundaries are
+    in x-units; otherwise they are zero-based grid indices.
+
+    Matches the R logic: find the indices where 0 is *not* in the band,
+    split into runs by ``diff > 1``, take the first index of each run as
+    the start and the last as the end.
+    """
+    if mean.shape != se.shape:
+        raise ValueError("mean and se must have the same shape")
+    ub = mean + f * se
+    lb = mean - f * se
+    sig = ~((ub >= 0) & (lb <= 0))
+    n = np.where(sig)[0]
+    if n.size == 0:
+        return None
+    diffs = np.diff(n)
+    starts_idx = np.concatenate(([0], np.where(diffs > 1)[0] + 1))
+    ends_idx = np.concatenate((np.where(diffs > 1)[0], [n.size - 1]))
+    starts = n[starts_idx]
+    ends = n[ends_idx]
+    if x_vals is not None and len(x_vals) == len(mean):
+        return {
+            "start": np.asarray(x_vals)[starts].tolist(),
+            "end":   np.asarray(x_vals)[ends].tolist(),
+            "x_vals": True,
+        }
+    return {
+        "start": starts.tolist(),
+        "end":   ends.tolist(),
+        "x_vals": False,
+    }
+
+
+class DiffResult:
+    """Output of :meth:`gam.get_difference` — the numerical table behind a
+    :meth:`gam.plot_diff` plot.
+
+    Attributes
+    ----------
+    xvar : str | None
+        Name of the x-axis covariate when this result came from
+        :meth:`plot_diff`. ``None`` if the result was produced via
+        :meth:`get_difference` directly (use ``grid`` to find the
+        varying axis).
+    grid : pl.DataFrame
+        The condition grid, one row per evaluated point. Comp predictors
+        are dropped (they're logged in ``levels``); cond predictors and
+        held-at-typical-value predictors stay.
+    difference : (n_grid,) ndarray
+        Link-scale predicted difference ``(X1 − X2) β̂``. Length matches
+        ``grid.height``.
+    f : float | None
+        SE multiplier used for the pointwise CI (``None`` if ``se=False``).
+    ci : (n_grid,) ndarray | None
+        Pointwise CI half-width: ``f · √diag((X1−X2) Vp (X1−X2)ᵀ)``.
+    sim_ci : (n_grid,) ndarray | None
+        Simultaneous CI half-width (Wood 2017 §6.10) when ``sim_ci=True``;
+        else ``None``. Built from ``self.Vc`` (the unconditional cov).
+    crit : float | None
+        The simultaneous critical value (empirical quantile of the max
+        absolute standardized deviation).
+    comp_label : str
+        Human-readable comparison label (e.g. ``"Group=('A', 'B')"``).
+    levels : (str, str)
+        ``(first, second)`` from the comp dict, joined across multi-key
+        comp by '.'.
+    rm_ranef_cancelled : list[str]
+        Smooth labels whose columns were zeroed.
+    """
+
+    __slots__ = (
+        "xvar", "grid", "difference", "f", "ci", "sim_ci", "crit",
+        "comp_label", "levels", "rm_ranef_cancelled",
+    )
+
+    def __init__(self, *, xvar, grid, difference, f, ci, sim_ci, crit,
+                 comp_label, levels, rm_ranef_cancelled):
+        self.xvar = xvar
+        self.grid = grid
+        self.difference = difference
+        self.f = f
+        self.ci = ci
+        self.sim_ci = sim_ci
+        self.crit = crit
+        self.comp_label = comp_label
+        self.levels = levels
+        self.rm_ranef_cancelled = rm_ranef_cancelled
+
+    def __repr__(self) -> str:
+        return (
+            f"DiffResult(comp={self.comp_label}, n_grid={len(self.difference)}, "
+            f"diff range=[{np.min(self.difference):.4g}, "
+            f"{np.max(self.difference):.4g}], "
+            f"sim_ci={'yes' if self.sim_ci is not None else 'no'})"
+        )
+
+    def regions(self, use_sim_ci: bool = False) -> list[tuple]:
+        """Return a list of ``(start, end)`` x-windows where the CI
+        excludes 0 — wraps :func:`_find_difference` and returns x-units
+        when ``xvar`` is known, grid indices otherwise.
+        """
+        band = self.sim_ci if use_sim_ci else self.ci
+        if band is None:
+            return []
+        x = None
+        if self.xvar is not None and self.xvar in self.grid.columns:
+            x = np.asarray(self.grid[self.xvar].to_numpy(), dtype=float)
+        # f=1.0 because `band` already includes the f multiplier.
+        out = _find_difference(self.difference, band, x_vals=x, f=1.0)
+        if out is None:
+            return []
+        return list(zip(out["start"], out["end"]))
