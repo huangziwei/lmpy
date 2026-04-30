@@ -1612,23 +1612,51 @@ class gam:
             }
             return theta
 
+        # Initial grad/hess at θ₀ and starting active set
+        # (gam.fit3.r:1383-1385). Dimensions whose gradient is already
+        # below ``score_scale·conv_tol`` start out inactive (excluded
+        # from the Newton step). If everything is below threshold, mark
+        # all active so the iter has something to move.
+        rho0, log_phi0 = _split(theta)
+        grad = _grad(rho0, log_phi0, fit)
+        H = _hess(rho0, log_phi0, fit)
+        H = 0.5 * (H + H.T)
+        score_scale = _score_scale(fit, f_prev)
+        uconv_ind = np.abs(grad) > score_scale * conv_tol
+        if not np.any(uconv_ind):
+            uconv_ind = np.ones_like(uconv_ind, dtype=bool)
+
         conv_text = "iteration limit reached"
-        last_grad = np.zeros_like(theta)
-        last_hess = np.zeros((theta.size, theta.size))
+        last_grad = grad
+        last_hess = H
         it_done = 0
         for it in range(max_iter):
-            rho, log_phi = _split(theta)
-            grad = _grad(rho, log_phi, fit)
-            H = _hess(rho, log_phi, fit)
-            H = 0.5 * (H + H.T)
-            last_grad, last_hess = grad, H
             score_scale = _score_scale(fit, f_prev)
 
-            # Eigen analysis with mgcv's pdef/indef flags
-            # (gam.fit3.r:1438-1455). ``indef`` triggers the SD-fallback;
-            # ``pdef`` False blocks immediate-step acceptance.
+            # Active-set masking (gam.fit3.r:1430-1436). Exclude
+            # apparently-converged dims from the Newton step. mgcv also
+            # computes a tighter ``uconv.ind1`` mask there but never
+            # uses it; we follow suit. Safety net: if everything is
+            # marked inactive, force the largest-|grad| dim active so
+            # the iter still has something to move.
+            if not np.any(uconv_ind):
+                j = int(np.argmax(np.abs(grad))) if grad.size > 0 else 0
+                uconv_ind = np.zeros_like(uconv_ind, dtype=bool)
+                if grad.size > 0:
+                    uconv_ind[j] = True
             if H.size > 0:
-                w_eig, V_eig = np.linalg.eigh(H)
+                H1 = H[np.ix_(uconv_ind, uconv_ind)]
+                grad1 = grad[uconv_ind]
+            else:
+                H1 = H
+                grad1 = grad
+
+            # Eigen analysis on the active subblock with mgcv's
+            # pdef/indef flags (gam.fit3.r:1438-1455). ``indef``
+            # triggers the SD-fallback; ``pdef`` False blocks
+            # immediate-step acceptance.
+            if H1.size > 0:
+                w_eig, V_eig = np.linalg.eigh(H1)
                 d_max_abs = float(np.abs(w_eig).max())
                 sqrt_eps = float(np.finfo(float).eps ** 0.5)
                 if d_max_abs > 0:
@@ -1648,7 +1676,9 @@ class gam:
                     pdef = False
                     d = np.where(clamp_mask, low_d, d)
                 d_inv = np.where(d > 0, 1.0 / d, 0.0)
-                Nstep = -V_eig @ (d_inv * (V_eig.T @ grad))
+                Nstep_active = -V_eig @ (d_inv * (V_eig.T @ grad1))
+                Nstep = np.zeros_like(grad)
+                Nstep[uconv_ind] = Nstep_active
             else:
                 Nstep = np.zeros_like(grad)
                 pdef = True
@@ -1680,7 +1710,7 @@ class gam:
             score_change = f_try - f_prev
             qerror = _qerror(Nstep, score_change)
             if (
-                np.isfinite(f_try) and score_change < -1e-14 * abs(f_prev)
+                np.isfinite(f_try) and score_change < 0
                 and pdef and qerror < qerror_thresh
             ):
                 accepted_step, accepted_f, accepted_fit = Nstep.copy(), f_try, fit_try
@@ -1705,7 +1735,7 @@ class gam:
                         qerror = _qerror(step, score_change)
                     if (
                         np.isfinite(f_try)
-                        and score_change < -1e-14 * abs(f_prev)
+                        and score_change < 0
                         and qerror < qerror_thresh
                     ):
                         accepted_step = step.copy()
@@ -1722,7 +1752,9 @@ class gam:
                 sd_best_step = None
                 sd_best_f = float("inf")
                 sd_best_fit = None
-                sd_step = Sstep * (max_sd_step * 2)
+                # mgcv starts at 2·Sstep so the first halving gives
+                # Sstep itself (max-norm 1) — gam.fit3.r:1581.
+                sd_step = Sstep * 2
                 for kk in range(40):
                     sd_step = sd_step / 2
                     f_sd, fit_sd = _eval(theta + sd_step)
@@ -1756,34 +1788,41 @@ class gam:
                 break
             theta = theta + accepted_step
             df = abs(accepted_f - f_prev)
-            f_old = f_prev
             f_prev = accepted_f
             fit = accepted_fit
             it_done = it + 1
 
-            # mgcv's outer convergence test (gam.fit3.r:1647-1658):
+            # Recompute grad/hess at the new θ (gam.fit3.r:1505-1508).
+            # The convergence test and active-set update use these
+            # post-step values, mirroring mgcv's gam.fit3 deriv=2 refit.
+            rho_n, log_phi_n = _split(theta)
+            grad = _grad(rho_n, log_phi_n, fit)
+            H = _hess(rho_n, log_phi_n, fit)
+            H = 0.5 * (H + H.T)
+            last_grad, last_hess = grad, H
+
+            # mgcv's outer convergence test (gam.fit3.r:1646-1658):
             # require non-indefinite Hessian, max(|grad|) ≤ 5·score_scale·conv_tol,
             # AND |Δscore| ≤ score_scale·conv_tol.
             score_scale = _score_scale(fit, f_prev)
             converged = not indef
+            # Refresh active set from new grad/hess (gam.fit3.r:1650-1651).
+            diag_H = np.diag(H) if H.size > 0 else np.array([])
+            uconv_ind = (
+                (np.abs(grad) > score_scale * conv_tol * 0.1)
+                | (np.abs(diag_H) > score_scale * conv_tol * 0.1)
+            )
             if grad.size > 0 and float(np.abs(grad).max()) > score_scale * conv_tol * 5.0:
                 converged = False
             if df > score_scale * conv_tol:
+                if converged:
+                    # Otherwise can't progress (gam.fit3.r:1654).
+                    uconv_ind = np.ones_like(uconv_ind, dtype=bool)
                 converged = False
             if converged:
                 conv_text = "full convergence"
                 break
-            if df < 1e-12 * (1.0 + abs(f_prev)) and not indef:
-                conv_text = "full convergence"
-                break
 
-        # Recompute final grad/hess at the converged θ so the diagnostics
-        # reflect the *accepted* step (last_grad above is from the iter's
-        # entry θ, which after a successful step is one back from final).
-        rho_f, log_phi_f = _split(theta)
-        last_grad = _grad(rho_f, log_phi_f, fit)
-        last_hess = _hess(rho_f, log_phi_f, fit)
-        last_hess = 0.5 * (last_hess + last_hess.T)
         self._outer_info = {
             "conv": conv_text,
             "iter": it_done,

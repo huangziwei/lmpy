@@ -272,10 +272,14 @@ def test_machines_re_smooths_REML():
              data=d, method="REML")
     assert b1.n == 54
     assert b1.p == 27  # full mgcv design, no gam.side surgery on re smooths
-    # mgcv reference (mgcv 1.9-4, REML, gam.vcomp). Tolerances are tighter
-    # than mgcv-printed-precision because hea's analytical Newton path
-    # converges to |grad|<1e-10 (vs mgcv's ~3e-5 stopping criterion);
-    # residual hea↔mgcv drift is dominated by mgcv's noise floor.
+    # mgcv reference (mgcv 1.9-4, REML, gam.vcomp). hea's outer Newton now
+    # uses mgcv's exact stopping rule (gam.fit3.r:1646-1658,
+    # ``max(|grad|) ≤ score.scale·conv.tol·5`` AND
+    # ``|Δscore| ≤ score.scale·conv.tol``) at the same default ``conv.tol=1e-6``.
+    # That puts hea and mgcv inside the same stopping band; residual drift
+    # is the natural noise of where each implementation lands within the
+    # band (≈ a few×1e-3 on the most leveraged CI, the small-std re-by-factor
+    # smooth s(Worker):MachineA).
     _allclose(b1.edf_total,  17.76461, atol=5e-5, name="b1.edf")
     # edf < edf2 < edf1 — sp uncertainty inflates df, capped by tr(2F-F²).
     _allclose(b1.edf1_total, 17.99523, atol=5e-5, name="b1.edf1")
@@ -332,7 +336,11 @@ def test_machines_re_smooths_REML():
         row = vc2.filter(pl.col("name") == nm).row(0, named=True)
         _allclose(row["std_dev"], sd, atol=5e-4, name=f"b2 vcomp {nm}.std")
         _allclose(row["lower"],   lo, atol=5e-4, name=f"b2 vcomp {nm}.lo")
-        _allclose(row["upper"],   hi, atol=5e-4, name=f"b2 vcomp {nm}.hi")
+        # MachineA has the smallest std (1.94) but largest upper (~14.87),
+        # making the upper highly sensitive to small sp shifts inside
+        # mgcv's stopping band — see the docstring above.
+        upper_atol = 3e-3 if nm == "s(Worker):MachineA" else 5e-4
+        _allclose(row["upper"],   hi, atol=upper_atol, name=f"b2 vcomp {nm}.hi")
 
 
 def test_data_helper_applies_schema_sidecar():
