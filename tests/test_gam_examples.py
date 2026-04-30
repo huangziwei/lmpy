@@ -1349,6 +1349,45 @@ def test_gam_fit_with_tw_recovers_p_near_truth():
     assert 1.30 < info["p_hat"] < 1.70
 
 
+def test_gam_tw_mack_with_expression_in_s_mgcv_oracle():
+    """User's literal R formula: ``s(I(b.depth^.5))`` and ``offset(...)``.
+
+    Pins the joint-Newton tw() fit on the gamair::mack complete-cases
+    subset to mgcv 1.9-4. Generated with:
+        m <- gam(egg.count ~ s(lon, lat, k=100) + s(I(b.depth^.5)) + s(c.dist)
+                              + s(salinity) + s(temp.surf) + s(temp.20m)
+                              + offset(log.net.area),
+                 data=mack, family=tw(), method="REML", select=TRUE)
+
+    The expression ``I(b.depth^.5)`` is materialised into a synthesised
+    column ``"I(b.depth^0.5)"`` by ``materialize_smooths`` /
+    ``_smooth_arg_expr_map``; predict-time replay re-evaluates the AST
+    against new data via the same machinery.
+    """
+    mack = load_dataset("gamair", "mack")
+    keep_cols = ["egg.count", "lon", "lat", "b.depth", "c.dist",
+                 "salinity", "temp.surf", "temp.20m", "net.area"]
+    mack = mack.drop_nulls(subset=keep_cols)
+    mack = mack.with_columns(log_net_area=pl.col("net.area").log())
+
+    m = gam(
+        "egg.count ~ s(lon, lat, k=100) + s(I(b.depth^0.5)) + s(c.dist) "
+        "+ s(salinity) + s(temp.surf) + s(temp.20m) + offset(log_net_area)",
+        mack, family=tw(), method="REML", select=True,
+    )
+    info = m._tw_info
+    assert info is not None
+    np.testing.assert_allclose(info["p_hat"], 1.33307185396394, atol=1e-3)
+    np.testing.assert_allclose(m.REML_criterion / 2,
+                               927.776776447335, atol=5e-3)
+    # mgcv reports edf for the I(...) smooth under its deparsed label.
+    assert "s(I(b.depth^0.5))" in m.edf_by_smooth
+    np.testing.assert_allclose(
+        m.edf_by_smooth["s(I(b.depth^0.5))"], 2.37609109, atol=5e-2,
+    )
+    np.testing.assert_allclose(m.edf_total, 47.4833915, atol=5e-2)
+
+
 def test_gam_tw_mack_mgcv_oracle():
     """Pin tw() joint outer-Newton output against mgcv 1.9-4 on gamair::mack.
 

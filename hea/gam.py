@@ -1404,11 +1404,16 @@ class gam:
         X = self._X_full
         S_pinv = self._S_pinv(fit.S_full)
 
-        # Common precomputations.
+        # Common precomputations. ``M = H⁻¹ X'`` is kept (p × n, used by
+        # ``diag_MtSM`` below). The n × n hat matrix ``P = X H⁻¹ X'`` and
+        # its elementwise square ``Rsq = P*P`` are NOT formed — at large
+        # n that's tens of GB. Instead we mirror mgcv (gdi.c:952
+        # ``get_trA2``) and operate on ``K`` (n × p) with ``K K' = P``.
+        # The bilinear form ``hv_i' Rsq hv_j`` (the only Rsq consumer)
+        # equals ``Σ_{p,q} G_i[p,q]·G_j[p,q]`` with
+        # ``G_k = K' diag(hv_k) K`` (p × p) — see ``G_arr`` precompute
+        # below. ``d_diag = diag(P)`` becomes ``Σ_p K[i,p]²``.
         M = cho_solve((fit.A_chol, fit.A_chol_lower), X.T)   # (p, n) = H⁻¹ X'
-        d_diag = np.einsum("ij,ji->i", X, M)                  # (n,)  diag(X H⁻¹ X')
-        P = X @ M                                              # (n, n) X H⁻¹ X'
-        Rsq = P * P                                            # (n, n) elementwise
 
         db_drho = self._dbeta_drho(fit, rho)                   # (p, n_sp)
         dw_deta = self._dw_deta(fit)                           # (n,)
@@ -1417,6 +1422,27 @@ class gam:
                                      dw_deta=dw_deta)          # (p, n_sp, n_sp)
         v = X @ db_drho                                        # (n, n_sp)
         hv = dw_deta[:, None] * v                              # h'·v_l, shape (n, n_sp)
+
+        # Build K (n × p) only when an n-side trace actually needs it.
+        # For families with ``dw/dη ≡ 0`` (Gaussian-identity, Gamma+log,
+        # any canonical link satisfying B(μ) = V'/V + g''·μ_η = 0 and the
+        # α'/α path zero) all of ``hv``, ``d2w_deta2`` are zero and the
+        # K-based traces collapse to zero. We still need ``d_diag`` for
+        # the Σ d·h''·v_i·v_j and Σ d·h'·X·d²β pieces — but those vanish
+        # too when the W-derivatives are zero. Skip K entirely.
+        needs_w = bool(np.any(hv)) or bool(np.any(d2w_deta2))
+        if needs_w:
+            K = self._make_K(fit.A_chol, fit.A_chol_lower)     # (n, p)
+            d_diag = np.einsum("ij,ij->i", K, K)                # (n,) diag(KK') = diag(P)
+            # G_k = K' diag(hv_k) K, p × p, n_sp of them. Symmetric.
+            G_arr = np.empty((n_sp, p, p))
+            for k in range(n_sp):
+                Khv = K * hv[:, k:k+1]                          # (n, p)
+                Gk = K.T @ Khv                                  # (p, p)
+                G_arr[k] = 0.5 * (Gk + Gk.T)                    # enforce symmetry
+        else:
+            d_diag = None
+            G_arr = None
 
         # Per-slot blocks reused for ∂²Dp / log|S|+ / log|H| Gaussian-style traces.
         AinvS_block: list[np.ndarray] = []
@@ -1500,8 +1526,13 @@ class gam:
                 d2Dp = -2.0 * sp[i] * sp[j] * bSiAinvSj_b
 
                 # tr(H⁻¹·∂H/∂ρ_i·H⁻¹·∂H/∂ρ_j) — four pieces.
-                # WW: (h'·v_i)' · Rsq · (h'·v_j).
-                tr_WW = float(hv[:, i] @ (Rsq @ hv[:, j]))
+                # WW: (h'·v_i)' · Rsq · (h'·v_j) where Rsq = P⊙P, P = KK'.
+                # Identity: hv_i' (KK' ⊙ KK') hv_j = Σ_{p,q} G_i[p,q]·G_j[p,q]
+                # with G_k = K' diag(hv_k) K (Wood 2008 §4 + mgcv gdi.c:952).
+                if G_arr is not None:
+                    tr_WW = float(np.sum(G_arr[i] * G_arr[j]))
+                else:
+                    tr_WW = 0.0
                 # WS: tr(H⁻¹·A_i·H⁻¹·S_j) = (h'·v_i)' · diag_MtSM[j].
                 tr_WS = float(hv[:, i] @ diag_MtSM[j])
                 tr_SW = float(hv[:, j] @ diag_MtSM[i])
@@ -1521,11 +1552,16 @@ class gam:
                 # tr(H⁻¹·∂²H/∂ρ_i∂ρ_j).
                 #   X'·diag(h''·v_i·v_j)·X contribution: Σ d_i·h''·v_i·v_j.
                 #   X'·diag(h'·X·d²β_ij)·X        contribution: Σ d_i·h'·(X·d²β_ij).
+                # Both are weighted by ``d_diag = diag(K K')``; if K wasn't
+                # built (W-derivs identically zero) both summands vanish.
                 Xd2b = X @ d2b[:, i, j]                       # (n,)
-                tr_d2H = (
-                    float(np.sum(d_diag * d2w_deta2 * v[:, i] * v[:, j]))
-                    + float(np.sum(d_diag * dw_deta * Xd2b))
-                )
+                if d_diag is not None:
+                    tr_d2H = (
+                        float(np.sum(d_diag * d2w_deta2 * v[:, i] * v[:, j]))
+                        + float(np.sum(d_diag * dw_deta * Xd2b))
+                    )
+                else:
+                    tr_d2H = 0.0
                 # δ_lk·λ_l·tr(H⁻¹·S_l) is the off-square diagonal term.
                 d2logH_ij = -tr_HinvHpHinvHp + tr_d2H
 
@@ -2050,6 +2086,38 @@ class gam:
         w_top = np.clip(w[order[:r]], 1e-300, None)
         V_top = V[:, order[:r]]
         return (V_top / w_top) @ V_top.T
+
+    def _make_K(self, A_chol: np.ndarray, A_chol_lower: bool) -> np.ndarray:
+        """K (n × p) such that ``K K' = X · A⁻¹ · X'`` — the n × p factor
+        of the unweighted hat matrix. Mirrors mgcv's ``K = Q1`` from
+        ``gdiPK`` (gdi.c:1691): the n-rows of the orthogonal factor of
+        the augmented QR ``[√W X; rt(Sλ)] = Q R``, satisfying
+        ``R'R = X'WX + Sλ`` and ``K K' = √W X (X'WX+Sλ)⁻¹ X' √W``.
+
+        We don't run a separate augmented QR — we already have the
+        Cholesky of ``A = X'WX + Sλ`` from PIRLS (lower form ``A = L L'``,
+        upper form ``A = U' U``), and ``A⁻¹ = R⁻¹ R⁻ᵀ`` with ``R`` upper
+        triangular such that ``R'R = A``. Then ``K = X · R⁻¹`` satisfies
+        ``K K' = X · R⁻¹ · R⁻ᵀ · X' = X · A⁻¹ · X'``. Using ``K`` instead
+        of materializing the n × n hat matrix is what mgcv does to scale
+        to large n: every n-side trace/diagonal in the Hessian path
+        reduces to operations on ``K`` (n × p) and ``K' D K`` (p × p)
+        without ever forming the n × n product.
+
+        Note hea's convention is *unweighted* ``P = X·A⁻¹·X'`` whereas
+        mgcv's K K' is the *weighted* hat ``√W·X·A⁻¹·X'·√W``; the ``√W``
+        factors are tracked explicitly at each call site rather than
+        absorbed into K. The two conventions agree for canonical-link or
+        Gaussian-identity (W = I).
+        """
+        X = self._X_full
+        if A_chol_lower:
+            # A = L L'  →  K = X · L⁻ᵀ  →  K' = L⁻¹ · X'.
+            K_T = solve_triangular(A_chol, X.T, lower=True)
+        else:
+            # A = U' U  →  K = X · U⁻¹  →  K' = U⁻ᵀ · X'.
+            K_T = solve_triangular(A_chol, X.T, lower=False, trans="T")
+        return K_T.T
 
     def _fisher_view(self, fit: "_FitState") -> "_FitState":
         """Return a Fisher-W view of a PIRLS-converged fit.
@@ -2589,11 +2657,15 @@ class gam:
         Sλ_beta = fit.S_full @ fit.beta                    # (p,)
         dD_drho = -2.0 * (Sλ_beta @ db_drho)               # (n_sp,)
 
-        # ∂τ/∂ρ_k. M_F = A_F⁻¹·X', P_F = X·M_F.
+        # ∂τ/∂ρ_k. ``M_F = A_F⁻¹·X'`` (p × n). The n × n hat matrix
+        # ``P_F = X·M_F`` is NOT formed — it's tens of GB at large n
+        # (e.g. 23 GB at n=54k). Mirroring mgcv (gdi.c:952), n-side
+        # quantities are computed from ``K_F`` (n × p) with
+        # ``K_F K_F' = P_F``: ``diag(P_F) = Σ_p K_F[i,p]²`` and
+        # ``s_a = Σ_b P_F[a,b]²·w_F[b] = (K_F · M_w · K_F')_{aa}`` with
+        # ``M_w = K_F' diag(w_F) K_F`` (p × p) — see the W-deriv branch.
         M_F = cho_solve((fit_F.A_chol, fit_F.A_chol_lower), X.T)
-        P_F = X @ M_F
-        d_diag = np.einsum("ij,ji->i", X, M_F)             # diag(P_F)
-        # Penalty piece: −λ_k · tr(A_F⁻¹·S_k·F_F).
+        # Penalty piece: −λ_k · tr(A_F⁻¹·S_k·F_F).  Doesn't need d_diag/s.
         pen_piece = np.empty(n_sp)
         for k, slot in enumerate(self._slots):
             a, b = slot.col_start, slot.col_end
@@ -2603,15 +2675,18 @@ class gam:
             )
 
         # W_F-deriv piece: (d − s)' hv_F,k. dW_F/dη = 0 for Gaussian-identity
-        # and for Gamma+log (W_F ≡ 1) ⇒ skipped via the all-close check.
+        # and for Gamma+log (W_F ≡ 1). When zero we skip building K_F entirely.
         if family.name == "gaussian" and family.link.name == "identity":
             w_piece = np.zeros(n_sp)
         else:
             dw_deta = self._dw_deta(fit_F)                 # (n,) — Fisher form
             v = X @ db_drho                                # (n, n_sp)
             hv = dw_deta[:, None] * v                      # (n, n_sp)
-            Rsq = P_F * P_F
-            s = Rsq @ w_F
+            K_F = self._make_K(fit_F.A_chol, fit_F.A_chol_lower)   # (n, p)
+            d_diag = np.einsum("ij,ij->i", K_F, K_F)               # (n,) diag(P_F)
+            M_w = (K_F * w_F[:, None]).T @ K_F                     # (p, p) K' diag(w) K
+            KM_w = K_F @ M_w                                        # (n, p)
+            s = np.einsum("ij,ij->i", KM_w, K_F)                   # (n,) diag(K·M_w·K')
             w_piece = (d_diag - s) @ hv                    # (n_sp,)
 
         dtau_drho = w_piece + pen_piece
@@ -2684,13 +2759,16 @@ class gam:
             Xw = X * np.sqrt(w_F)[:, None]
             XtWX_F = Xw.T @ Xw
 
-        # Fisher precomputations for τ.
+        # Fisher precomputations for τ. ``M_F = A_F⁻¹·X'`` is kept
+        # (p × n, used by the Y_full / U_full builds below). The n × n
+        # hat matrix ``P_F = X·M_F`` and its elementwise square ``Rsq``
+        # are NOT formed — at large n that's 2 × 23 GB (mgcv gdi.c:952
+        # ``get_trA2`` works the same way). ``d_diag = diag(P_F)`` and
+        # ``s = (P_F⊙P_F)·w_F`` get rewritten as K-based reductions
+        # below; both are zero in the W-deriv-free branch (Gaussian-
+        # identity, Gamma+log) so we skip K when not needed.
         A_F_inv = cho_solve((fit_F.A_chol, fit_F.A_chol_lower), np.eye(p))
         M_F = cho_solve((fit_F.A_chol, fit_F.A_chol_lower), X.T)   # (p, n)
-        P_F = X @ M_F                                               # (n, n)
-        d_diag = np.einsum("ij,ji->i", X, M_F)                      # diag(P_F)
-        Rsq = P_F * P_F
-        s = Rsq @ w_F
         F_F = A_F_inv @ XtWX_F                                      # (p, p)
         edf_total = float(np.trace(F_F))
 
@@ -2708,6 +2786,23 @@ class gam:
         dw_deta_N = self._dw_deta(fit)                         # (n,) Newton
         v = X @ db_drho                                        # (n, n_sp)
         hv = dw_deta_F[:, None] * v                            # (n, n_sp)
+
+        # ``d_diag = diag(P_F)`` and ``s = (P_F⊙P_F)·w_F`` are needed by
+        # ``w_piece`` (gradient) and ``T6_minus_T3B`` (Hessian). For
+        # families with dW_F/dη ≡ 0 and d²W_F/dη² ≡ 0 (Gaussian-identity,
+        # Gamma+log) both consumers multiply by ``hv`` or ``d2w_lk`` and
+        # vanish identically, so the K_F build is skipped — keeping the
+        # n × n hat matrix off the heap. Mirrors mgcv gdi.c:952.
+        needs_w = bool(np.any(hv)) or bool(np.any(d2w_deta2_F))
+        if needs_w:
+            K_F = self._make_K(fit_F.A_chol, fit_F.A_chol_lower)   # (n, p)
+            d_diag = np.einsum("ij,ij->i", K_F, K_F)               # (n,) diag(K_F K_F') = diag(P_F)
+            M_w = (K_F * w_F[:, None]).T @ K_F                     # (p, p) K_F' diag(w_F) K_F
+            KM_w = K_F @ M_w                                        # (n, p)
+            s = np.einsum("ij,ij->i", KM_w, K_F)                   # (n,) diag(K_F·M_w·K_F') = (P_F⊙P_F)·w_F
+            d_minus_s = d_diag - s
+        else:
+            d_minus_s = None
 
         # Per-slot block precomputations.
         AinvS_block: list[np.ndarray] = []
@@ -2730,7 +2825,10 @@ class gam:
             ))
 
         pen_piece = -sp * tr_AinvSk_F                          # (n_sp,)
-        w_piece = (d_diag - s) @ hv                            # (n_sp,)
+        if d_minus_s is not None:
+            w_piece = d_minus_s @ hv                           # (n_sp,)
+        else:
+            w_piece = np.zeros(n_sp)
         dtau_drho = w_piece + pen_piece
 
         # ---- ∂²D/∂ρ_l∂ρ_k — uses Newton A throughout β̂-derivatives. -----
@@ -2781,12 +2879,18 @@ class gam:
 
                 # d²W_F_lk = d²W_F/dη² · v_l v_k + dW_F/dη · X·∂²β̂/(∂ρ_l ∂ρ_k).
                 # Fisher W-derivatives; Newton ∂²β̂/∂ρ² (Newton IFT).
-                Xd2b_lk = X @ d2b[:, ll, k]
-                d2w_lk = (
-                    d2w_deta2_F * v[:, ll] * v[:, k]
-                    + dw_deta_F * Xd2b_lk
-                )
-                T6_minus_T3B = float((d_diag - s) @ d2w_lk)
+                # Both summands are zero for Gaussian-identity / Gamma+log,
+                # in which case ``d_minus_s`` was skipped above and the
+                # T6 contribution is identically zero.
+                if d_minus_s is not None:
+                    Xd2b_lk = X @ d2b[:, ll, k]
+                    d2w_lk = (
+                        d2w_deta2_F * v[:, ll] * v[:, k]
+                        + dw_deta_F * Xd2b_lk
+                    )
+                    T6_minus_T3B = float(d_minus_s @ d2w_lk)
+                else:
+                    T6_minus_T3B = 0.0
                 delta_S = -sp[k] * tr_AinvSk_F[k] if ll == k else 0.0
 
                 val = T1_T2 - T4 - T5 + T6_minus_T3B + delta_S
@@ -3344,7 +3448,21 @@ class gam:
             X_new = self._X_full
             off_new = self._offset
         else:
-            from .formula import materialize  # local to avoid cycle
+            from .formula import (        # local to avoid cycle
+                _apply_smooth_arg_exprs,
+                _smooth_arg_expr_map,
+                materialize,
+            )
+
+            # Re-evaluate any smooth-arg expressions on newdata. e.g. if
+            # the fit used ``s(I(b.depth^.5))``, the synthesised column
+            # ``"I(b.depth^0.5)"`` must be present before the basis
+            # evaluator asks for it. ``_smooth_arg_expr_map`` is
+            # deterministic in ``self._expanded`` so we rebuild it here
+            # rather than caching a copy on the model.
+            expr_map = _smooth_arg_expr_map(self._expanded)
+            if expr_map:
+                newdata = _apply_smooth_arg_exprs(newdata, expr_map)
 
             X_param = materialize(self._expanded, newdata).to_numpy().astype(float)
             cols = [X_param]

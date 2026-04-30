@@ -2766,19 +2766,107 @@ def _smooth_bs(call: Call) -> str:
 
 
 def _smooth_term_vars(call: Call) -> list[str]:
-    """Pluck variable names from an s(...)'s positional args.
+    """Pluck variable names (or deparsed expressions) from an s(...)'s
+    positional args.
 
     mgcv treats the non-keyword args of s() as the term variables. e.g.
-    `s(Machine, Worker, bs="re")` → ["Machine", "Worker"].
+    ``s(Machine, Worker, bs="re")`` → ``["Machine", "Worker"]``. Expression
+    args (``s(I(b.depth^.5))``, ``s(log(x))``, ``s(x*2)``) are deparsed to
+    their formula text — the same string mgcv prints in summaries — and
+    are materialised into a synthesised column of that name by
+    :func:`_smooth_arg_expr_map` / :func:`_apply_smooth_arg_exprs` before
+    each smooth basis is built. Predict-time replay re-evaluates the AST
+    against the new data using the same machinery.
     """
     names: list[str] = []
     for a in call.args:
         if isinstance(a, Name):
             names.append(a.ident)
         else:
-            # Could be an expression — not supported yet.
             names.append(_deparse(a))
     return names
+
+
+def _collect_name_idents(node, out: set[str]) -> None:
+    """Walk an AST collecting every ``Name.ident`` reference. Used to map
+    a smooth-arg expression like ``I(b.depth^.5)`` back to the underlying
+    columns (``{"b.depth"}``) so NA-drop covers them and predict-time
+    re-evaluation can request them."""
+    if node is None:
+        return
+    if isinstance(node, Name):
+        if node.ident not in _R_CONSTANTS:
+            out.add(node.ident)
+        return
+    if isinstance(node, Literal):
+        return
+    if isinstance(node, Paren):
+        _collect_name_idents(node.expr, out)
+        return
+    if isinstance(node, UnaryOp):
+        _collect_name_idents(node.operand, out)
+        return
+    if isinstance(node, BinOp):
+        _collect_name_idents(node.left, out)
+        _collect_name_idents(node.right, out)
+        return
+    if isinstance(node, Call):
+        for a in node.args:
+            _collect_name_idents(a, out)
+        for v in node.kwargs.values():
+            _collect_name_idents(v, out)
+        return
+    # Subscript, Dot, Empty: no Name references we care about for this path.
+
+
+def _smooth_arg_expr_map(expanded: "ExpandedFormula") -> dict[str, "Node"]:
+    """Walk every smooth Call (``s``/``te``/``ti``/``t2``) in ``expanded``
+    and collect a ``{deparsed_text: ast_node}`` map for every non-``Name``
+    positional argument. Same deparse text appears in
+    :func:`_smooth_term_vars`, so the resulting map's keys line up with the
+    column names the smooth builders ask for at fit/predict time.
+    """
+    out: dict[str, "Node"] = {}
+    for c in expanded.smooths:
+        for a in c.args:
+            if isinstance(a, Name):
+                continue
+            key = _deparse(a)
+            # First sighting wins — multiple smooths writing identical
+            # expressions deparse identically and reuse the same column.
+            out.setdefault(key, a)
+    return out
+
+
+def _apply_smooth_arg_exprs(
+    data: pl.DataFrame, expr_map: dict[str, "Node"],
+) -> pl.DataFrame:
+    """Materialise smooth-arg expressions into columns of ``data``.
+
+    For each ``(synth_name, ast_node)`` in ``expr_map``, evaluate the AST
+    via :func:`_eval_numeric` and append a column under ``synth_name``.
+    Idempotent: if ``synth_name`` already exists in ``data``, it's left
+    alone. Used both at fit time (in :func:`materialize_smooths`) and at
+    predict time (from :meth:`hea.gam.gam.predict`)."""
+    if not expr_map:
+        return data
+    additions: dict[str, np.ndarray] = {}
+    for synth_name, node in expr_map.items():
+        if synth_name in data.columns:
+            continue
+        try:
+            v = _eval_numeric(node, data)
+        except Exception as e:
+            raise ValueError(
+                f"smooth-arg expression {synth_name!r} failed to evaluate "
+                f"against data: {e}"
+            ) from e
+        additions[synth_name] = np.asarray(v, dtype=float)
+    if additions:
+        data = data.with_columns([
+            pl.Series(name, vals) for name, vals in additions.items()
+        ])
+    return data
 
 
 def _smooth_label(call: Call) -> str:
@@ -5861,16 +5949,40 @@ def materialize_smooths(
     Returns a list parallel to `expanded.smooths`; each entry is the list of
     SmoothBlock that mgcv's smoothCon returns for that spec. Most smooths
     produce exactly one block; `by = <factor>` with `id` yields n_levels.
+
+    Smooth args may be plain column names (``s(x)``) or expressions
+    (``s(I(b.depth^.5))``, ``s(log(x))``). Expressions are deparsed to a
+    synthesised column name, NA-dropped on their underlying source
+    columns, then materialised into ``data`` once before the per-smooth
+    builders run. Predict-time replay uses the same machinery via
+    :func:`_apply_smooth_arg_exprs` against the new dataframe.
     """
-    # NA-drop using every referenced variable, to match R's `na.omit` over the
-    # union of all formula variables.
+    # NA-drop on every column the smooths reference. For plain ``Name``
+    # args this is just the column name; for expressions we union in every
+    # ``Name.ident`` mentioned inside the AST so e.g. ``s(I(b.depth^.5))``
+    # NA-drops on ``b.depth`` (not on the not-yet-materialised
+    # ``"I(b.depth^0.5)"`` synth column).
     referenced: set[str] = set()
     for c in expanded.smooths:
-        for v in _smooth_term_vars(c):
-            if v in data.columns:
-                referenced.add(v)
+        for a in c.args:
+            if isinstance(a, Name):
+                if a.ident in data.columns:
+                    referenced.add(a.ident)
+            else:
+                _collect_name_idents(a, referenced)
+        # ``by=`` may also be a non-Name expression in mgcv; the existing
+        # ``_eval_by_col`` only supports a small set of forms and pulls
+        # source columns out itself, so we skip walking it here.
+    referenced &= set(data.columns)
     if referenced:
         data = data.drop_nulls(subset=list(referenced))
+
+    # Materialise smooth-arg expressions into synthesised columns. After
+    # this, every term name returned by ``_smooth_term_vars`` resolves
+    # against ``data.columns`` directly.
+    expr_map = _smooth_arg_expr_map(expanded)
+    if expr_map:
+        data = _apply_smooth_arg_exprs(data, expr_map)
 
     out: list[list[SmoothBlock]] = []
     for call in expanded.smooths:
