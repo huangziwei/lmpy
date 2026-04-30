@@ -37,6 +37,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
+from matplotlib.transforms import blended_transform_factory
 from scipy.linalg import cho_factor, cho_solve, solve_triangular
 from scipy.stats import f as f_dist, norm, t as t_dist
 
@@ -3772,6 +3773,8 @@ class gam:
         n_grid: int = 40,
         too_far: float = 0.1,
         zlim=None,
+        xlim=None,
+        ylim=None,
         all_terms: bool = False,
         ax=None,
     ):
@@ -3845,6 +3848,15 @@ class gam:
             doesn't read as flat). Pass an explicit range (e.g.
             ``(-3, 3)``) to make near-zero terms render as flat plates,
             matching Wood 2017 Fig. 7.9.
+        xlim, ylim : (float, float) | list | None
+            Per-panel axis limits, applied after each panel is drawn.
+            ``None`` (default) leaves matplotlib's autoscaling in place;
+            a single ``(lo, hi)`` is applied to every selected panel; a
+            list (entries ``(lo, hi)`` or ``None``) sets per-panel
+            limits and must have length equal to the number of selected
+            panels. The rug is anchored to the axes bottom, so it
+            tracks ``ylim`` automatically. mgcv's ``plot.gam`` calls
+            these ``xlim``/``ylim`` too.
         all_terms : bool
             Also include parametric terms (factor / numeric, excluding the
             intercept) — Wood 2017 Fig. 4.15 layout.
@@ -3916,6 +3928,8 @@ class gam:
         sel_idx = self._resolve_plot_select(select, plottable)
         selected = [plottable[i] for i in sel_idx]
         schemes = self._resolve_plot_scheme(scheme, len(selected))
+        xlims = self._resolve_plot_lim(xlim, len(selected), "xlim")
+        ylims = self._resolve_plot_lim(ylim, len(selected), "ylim")
 
         wr_all = (
             self.residuals_of("working") if partial_residuals else None
@@ -3979,6 +3993,10 @@ class gam:
                     "pass an axes built with projection='3d'."
                 )
             draw_panel(ax, item, sch)
+            if xlims[0] is not None:
+                ax.set_xlim(xlims[0])
+            if ylims[0] is not None:
+                ax.set_ylim(ylims[0])
             return ax
 
         n_plots = len(selected)
@@ -4005,6 +4023,10 @@ class gam:
                 n_rows, n_cols_eff, plot_i + 1, projection=proj
             )
             draw_panel(ax_i, item, sch)
+            if xlims[plot_i] is not None:
+                ax_i.set_xlim(xlims[plot_i])
+            if ylims[plot_i] is not None:
+                ax_i.set_ylim(ylims[plot_i])
 
         if any_persp:
             # Hard-coded margins: leave 8% on the right (zlabel of the
@@ -4081,6 +4103,47 @@ class gam:
             return [int(s) for s in scheme]
         return [int(scheme)] * n_panels
 
+    @staticmethod
+    def _resolve_plot_lim(lim, n_panels, name):
+        """Map ``xlim=``/``ylim=`` (None / (lo, hi) / list of those) to a
+        list of length ``n_panels``. A single ``(lo, hi)`` broadcasts to
+        every panel; a list must align with the selection (entries may be
+        ``None`` to skip a specific panel).
+        """
+        if lim is None:
+            return [None] * n_panels
+
+        def _is_pair(v):
+            return (
+                isinstance(v, (list, tuple))
+                and len(v) == 2
+                and all(isinstance(x, (int, float, np.number)) for x in v)
+            )
+
+        if _is_pair(lim):
+            return [tuple(lim)] * n_panels
+        if isinstance(lim, list):
+            if len(lim) != n_panels:
+                raise ValueError(
+                    f"{name} list must have length {n_panels} (one per "
+                    f"selected panel); got {len(lim)}"
+                )
+            out = []
+            for i, v in enumerate(lim):
+                if v is None:
+                    out.append(None)
+                elif _is_pair(v):
+                    out.append(tuple(v))
+                else:
+                    raise TypeError(
+                        f"{name}[{i}] must be (lo, hi) or None; got {v!r}"
+                    )
+            return out
+        raise TypeError(
+            f"{name}= must be None, (lo, hi), or a list of (lo, hi)/None; "
+            f"got {type(lim).__name__}"
+        )
+
     def _plot_smooth_1d(
         self, ax, block, a, bcol, *,
         color, band_color, band_alpha, rug, partial_residuals,
@@ -4123,9 +4186,11 @@ class gam:
             )
 
         if rug:
-            ymin = ax.get_ylim()[0]
+            # Anchor at axes-fraction y=0 (data x) so the rug follows any
+            # later ylim change instead of stranding at the original ymin.
+            trans = blended_transform_factory(ax.transData, ax.transAxes)
             ax.plot(
-                xa, np.full_like(xa, ymin), "|",
+                xa, np.zeros_like(xa), "|", transform=trans,
                 color="black", markersize=6, alpha=0.6,
             )
 
@@ -4312,8 +4377,8 @@ class gam:
                     )
             if xs_list:
                 xs = np.asarray(xs_list)
-                ymin = ax.get_ylim()[0]
-                ax.plot(xs, np.full_like(xs, ymin), "|",
+                trans = blended_transform_factory(ax.transData, ax.transAxes)
+                ax.plot(xs, np.zeros_like(xs), "|", transform=trans,
                         color="black", markersize=6, alpha=0.6)
 
         ax.set_xticks(range(len(levels)))
@@ -4342,8 +4407,8 @@ class gam:
         )
         ax.plot(x_grid, fhat, color=color, linewidth=1.0)
         if rug:
-            ymin = ax.get_ylim()[0]
-            ax.plot(x, np.full_like(x, ymin), "|",
+            trans = blended_transform_factory(ax.transData, ax.transAxes)
+            ax.plot(x, np.zeros_like(x), "|", transform=trans,
                     color="black", markersize=6, alpha=0.6)
         ax.set_xlabel(label)
         ax.set_ylabel(f"Partial for {label}")
