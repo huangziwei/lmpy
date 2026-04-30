@@ -25,6 +25,7 @@ import pytest
 
 from conftest import load_dataset
 from hea import gam
+from hea.family import Tweedie, tw
 
 
 # ---------------------------------------------------------------------------
@@ -1303,3 +1304,117 @@ def test_method_validation():
         gam("accel ~ s(times)", d, method="GACV.Cp")
     with pytest.raises(ValueError, match="REML.*ML.*GCV"):
         gam("accel ~ s(times)", d, method="P-REML")
+
+
+# ---------------------------------------------------------------------------
+# Tweedie / tw — end-to-end fits on a synthetic compound Poisson-Gamma
+# response. Mirrors the mgcv mack/egg-count workflow at small n; checks
+# that p̂ recovers the truth and tw() never scores worse than Tweedie(p̂_init).
+# ---------------------------------------------------------------------------
+
+
+def _simulate_compound_poisson_gamma(rng, n, p_true=1.5, phi_true=1.0):
+    """Compound Poisson-Gamma sample: N_i ~ Poisson(λ_i), N_i Gamma jumps."""
+    x = rng.uniform(0.0, 1.0, n)
+    mu_true = np.exp(0.5 + 1.5 * np.sin(2.0 * np.pi * x))
+    lam = mu_true ** (2.0 - p_true) / (phi_true * (2.0 - p_true))
+    N = rng.poisson(lam)
+    shape = (2.0 - p_true) / (p_true - 1.0)
+    scale = phi_true * (p_true - 1.0) * mu_true ** (p_true - 1.0)
+    y = np.zeros(n)
+    for i in range(n):
+        if N[i] > 0:
+            y[i] = rng.gamma(shape * N[i], scale[i])
+    return x, y, mu_true
+
+
+def test_gam_fit_with_tweedie_fixed_p():
+    rng = np.random.default_rng(42)
+    x, y, _ = _simulate_compound_poisson_gamma(rng, n=200)
+    df = pl.DataFrame({"y": y, "x": x})
+    m = gam("y ~ s(x, k=8)", df, family=Tweedie(p=1.5), method="REML")
+    assert np.isfinite(m.REML_criterion)
+    assert 1.0 < m.edf_total < 8.0
+    assert 0.5 < float(np.exp(m._log_phi_hat)) < 2.0
+
+
+def test_gam_fit_with_tw_recovers_p_near_truth():
+    """tw() with default initialisation should converge near the true p."""
+    rng = np.random.default_rng(123)
+    x, y, _ = _simulate_compound_poisson_gamma(rng, n=400, p_true=1.5)
+    df = pl.DataFrame({"y": y, "x": x})
+    m = gam("y ~ s(x, k=10)", df, family=tw(), method="REML")
+    info = m._tw_info
+    assert info is not None
+    assert 1.30 < info["p_hat"] < 1.70
+
+
+def test_gam_tw_mack_mgcv_oracle():
+    """Pin tw() joint outer-Newton output against mgcv 1.9-4 on gamair::mack.
+
+    Generated with:
+        library(gamair); data(mack)
+        mack$log.net.area <- log(mack$net.area)
+        keep <- complete.cases(mack[, c("egg.count", "lon", "lat",
+                                        "b.depth", "c.dist", "salinity",
+                                        "temp.surf", "temp.20m",
+                                        "log.net.area")])
+        m <- gam(egg.count ~ s(lon, lat, k=20) + s(temp.surf),
+                 data=mack[keep,], family=tw(), method="REML",
+                 offset=log.net.area)
+
+    p̂ matches to ~6 digits, REML/2 to 7 digits, scale to ~5 digits.
+    sp[1] (temp.surf) sits on the flat-ridge tail where mgcv and hea both
+    effectively fully smooth; only the resulting REML/edf are pinned there,
+    not the absolute sp value.
+    """
+    mack = load_dataset("gamair", "mack")
+    keep_cols = ["egg.count", "lon", "lat", "b.depth", "c.dist",
+                 "salinity", "temp.surf", "temp.20m", "net.area"]
+    mack = mack.drop_nulls(subset=keep_cols)
+    mack = mack.with_columns(log_net_area=pl.col("net.area").log())
+
+    m = gam(
+        "egg.count ~ s(lon, lat, k=20) + s(temp.surf)",
+        mack, family=tw(), method="REML",
+        offset=mack["log_net_area"].to_numpy().tolist(),
+    )
+    info = m._tw_info
+    assert info is not None
+    np.testing.assert_allclose(info["p_hat"], 1.39920632555438, atol=1e-4)
+    np.testing.assert_allclose(m.REML_criterion / 2,
+                               945.744274311548, atol=1e-4)
+    np.testing.assert_allclose(np.exp(info["log_phi_hat"]),
+                               4.00764107362287, rtol=5e-4)
+    np.testing.assert_allclose(m.edf_total, 17.9986147698585, atol=5e-2)
+    np.testing.assert_allclose(m.sp[0], 0.161829581092981, rtol=5e-3)
+    # sp[1] for s(temp.surf) sits in a flat tail (mgcv: 5.62, hea: 5.72) —
+    # both are effectively "fully smoothed"; pin the resulting fit (REML,
+    # edf above) instead of the sp itself.
+
+
+def test_gam_fit_tw_score_no_worse_than_fixed_p():
+    """Joint outer Newton over (ρ, log φ, θ_tw) only accepts steps that
+    improve the criterion, so tw()'s REML score should be ≤ Tweedie(1.5)'s."""
+    rng = np.random.default_rng(7)
+    x, y, _ = _simulate_compound_poisson_gamma(rng, n=300, p_true=1.4)
+    df = pl.DataFrame({"y": y, "x": x})
+    m_fixed = gam("y ~ s(x, k=8)", df, family=Tweedie(p=1.5), method="REML")
+    m_tw = gam("y ~ s(x, k=8)", df, family=tw(), method="REML")
+    assert m_tw.REML_criterion <= m_fixed.REML_criterion + 1e-6
+
+
+def test_tw_rejects_gcv_method():
+    rng = np.random.default_rng(0)
+    x, y, _ = _simulate_compound_poisson_gamma(rng, n=100)
+    df = pl.DataFrame({"y": y, "x": x})
+    with pytest.raises(ValueError, match="REML"):
+        gam("y ~ s(x, k=6)", df, family=tw(), method="GCV.Cp")
+
+
+def test_tw_rejects_fixed_sp():
+    rng = np.random.default_rng(0)
+    x, y, _ = _simulate_compound_poisson_gamma(rng, n=100)
+    df = pl.DataFrame({"y": y, "x": x})
+    with pytest.raises(ValueError, match="incompatible"):
+        gam("y ~ s(x, k=6)", df, family=tw(), method="REML", sp=np.array([0.1]))

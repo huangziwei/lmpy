@@ -7,11 +7,13 @@ from .family import (
     InverseGaussian,
     Poisson,
     Quasi,
+    Tweedie,
     binomial,
     gaussian,
     inverse_gaussian,
     poisson,
     quasi,
+    tw,
 )
 from .gam import gam
 from .glm import glm

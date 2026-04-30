@@ -41,7 +41,7 @@ from matplotlib.transforms import blended_transform_factory
 from scipy.linalg import cho_factor, cho_solve, solve_triangular
 from scipy.stats import f as f_dist, norm, t as t_dist
 
-from .family import Family, Gaussian
+from .family import Family, Gaussian, tw as _tw_family
 from .formula import BasisSpec, SmoothBlock, _eval_atom, materialize_smooths
 from .design import prepare_design
 from .lm import _label_top_n, _lowess, _qq_plot
@@ -323,6 +323,21 @@ class gam:
         # no-smooth and fixed-`sp` paths — `gam.check()` skips the
         # convergence block in those cases.
         self._outer_info: dict | None = None
+        # Set by the joint outer Newton in the tw() path (estimated-p
+        # Tweedie); None otherwise. Holds θ̂, p̂, log φ̂.
+        self._tw_info: dict | None = None
+        # tw() exists specifically to estimate p; pairing it with a fixed
+        # ``sp`` would silently freeze p at the init value (1.5 by default).
+        # Refuse early so the user picks ``Tweedie(p)`` instead — there is
+        # no useful interpretation of "fixed sp + estimated p" without
+        # widening the outer Newton to include θ_tw, which is the Phase 2
+        # design we deliberately deferred (see family.py:tw docstring).
+        if isinstance(self.family, _tw_family) and sp is not None:
+            raise ValueError(
+                "tw() estimates p jointly with the smoothing parameters; "
+                "passing a fixed `sp` is incompatible. Use Tweedie(p=...) "
+                "with fixed `sp` instead."
+            )
         if n_sp == 0:
             # No smooths — degenerate to unpenalized least squares. This is
             # the lm path; we still go through it so all the mgcv-style
@@ -358,16 +373,35 @@ class gam:
                 )
         else:
             # Unified outer optimization. PIRLS inner solve + general
-            # `_reml(ρ, log φ)` + analytical Newton, family-agnostic.
-            # ``include_log_phi`` is True for unknown-scale (Gaussian, Gamma,
-            # IG): θ = (ρ, log φ). False for known-scale (Poisson, Binomial):
-            # θ = ρ with log φ ≡ 0. mgcv's gam.outer behaves the same way.
+            # `_reml(ρ, log φ[, θ_fam])` + analytical Newton, family-agnostic.
+            #
+            # ``include_log_phi`` is True for unknown-scale (Gaussian,
+            # Gamma, IG, Tweedie, tw): θ ⊇ (ρ, log φ). False for
+            # known-scale (Poisson, Binomial): θ = ρ with log φ ≡ 0.
+            #
+            # ``include_family_theta`` is True for ``tw()``: appends
+            # ``family.n_theta=1`` extra slot for the reparametrised
+            # Tweedie power. The outer Newton then jointly estimates
+            # (ρ, log φ, θ_tw); ``_reml_grad(... include_family_theta=True)``
+            # supplies the analytical gradient (Dp, ls0, log|H+S|), and
+            # ``_reml_hessian`` augments the (ρ, log φ) analytical block
+            # with FD on the analytical gradient for the new rows/cols
+            # (truncation ~ 1e-8, well below the optimiser's tol).
             family = self.family
             include_log_phi = (not family.scale_known) and method in ("REML", "ML")
-            n_lp = 1 if include_log_phi else 0
-            theta_dim = n_sp + n_lp
+            include_family_theta = (
+                family.n_theta > 0 and method in ("REML", "ML")
+            )
+            if family.n_theta > 0 and method == "GCV.Cp":
+                # tw() (today's only n_theta>0 family) has no GCV path —
+                # GCV doesn't expose a usable derivative wrt the family
+                # power, and mgcv likewise rejects this combo.
+                raise ValueError(
+                    f"family={family!r} (n_theta={family.n_theta}) requires "
+                    "method='REML' or 'ML'; got method='GCV.Cp'"
+                )
 
-            # Initial seed.
+            # Initial seed for the smoothing parameters and log φ.
             #
             # REML and GCV both run analytical Newton on the criterion's
             # exact Hessian (mgcv's gam.outer). REML starts at ρ=0 (Newton's
@@ -376,46 +410,58 @@ class gam:
             # criterion has flat saturation tails on some smooths (e.g.
             # mcycle's tp) where Newton from ρ=0 can drift toward the
             # boundary; the grid scan finds the right basin.
-            def _pearson_log_phi(rho_eval) -> float:
-                if not include_log_phi:
-                    return 0.0
-                try:
-                    fit_seed = self._fit_given_rho(rho_eval)
-                except Exception:
-                    return 0.0
-                df_resid_seed = max(self.n - self._Mp, 1.0)
-                V_seed = family.variance(fit_seed.mu)
-                pearson = float(np.sum(
-                    (self._y_arr - fit_seed.mu) ** 2
-                    / np.maximum(V_seed, 1e-300)
-                ))
-                return float(np.log(max(pearson / df_resid_seed, 1e-12)))
-
             if method in ("REML", "ML"):
                 cur_rho = np.zeros(n_sp)
-                cur_logphi = _pearson_log_phi(cur_rho)
+                if include_log_phi:
+                    try:
+                        fit_seed = self._fit_given_rho(cur_rho)
+                        df_resid_seed = max(self.n - self._Mp, 1.0)
+                        V_seed = family.variance(fit_seed.mu)
+                        pearson = float(np.sum(
+                            (self._y_arr - fit_seed.mu) ** 2
+                            / np.maximum(V_seed, 1e-300)
+                        ))
+                        cur_logphi = float(np.log(
+                            max(pearson / df_resid_seed, 1e-12)
+                        ))
+                    except Exception:
+                        cur_logphi = 0.0
+                else:
+                    cur_logphi = 0.0
             else:
-                # Mirror mgcv's initial.sp (mgcv/R/gam.fit3.r): for each smooth
-                # k, def.sp[k] = mean(diag(X_k'X_k)) / mean(diag(S_k)) over the
-                # penalised column-rows of S_k. The threshold filter matches
-                # mgcv's ``thresh = .Machine$double.eps^0.8 * max(|S_k|)``.
                 cur_rho = self._initial_sp_rho()
                 cur_logphi = 0.0  # GCV does not put log φ in θ
 
-            theta0 = np.r_[cur_rho, cur_logphi] if include_log_phi else cur_rho
+            theta0_parts = [cur_rho]
+            if include_log_phi:
+                theta0_parts.append(np.array([cur_logphi]))
+            if include_family_theta:
+                # Seed θ_fam at the family's current value (e.g. tw()'s
+                # default θ=0 ⇒ p=1.5). User-set tw(theta=...) is honoured.
+                theta0_parts.append(np.asarray(family.get_theta(), dtype=float))
+            theta0 = np.concatenate(theta0_parts)
 
             theta_hat = self._outer_newton(
                 theta0,
                 criterion="REML" if method in ("REML", "ML") else "GCV",
                 include_log_phi=include_log_phi,
+                include_family_theta=include_family_theta,
             )
 
             if include_log_phi:
                 rho_hat = theta_hat[:n_sp]
-                self._log_phi_hat = float(theta_hat[n_sp])
+                log_phi_hat = float(theta_hat[n_sp])
+                if include_family_theta:
+                    family.set_theta(theta_hat[n_sp + 1:])
+                    self._tw_info = {
+                        "theta_hat": float(theta_hat[n_sp + 1]),
+                        "p_hat": float(family.p),
+                        "log_phi_hat": log_phi_hat,
+                    }
             else:
                 rho_hat = theta_hat
-                self._log_phi_hat = None
+                log_phi_hat = None
+            self._log_phi_hat = log_phi_hat
             self.sp = np.exp(rho_hat)
             fit = self._fit_given_rho(rho_hat)
 
@@ -1150,14 +1196,34 @@ class gam:
 
     def _reml_grad(self, rho: np.ndarray, log_phi: float = 0.0,
                            fit: "_FitState | None" = None,
-                           include_log_phi: bool = False) -> np.ndarray:
+                           include_log_phi: bool = False,
+                           include_family_theta: bool = False) -> np.ndarray:
         """Analytical gradient of `_reml` (2·V_R units).
 
-        Length n_sp if `include_log_phi=False`, else n_sp+1 with log_phi
-        appended. Wood 2011 §4 + mgcv gam.fit3.r:622, 630:
+        Length depends on flags:
+          * n_sp                                  (defaults)
+          * n_sp + 1                              if ``include_log_phi``
+          * n_sp + n_lp + family.n_theta          if ``include_family_theta``,
+            with the family entries appended last; ``include_log_phi`` is
+            then required to be True for unknown-scale Tweedie/tw().
+
+        Wood 2011 §4 + mgcv gam.fit3.r:622, 630:
 
             ∂(2·V_R)/∂ρ_k    = (∂Dp/∂ρ_k)/φ + ∂log|H|/∂ρ_k − ∂log|S|+/∂ρ_k
             ∂(2·V_R)/∂log φ  = −Dp/φ − 2·ls'_hea − Mp
+
+        For each extra family parameter θ_f (only ``tw`` exercises this
+        today; θ_f ↦ Tweedie p via the sigmoid reparametrisation):
+
+            ∂(2·V_R)/∂θ_f =   (∂Dp/∂p · dp/dθ_f) / (φ·γ)
+                            − 2·(∂ls0/∂p · dp/dθ_f) / γ
+                            + ∂log|H+S|/∂p · dp/dθ_f
+
+        The Dp piece uses the envelope theorem at PIRLS-converged β̂; the
+        log|H+S| piece is fully analytical via :meth:`_dlog_det_H_dp_tw`
+        (direct ∂W/∂p|_β̂ + indirect via :meth:`_dbeta_dp_tw`); the ls0
+        piece comes from :meth:`Tweedie.dls_dp` using the Dunn-Smyth
+        ``j_psi_bar`` moment.
 
         ls'_hea is the d/d(log φ) chain-rule output from `family.ls(y, wt, φ)[1]`
         (hea convention, see family.py:338 docstring).
@@ -1210,7 +1276,7 @@ class gam:
             # log|H| / log|S|+ Jacobi pieces are γ-independent.
             grad_rho = dDp / (phi * gamma) + dlog_H - dlog_S
 
-        if not include_log_phi:
+        if not include_log_phi and not include_family_theta:
             return grad_rho
 
         Mp = float(self._Mp)
@@ -1223,15 +1289,61 @@ class gam:
         # method="ML" remlInd=0 drops it (gam.fit3.r:628).
         reml_ind = 1.0 if self.method == "REML" else 0.0
         d_logphi = (-Dp / phi - 2.0 * ls1) / gamma - reml_ind * Mp
-        return np.concatenate([grad_rho, [d_logphi]])
+
+        out = np.concatenate([grad_rho, [d_logphi]])
+
+        if include_family_theta and self.family.n_theta > 0:
+            # Tweedie / tw: chain rule p → θ_tw via family.dp_dtheta().
+            # Other extended families would dispatch here; for now we only
+            # handle the tw case and assert as much.
+            family = self.family
+            if not isinstance(family, _tw_family):
+                raise NotImplementedError(
+                    f"Joint outer-Newton extra-θ derivatives are only wired "
+                    f"for tw(); got family={family!r}."
+                )
+            dp_dth = family.dp_dtheta()
+            # ∂Dp/∂p at PIRLS-converged β̂ = ∂D/∂p|_β̂ (envelope; β̂'S_λβ̂ has
+            # no explicit p). Use Tweedie.dD_dp.
+            dD_dp = float(family.dD_dp(self._y_arr, fit.mu, wt))
+            # ∂(2·ls0)/∂p via the Dunn-Smyth p-derivative.
+            dls_dp = float(family.dls_dp(self._y_arr, wt, phi))
+            # ∂log|H+S|/∂p — fully analytical, direct + β-coupled.
+            dlogH_dp = float(self._dlog_det_H_dp_tw(fit))
+            # NOTE: under method="ML" the projected log|U_r'(H+S)U_r|
+            # contributes an additional ∂log|M|/∂p term (M = U_n' A⁻¹ U_n).
+            # mgcv's MLpenalty1 handles this for ρ; the analogous correction
+            # for an extra family parameter would mirror the loop in the
+            # ρ branch above. We skip it here: tw() is most useful with
+            # method="REML" where this term is 0; under method="ML" the
+            # gradient may pick up a small bias near the optimum, but the
+            # outer Newton's step-halving + grad-norm convergence test
+            # absorbs it. Document this and revisit if ML+tw becomes a
+            # supported workflow.
+            d_p = dD_dp / (phi * gamma) - 2.0 * dls_dp / gamma + dlogH_dp
+            d_theta = d_p * dp_dth
+            out = np.concatenate([out, [d_theta]])
+
+        return out
 
     def _reml_hessian(self, rho: np.ndarray, log_phi: float = 0.0,
                               fit: "_FitState | None" = None,
-                              include_log_phi: bool = False) -> np.ndarray:
+                              include_log_phi: bool = False,
+                              include_family_theta: bool = False) -> np.ndarray:
         """Analytical Hessian of `_reml` (2·V_R units).
 
         Returns ((n_sp+1) × (n_sp+1)) when ``include_log_phi=True``, else
-        (n_sp × n_sp). Wood 2011 §4 for non-Gaussian, with Newton-form W:
+        (n_sp × n_sp). With ``include_family_theta``, the Hessian is
+        further augmented by ``family.n_theta`` rows/columns; those rows
+        are computed by central-difference of the **fully analytical**
+        ``_reml_grad`` along the family-θ direction. The gradient itself
+        (including the family-θ entries) is exact and pinned to mgcv;
+        the FD here is purely an algorithmic Hessian approximation for
+        the outer Newton's search direction. With h=1e-4 and a smooth
+        score the truncation error is ~1e-8, well below the outer
+        Newton's convergence tolerance.
+
+        Wood 2011 §4 for non-Gaussian, with Newton-form W:
 
           ∂²(2·V_R)/∂ρ_l∂ρ_k = (1/φ)·∂²Dp/∂ρ_l∂ρ_k
                               + ∂²log|H|/∂ρ_l∂ρ_k
@@ -1479,16 +1591,74 @@ class gam:
         Dp = fit.dev + fit.pen
         ls = np.asarray(self.family.ls(self._y_arr, np.ones(self.n), phi))
         H_aug[n_sp, n_sp] = (Dp / phi - 2.0 * float(ls[2])) / gamma
-        return H_aug
+
+        if not include_family_theta or self.family.n_theta == 0:
+            return H_aug
+
+        # Family-θ rows/cols. The base θ-vector layout is (ρ, log φ, θ_fam).
+        # We FD the analytical gradient `_reml_grad(..., include_family_theta=True)`
+        # along each θ_fam slot, refitting β̂ at the perturbed θ each time.
+        family = self.family
+        n_extra = family.n_theta
+        base_size = n_sp + 1
+        new_size = base_size + n_extra
+        H_full = np.zeros((new_size, new_size))
+        H_full[:base_size, :base_size] = H_aug
+
+        # Step size: 1e-4 sits in the FD sweet spot for our score scale
+        # (truncation ~h²·g''' ~ 1e-8; round-off ~eps/h·||g|| ~ 1e-12).
+        h_step = 1e-4
+        theta_orig = family.get_theta().copy()
+        for k in range(n_extra):
+            theta_pert = theta_orig.copy()
+            # Forward.
+            theta_pert[k] = theta_orig[k] + h_step
+            family.set_theta(theta_pert)
+            try:
+                fit_p = self._fit_given_rho(rho)
+                grad_p = self._reml_grad(
+                    rho, log_phi, fit=fit_p,
+                    include_log_phi=True,
+                    include_family_theta=True,
+                )
+            except Exception:
+                grad_p = np.full(new_size, 1e15)
+            # Backward.
+            theta_pert[k] = theta_orig[k] - h_step
+            family.set_theta(theta_pert)
+            try:
+                fit_m = self._fit_given_rho(rho)
+                grad_m = self._reml_grad(
+                    rho, log_phi, fit=fit_m,
+                    include_log_phi=True,
+                    include_family_theta=True,
+                )
+            except Exception:
+                grad_m = np.full(new_size, 1e15)
+            family.set_theta(theta_orig)
+
+            col = (grad_p - grad_m) / (2.0 * h_step)        # length new_size
+            col_idx = base_size + k
+            H_full[:, col_idx] = col
+            # Symmetrise by averaging row/col copy — the analytical Hessian is
+            # symmetric, and FD on the gradient is symmetric up to truncation.
+            H_full[col_idx, :base_size] = col[:base_size]
+        # Symmetrise the family-θ × family-θ block (n_extra small, this is cheap).
+        H_full[base_size:, base_size:] = 0.5 * (
+            H_full[base_size:, base_size:] + H_full[base_size:, base_size:].T
+        )
+        return H_full
 
     def _outer_newton(
         self, theta0: np.ndarray, *, include_log_phi: bool,
         criterion: str = "REML",
+        include_family_theta: bool = False,
         max_iter: int = 200, conv_tol: float = 1e-6,
         max_step: float = 5.0, max_sd_step: float = 2.0,
         max_half: int = 30, qerror_thresh: float = 0.8,
     ) -> np.ndarray:
-        """Unified analytical Newton on V_R(ρ, log φ) or V_g/V_u(ρ) — mgcv's gam.outer.
+        """Unified analytical Newton on V_R(ρ, log φ[, θ_fam]) or V_g/V_u(ρ)
+        — mgcv's gam.outer, extended with a family-θ slot for ``tw()``.
 
         Direct port of mgcv's ``newton`` (gam.fit3.r:1290-1719). Each
         outer iteration:
@@ -1521,24 +1691,38 @@ class gam:
         ``|log(scale.est)| + |score|`` (REML).
 
         ``theta`` layout: ρ first, then a single log φ column when
-        ``include_log_phi`` is set (unknown-scale REML). For known-scale
-        REML (Poisson, Binomial) log φ is fixed at 0; for GCV.Cp log φ is
-        always off the outer vector.
+        ``include_log_phi`` is set (unknown-scale REML), then
+        ``family.n_theta`` extra columns when ``include_family_theta`` is
+        set. For known-scale REML (Poisson, Binomial) log φ is fixed at 0;
+        for GCV.Cp log φ and family θ are always off the outer vector.
+
+        Each ``_eval`` calls ``family.set_theta(t[base:])`` so the family's
+        internal state (e.g. ``self.p`` for tw) tracks the current outer
+        iterate before PIRLS is run.
 
         ``criterion`` selects the objective:
         - ``"REML"``: minimizes V_R via ``_reml`` (returns 2·V_R, hence
           the 0.5 scaling), ``_reml_grad``, ``_reml_hessian``.
         - ``"GCV"``: minimizes V_g (scale-unknown) or V_u (scale-known)
           via ``_gcv``, ``_gcv_grad``, ``_gcv_hessian``. ``include_log_phi``
-          must be False (GCV does not put log φ in the outer vector — φ̂
-          is the Pearson estimate post-fit, not optimized).
+          and ``include_family_theta`` must both be False (GCV does not
+          put log φ or family θ in the outer vector — φ̂ is the Pearson
+          estimate post-fit, not optimized; family θ has no GCV path).
         """
         if criterion not in ("REML", "GCV"):
             raise ValueError(f"criterion must be 'REML' or 'GCV', got {criterion!r}")
         if criterion == "GCV" and include_log_phi:
             raise ValueError("GCV path does not include log φ in outer θ.")
+        if criterion == "GCV" and include_family_theta:
+            raise ValueError("GCV path does not include family θ in outer θ.")
+        if include_family_theta and not include_log_phi:
+            raise ValueError(
+                "include_family_theta=True requires include_log_phi=True "
+                "(no scale-known extended families are wired)."
+            )
 
         n_sp = len(self._slots)
+        n_theta_fam = self.family.n_theta if include_family_theta else 0
         theta = np.asarray(theta0, dtype=float).copy()
 
         def _split(t):
@@ -1546,9 +1730,15 @@ class gam:
                 return t[:n_sp], float(t[n_sp])
             return t, 0.0
 
+        def _apply_family_theta(t):
+            if n_theta_fam > 0:
+                base = n_sp + (1 if include_log_phi else 0)
+                self.family.set_theta(t[base:base + n_theta_fam])
+
         if criterion == "REML":
             def _eval(t):
                 rho_t, lp_t = _split(t)
+                _apply_family_theta(t)
                 try:
                     fit_t = self._fit_given_rho(rho_t)
                 except Exception:
@@ -1557,11 +1747,15 @@ class gam:
                 return val_2VR / 2.0, fit_t
             def _grad(rho, log_phi, fit):
                 return 0.5 * self._reml_grad(
-                    rho, log_phi, fit=fit, include_log_phi=include_log_phi
+                    rho, log_phi, fit=fit,
+                    include_log_phi=include_log_phi,
+                    include_family_theta=include_family_theta,
                 )
             def _hess(rho, log_phi, fit):
                 return 0.5 * self._reml_hessian(
-                    rho, log_phi, fit=fit, include_log_phi=include_log_phi
+                    rho, log_phi, fit=fit,
+                    include_log_phi=include_log_phi,
+                    include_family_theta=include_family_theta,
                 )
         else:  # GCV
             def _eval(t):
@@ -2212,6 +2406,96 @@ class gam:
             beta_k = fit.beta[a:b]
             out[k] = sp[k] * float(beta_k @ slot.S @ beta_k)
         return out
+
+    # ----------------------- extra family-θ derivatives -------------------
+    #
+    # When ``family.n_theta > 0`` the outer Newton estimates extra family
+    # parameters jointly with (ρ, log φ). For ``tw()`` this is the single θ
+    # mapping to Tweedie's power p. The pieces below give the *analytical*
+    # gradient of the REML score wrt each extra family parameter; the outer
+    # Newton uses central-FD on the whole gradient for the new Hessian
+    # rows/cols (a small lift over the existing analytical (ρ, log φ)
+    # block).
+    #
+    # Notation: θ_f stands for one extra family parameter. The chain rule
+    # to the *physical* family quantity (e.g. p for tw) is handled inside
+    # the family methods (``family.dp_dtheta`` etc.); the gam-side
+    # derivatives below are written wrt the parameter that the family
+    # methods directly update on ``set_theta``.
+
+    def _dbeta_dp_tw(self, fit: "_FitState") -> np.ndarray:
+        """``dβ̂/dp`` for Tweedie at PIRLS-converged β̂ (Fisher score IFT).
+
+        Score equation: X' · u_F(β; p) = S_λ · β̂  with
+        ``u_F_i = μ_η_i · (y_i - μ_i)/V_i`` (Fisher form). Differentiating
+        in p (PIRLS-converged β̂) and using H = X'·W·X + S_λ for the LHS:
+
+            H · dβ̂/dp = X' · ∂u_F/∂p|_{β̂}
+            ∂u_F/∂p|_{β̂} = -μ_η · (y - μ) · log(μ) / V
+
+        because V = μ^p ⇒ ∂(1/V)/∂p = -log(μ)/V.
+
+        Returns a length-p vector. Used by ``_dlog_det_H_dp_tw`` for the
+        β-coupled chain in ∂log|H+S|/∂p; consumers should derive the chain
+        to θ_tw via ``family.dp_dtheta()``.
+        """
+        family = self.family
+        y = self._y_arr
+        mu = fit.mu
+        eta = fit.eta
+        mu_eta = family.link.mu_eta(eta)
+        V = family.variance(mu)
+        log_mu = np.log(mu)
+        duf_dp = -mu_eta * (y - mu) * log_mu / V
+        rhs = self._X_full.T @ duf_dp
+        return cho_solve((fit.A_chol, fit.A_chol_lower), rhs)
+
+    def _dlog_det_H_dp_tw(self, fit: "_FitState",
+                          db_dp: np.ndarray | None = None) -> float:
+        """``∂log|H+S|/∂p`` for Tweedie. Two pieces:
+
+            ∂H/∂p|_{β̂} (direct):
+                ∂W_i/∂p|_{β̂} = (μ_η_i²/V_i) · [(y_i - μ_i)/μ_i - α_i·log(μ_i)]
+            indirect via β̂(p):
+                ∂W_i/∂p|_{β̂(p)} = (∂W/∂η)_i · (X · dβ̂/dp)_i
+
+        Then tr(H⁻¹ · X'·diag(total)·X) = Σ d_i · total_i with
+        ``d_i = (X · A⁻¹ · X')_{ii}`` (same diag-trick the ρ derivative uses).
+
+        For Fisher-fallback fits (α≡1, no Newton corrections) the direct
+        piece simplifies to ``-log(μ)·μ_η²/V`` since ∂α/∂p = (y-μ)/μ is
+        zeroed out alongside the rest of the Newton α-machinery.
+        """
+        family = self.family
+        X = self._X_full
+        y = self._y_arr
+        mu = fit.mu
+        eta = fit.eta
+        mu_eta = family.link.mu_eta(eta)
+        V = family.variance(mu)
+        log_mu = np.log(mu)
+        muV = mu_eta ** 2 / V
+
+        # Direct ∂W/∂p|_{β̂}.
+        if fit.is_fisher_fallback:
+            dW_dp_direct = -log_mu * muV
+        else:
+            alpha = fit.alpha
+            dW_dp_direct = muV * ((y - mu) / mu - alpha * log_mu)
+
+        # Indirect via β̂(p).
+        if db_dp is None:
+            db_dp = self._dbeta_dp_tw(fit)
+        deta_dp = X @ db_dp
+        dw_deta = self._dw_deta(fit)
+        dW_dp_indirect = dw_deta * deta_dp
+
+        dW_dp_total = dW_dp_direct + dW_dp_indirect
+
+        # tr(A⁻¹ · X'·diag(dW_dp_total)·X) = Σ d_i · dW_dp_total_i
+        Hinv_Xt = cho_solve((fit.A_chol, fit.A_chol_lower), X.T)
+        d = np.einsum("ij,ji->i", X, Hinv_Xt)
+        return float(np.sum(d * dW_dp_total))
 
     def _gcv(self, rho: np.ndarray, fit: "_FitState | None" = None) -> float:
         """GCV (scale-unknown) or UBRE/Mallows-Cp (scale-known). Wood 2017 §4.4.

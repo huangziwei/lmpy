@@ -293,6 +293,14 @@ class Family:
     name: str
     canonical_link_name: str
     scale_known: bool
+    # Number of "extra" family parameters that the GAM outer Newton should
+    # estimate jointly with (ρ, log φ). Default 0 (Gaussian, Gamma, Poisson,
+    # Binomial, IG, Quasi); ``tw`` overrides to 1 (its θ_tw → p
+    # reparametrisation). The GAM hooks read ``n_theta`` to size the outer
+    # vector and call ``set_theta(values)`` before each criterion eval; they
+    # call ``dscore_extra(...)`` to obtain the score-side ∂(2·V_R)/∂θ_extra
+    # contributions for the gradient.
+    n_theta: int = 0
 
     def __init__(self, link=None):
         self.link = _resolve_link(link, self.canonical_link_name)
@@ -300,6 +308,22 @@ class Family:
     @property
     def is_canonical(self) -> bool:
         return self.link.name == self.canonical_link_name
+
+    def set_theta(self, values) -> None:
+        """Mutate the family's extra parameters from a length-``n_theta``
+        array. Default is a no-op (consistent with ``n_theta = 0``);
+        :class:`tw` overrides to update ``self.theta`` and ``self.p``.
+        """
+        if self.n_theta != 0:
+            raise NotImplementedError(
+                f"{type(self).__name__} declares n_theta={self.n_theta} "
+                f"but did not override set_theta()."
+            )
+
+    def get_theta(self) -> np.ndarray:
+        """Return the current extra parameters as a length-``n_theta`` array.
+        Default empty; :class:`tw` returns ``[θ_tw]``."""
+        return np.zeros(0)
 
     def variance(self, mu): raise NotImplementedError
     def dvar(self, mu): raise NotImplementedError
@@ -734,6 +758,524 @@ class Quasi(Family):
         return f"quasi(link={self.link.name}, variance={self.variance_name!r})"
 
 
+# ---------------------------------------------------------------------------
+# Tweedie / tw — Dunn-Smyth (2005) series implementation.
+#
+# Tweedie EDF for ``1 < p < 2`` is the compound Poisson-Gamma: a Poisson(λ)
+# count of Gamma jumps. Mean μ, variance ``φ·μ^p``; the density mixes a
+# point mass at 0 with a continuous part on ``y > 0``. With ``α = (2-p)/(1-p)``
+# (negative for 1<p<2):
+#
+#     y = 0:  log f(0; μ, φ, p) = -μ^(2-p) / (φ·(2-p))
+#     y > 0:  log f(y; μ, φ, p) = -log y + log a(y, φ, p)
+#                                + y·μ^(1-p)/(φ·(1-p)) - μ^(2-p)/(φ·(2-p))
+#
+# where ``a(y, φ, p) = Σ_{j≥1} W_j``,
+#
+#     log W_j = j·log z - log Γ(j+1) - log Γ(-j·α),
+#     log z   = -α·log y + α·log(p-1) - (1-α)·log φ - log(2-p).
+#
+# We sum log-W_j outward from the dominant index ``j*`` (where d_j log W_j = 0)
+# until terms drop ``≥ ld_eps`` below the running max, then log-sum-exp. The
+# moments E_p[j] and Var_p[j] under ``p_j = W_j / Σ W_k`` give the φ-derivatives
+# of log a:  d/dlog φ  log a = -(1-α)·E[j] ;  d²/dlog φ² log a = (1-α)²·Var[j].
+# Direct port of mgcv's ``tweedious.c`` / ``ldTweedie``.
+# ---------------------------------------------------------------------------
+
+
+# Series tail tolerance: terms log W_j < log W_max - LD_EPS are dropped. mgcv
+# uses ~36 (≈ -log(eps^½)); a touch tighter than the .Machine$double.eps
+# threshold used in tweedious.c, but well past where summands matter.
+_LD_EPS = 36.0
+# Hard cap on series length to bound worst-case latency at extreme (y, φ, p).
+# In practice the series is centred near j* with width ~√j*, so the loop
+# exits via the LD_EPS gate long before this; the cap is purely a safety net.
+_LD_J_MAX = 100000
+
+
+def _tweedie_log_a_one(y_i: float, phi_i: float, p: float):
+    """Series approximation log a(y, φ, p) = log Σ_{j≥1} W_j for one y > 0.
+
+    Returns ``(log_a, j_bar, j_var, j_psi_bar)`` — the log of the series sum
+    plus three moments of ``j`` under ``p_j = W_j/Σ W_k``: E[j], Var[j],
+    and E[j·ψ(-j·α)]. The first two feed the φ-derivatives of log a; the
+    third (with the digamma weight) is needed for the p-derivative — see
+    Tweedie.dls_dp.
+    """
+    om1 = 1.0 - p                  # negative
+    tm = 2.0 - p                   # positive
+    alpha = tm / om1               # negative
+    one_minus_alpha = 1.0 - alpha  # > 1; equals 1/(p-1)
+
+    # log W_j = j·log_z - lgamma(j+1) - lgamma(-j·α).
+    # Pull constants out of the j loop.
+    log_z = (-alpha * np.log(y_i) + alpha * np.log(p - 1.0)
+             - one_minus_alpha * np.log(phi_i) - np.log(tm))
+
+    # Continuous-extension dominant index (Dunn-Smyth §3): with ψ(x) ≈ log x,
+    # d_j log W_j = log_z - ψ(j+1) + α·ψ(-jα) ≈ 0 ⇒
+    #     j*  ≈ exp((log_z + α·log(-α)) / (1-α))
+    j_star = np.exp((log_z + alpha * np.log(-alpha)) / one_minus_alpha)
+    j_star = max(j_star, 1.0)
+    j_int = max(1, int(round(j_star)))
+
+    def _lw(j):
+        return j * log_z - gammaln(j + 1.0) - gammaln(-j * alpha)
+
+    # Walk outward from j_int both ways. Record (j, log W_j) for each kept
+    # term; track the running max so log-sum-exp is numerically stable. The
+    # `min_steps` guard keeps a few neighbours even when the immediate
+    # neighbour is already below the eps gate (rare; happens at small j*).
+    log_max = _lw(j_int)
+    j_list = [float(j_int)]
+    lw_list = [log_max]
+
+    # Right tail.
+    j = j_int + 1
+    near = 5
+    while j < _LD_J_MAX:
+        v = _lw(j)
+        if v - log_max < -_LD_EPS and (j - j_int) > near:
+            break
+        j_list.append(float(j))
+        lw_list.append(v)
+        if v > log_max:
+            log_max = v
+        j += 1
+
+    # Left tail.
+    j = j_int - 1
+    while j >= 1:
+        v = _lw(j)
+        if v - log_max < -_LD_EPS and (j_int - j) > near:
+            break
+        j_list.append(float(j))
+        lw_list.append(v)
+        if v > log_max:
+            log_max = v
+        j -= 1
+
+    j_arr = np.array(j_list, dtype=float)
+    lw_arr = np.array(lw_list, dtype=float)
+    weights = np.exp(lw_arr - log_max)
+    sum_w = float(np.sum(weights))
+    log_a = log_max + float(np.log(sum_w))
+
+    p_w = weights / sum_w
+    j_bar = float(np.sum(p_w * j_arr))
+    j_var = float(np.sum(p_w * (j_arr - j_bar) ** 2))
+    # ψ(-j·α) is well-defined for α<0, j≥1 (so -j·α > 0). We compute it on
+    # the same j-grid so that the moment matches the series we just summed.
+    psi_arr = digamma(-j_arr * alpha)
+    j_psi_bar = float(np.sum(p_w * j_arr * psi_arr))
+    return log_a, j_bar, j_var, j_psi_bar
+
+
+def _tweedie_log_a_vec(y, phi, p):
+    """Vectorised over y (and per-obs phi). Returns four arrays of shape
+    ``y.shape``: ``log_a``, ``j_bar``, ``j_var``, ``j_psi_bar``. Entries
+    with y==0 are 0 (the y=0 row uses the closed-form point mass, not the
+    series). Per-obs phi handles weights via ``φ_i = φ/wt_i``.
+    """
+    y = np.asarray(y, dtype=float)
+    phi_arr = np.broadcast_to(np.asarray(phi, dtype=float), y.shape).astype(float, copy=True)
+    log_a = np.zeros_like(y)
+    j_bar = np.zeros_like(y)
+    j_var = np.zeros_like(y)
+    j_psi_bar = np.zeros_like(y)
+    flat_y = y.ravel()
+    flat_phi = phi_arr.ravel()
+    out_la = log_a.ravel()
+    out_jb = j_bar.ravel()
+    out_jv = j_var.ravel()
+    out_jpb = j_psi_bar.ravel()
+    for i in range(flat_y.size):
+        if flat_y[i] > 0.0:
+            la, jb, jv, jpb = _tweedie_log_a_one(
+                float(flat_y[i]), float(flat_phi[i]), p
+            )
+            out_la[i] = la
+            out_jb[i] = jb
+            out_jv[i] = jv
+            out_jpb[i] = jpb
+    return log_a, j_bar, j_var, j_psi_bar
+
+
+class Tweedie(Family):
+    """Tweedie EDF with fixed power ``p ∈ (1, 2)`` — compound Poisson-Gamma.
+
+    Mean ``μ``, variance ``φ·μ^p``. The density mixes an exact point mass at
+    ``y = 0`` with a continuous part on ``y > 0``; ``ls`` and ``aic`` evaluate
+    it via the Dunn-Smyth series (see :func:`_tweedie_log_a_one`). For joint
+    estimation of ``p`` with the smoothing parameters, use :class:`tw`.
+
+    Default link is ``log``. Scale ``φ`` is unknown (Pearson/REML estimated).
+    """
+    name = "Tweedie"
+    canonical_link_name = "log"  # mgcv's default; no canonical link in the strict
+                                  # EDF sense for non-integer p.
+    scale_known = False
+
+    def __init__(self, p: float, link=None):
+        if not (1.0 < p < 2.0):
+            raise ValueError(f"Tweedie requires 1 < p < 2; got p={p!r}")
+        self.p = float(p)
+        super().__init__(link=link)
+
+    def variance(self, mu):
+        return np.asarray(mu, dtype=float) ** self.p
+
+    def dvar(self, mu):
+        return self.p * np.asarray(mu, dtype=float) ** (self.p - 1.0)
+
+    def d2var(self, mu):
+        return (self.p * (self.p - 1.0)
+                * np.asarray(mu, dtype=float) ** (self.p - 2.0))
+
+    def d3var(self, mu):
+        return (self.p * (self.p - 1.0) * (self.p - 2.0)
+                * np.asarray(mu, dtype=float) ** (self.p - 3.0))
+
+    def dev_resids(self, y, mu, wt):
+        # 1<p<2 form (Jorgensen 1987):
+        #   y > 0:  d_i = 2·[ y·(y^(1-p) - μ^(1-p))/(1-p) - (y^(2-p) - μ^(2-p))/(2-p) ]
+        #   y = 0:  d_i = 2·μ^(2-p)/(2-p)
+        # Both pieces are non-negative for 1<p<2, μ>0, y≥0; minimised at y=μ.
+        y = np.asarray(y, dtype=float)
+        mu = np.asarray(mu, dtype=float)
+        wt = np.asarray(wt, dtype=float)
+        p = self.p
+        om1 = 1.0 - p
+        tm = 2.0 - p
+        zero = (y == 0.0)
+        # Mask y inside the y^(...) so y=0 rows don't generate spurious 0**neg.
+        y_safe = np.where(zero, 1.0, y)
+        d_pos = 2.0 * (y * (y_safe ** om1 - mu ** om1) / om1
+                       - (y_safe ** tm - mu ** tm) / tm)
+        d_zero = 2.0 * mu ** tm / tm
+        return wt * np.where(zero, d_zero, d_pos)
+
+    def initialize(self, y, wt):
+        y = np.asarray(y, dtype=float)
+        if np.any(y < 0):
+            raise ValueError(
+                "negative values not allowed for the 'Tweedie' family"
+            )
+        # mgcv's Tweedie(): mustart = y + 0.1 — keeps log(μ) finite for y=0
+        # rows under the canonical log link. Same shape as Poisson.
+        return y + 0.1
+
+    def validmu(self, mu):
+        mu = np.asarray(mu)
+        return bool(np.all(np.isfinite(mu)) and np.all(mu > 0))
+
+    def _log_density(self, y, mu, phi, wt):
+        """Per-obs log f(y_i; μ_i, φ/wt_i, p), shape (n,). Weight-aware via
+        the per-obs scale convention φ_i = φ/w_i (matches mgcv)."""
+        y = np.asarray(y, dtype=float)
+        mu = np.asarray(mu, dtype=float)
+        wt = np.asarray(wt, dtype=float)
+        good = wt > 0
+        phi_i = np.where(good, float(phi) / np.where(good, wt, 1.0), 1.0)
+        p = self.p
+        om1 = 1.0 - p
+        tm = 2.0 - p
+        zero = (y == 0.0)
+        # cumulant_i = y_i·μ_i^(1-p)/(1-p) - μ_i^(2-p)/(2-p) (the y-only term
+        # vanishes at y=0; the rest is the y=0 closed form's exponent).
+        cumulant = y * mu ** om1 / om1 - mu ** tm / tm
+        out = np.empty_like(y)
+        out[zero] = cumulant[zero] / phi_i[zero]
+        if np.any(~zero):
+            la, _, _, _ = _tweedie_log_a_vec(y[~zero], phi_i[~zero], p)
+            out[~zero] = -np.log(y[~zero]) + la + cumulant[~zero] / phi_i[~zero]
+        return out
+
+    def aic(self, y, mu, dev, wt, n):
+        # mgcv's ``Tweedie()$aic``: -2·Σ wt·log f at the fitted (μ, φ̂) plus
+        # +2 for the φ "extra df". φ̂ is the Pearson moment scale (matches
+        # mgcv:::fix.family.aic which expects the post-fit scale).
+        y = np.asarray(y, dtype=float)
+        mu = np.asarray(mu, dtype=float)
+        wt = np.asarray(wt, dtype=float)
+        n_eff = float(wt.sum())
+        V = mu ** self.p
+        phi = float(np.sum(wt * (y - mu) ** 2 / np.maximum(V, 1e-300))
+                    / max(n_eff, 1.0))
+        if not (np.isfinite(phi) and phi > 0):
+            phi = max(float(dev) / max(n_eff, 1.0), 1e-12)
+        log_f = self._log_density(y, mu, phi, wt)
+        return -2.0 * float(np.sum(log_f * wt)) + 2.0
+
+    def ls(self, y, wt, scale):
+        """Saturated log-lik Σ w_i·log f(y_i; y_i, φ/w_i, p) and its 1st/2nd
+        derivatives wrt log φ (hea log-scale convention).
+
+        Per-obs scale ``φ_i = φ/w_i`` ⇒ d log φ_i / d log φ = 1, so the chain
+        rule is trivial. For y_i = 0 with μ_i = y_i = 0 the cumulant is 0 and
+        log f = 0; the entry contributes nothing to ls or its derivatives.
+        For y_i > 0:
+
+            log f_sat = -log y + log a(y, φ_i, p) + y^(2-p)/((1-p)(2-p)·φ_i)
+
+        and using d/dlog φ_i log a = -(1-α)·E[j], d²/dlog φ_i² log a =
+        (1-α)²·Var[j] (Dunn-Smyth moments under p_j = W_j/Σ W_k):
+
+            d ls / dlog φ   = Σ w_i · (-(1-α)·E[j_i] - c_i/φ_i)
+            d² ls / dlog φ² = Σ w_i · ( (1-α)²·Var[j_i] + c_i/φ_i )
+
+        with c_i = y_i^(2-p)/((1-p)(2-p)) the saturated cumulant (negative
+        for 1<p<2).
+        """
+        y = np.asarray(y, dtype=float)
+        wt = np.asarray(wt, dtype=float)
+        good = wt > 0
+        if not np.any(good):
+            return np.array([0.0, 0.0, 0.0], dtype=float)
+        y_g = y[good]
+        w_g = wt[good]
+        phi_i = float(scale) / w_g
+        p = self.p
+        om1 = 1.0 - p
+        tm = 2.0 - p
+        # one_minus_alpha = 1 - (2-p)/(1-p) = -1/(1-p) = 1/(p-1)
+        one_minus_alpha = 1.0 / (p - 1.0)
+
+        zero = (y_g == 0.0)
+        y_safe = np.where(zero, 1.0, y_g)
+        # Saturated cumulant c_i = y^(2-p)/((1-p)(2-p)) for y>0; 0 at y=0.
+        cum = np.where(zero, 0.0, y_safe ** tm / (om1 * tm))
+
+        # Series moments at μ=y; only computed for y>0 rows. ``ls`` only
+        # needs (log a, E[j], Var[j]); the j_psi_bar moment is consumed by
+        # ``dls_dp`` for the p-derivative path.
+        log_a = np.zeros_like(y_g)
+        j_bar = np.zeros_like(y_g)
+        j_var = np.zeros_like(y_g)
+        if np.any(~zero):
+            la_, jb_, jv_, _ = _tweedie_log_a_vec(y_g[~zero], phi_i[~zero], p)
+            log_a[~zero] = la_
+            j_bar[~zero] = jb_
+            j_var[~zero] = jv_
+
+        # log f_sat per observation; y=0 row is 0 by the closed form.
+        log_f_sat = np.where(zero, 0.0,
+                             -np.log(y_safe) + log_a + cum / phi_i)
+        ls0 = float(np.sum(w_g * log_f_sat))
+
+        d1_per = np.where(zero, 0.0, -one_minus_alpha * j_bar - cum / phi_i)
+        d2_per = np.where(zero, 0.0,
+                          one_minus_alpha * one_minus_alpha * j_var
+                          + cum / phi_i)
+        d1 = float(np.sum(w_g * d1_per))
+        d2 = float(np.sum(w_g * d2_per))
+        return np.array([ls0, d1, d2], dtype=float)
+
+    # ---- analytical p-derivatives (used by joint outer Newton in tw()) ----
+
+    def dvar_dp(self, mu):
+        """``∂V(μ)/∂p = log(μ)·μ^p`` (since V = μ^p ⇒ log V = p·log μ)."""
+        mu = np.asarray(mu, dtype=float)
+        return np.log(mu) * mu ** self.p
+
+    def dD_dp(self, y, mu, wt):
+        """Σ_i wt_i · ∂d_i/∂p at fixed (y, μ). Used by the joint outer
+        Newton when ``family.n_theta > 0`` to evaluate ``∂Dp/∂p`` (the
+        envelope theorem at PIRLS-converged β̂ kills the β-coupled chain).
+
+        For y > 0:
+            d_i = 2·[y·u/om1 - v/tm]   with u = y^om1 - μ^om1, v = y^tm - μ^tm,
+                                            om1 = 1-p, tm = 2-p.
+            ∂d_i/∂p = 2·[ y·(μ^om1·log μ - y^om1·log y)/om1 + y·u/om1²
+                         - (μ^tm·log μ - y^tm·log y)/tm - v/tm² ]
+        For y = 0:
+            d_i = 2·μ^tm/tm,  ∂d_i/∂p = 2·μ^tm·[1/tm² - log μ/tm].
+        """
+        y = np.asarray(y, dtype=float)
+        mu = np.asarray(mu, dtype=float)
+        wt = np.asarray(wt, dtype=float)
+        p = self.p
+        om1 = 1.0 - p
+        tm = 2.0 - p
+        zero = (y == 0.0)
+        log_mu = np.log(mu)
+        # y_safe is only used inside masked branches; log_y substitutes 0 for
+        # y=0 so y·log y = 0 (limit of y·log y as y→0⁺).
+        y_safe = np.where(zero, 1.0, y)
+        log_y = np.where(zero, 0.0, np.log(y_safe))
+
+        # y > 0 branch
+        y_om1 = y_safe ** om1
+        mu_om1 = mu ** om1
+        y_tm = y_safe ** tm
+        mu_tm = mu ** tm
+        u = y_om1 - mu_om1
+        v = y_tm - mu_tm
+        # ∂[y·u/om1]/∂p:  y·∂u/∂p / om1 + y·u/om1²
+        #   ∂u/∂p = -y^om1·log y + μ^om1·log μ
+        dA1 = (y * (mu_om1 * log_mu - y_om1 * log_y) / om1
+               + y * u / (om1 * om1))
+        # ∂[v/tm]/∂p:    ∂v/∂p / tm + v/tm²
+        #   ∂v/∂p = -y^tm·log y + μ^tm·log μ
+        dA2 = ((mu_tm * log_mu - y_tm * log_y) / tm
+               + v / (tm * tm))
+        d_dp_pos = 2.0 * (dA1 - dA2)
+
+        # y = 0 branch
+        d_dp_zero = 2.0 * mu_tm * (1.0 / (tm * tm) - log_mu / tm)
+
+        return float(np.sum(wt * np.where(zero, d_dp_zero, d_dp_pos)))
+
+    def dls_dp(self, y, wt, scale):
+        """``∂ls/∂p`` (saturated log-lik). Companion to ``ls`` for the
+        joint-outer-Newton p-direction.
+
+        For y_i > 0:
+            log f_sat = -log y + log a(y, φ_i, p) + cum_sat(y, p)/φ_i
+            ∂log f_sat/∂p = ∂log a/∂p + ∂cum_sat/∂p / φ_i
+        For y_i = 0: log f_sat ≡ 0 ⇒ ∂/∂p = 0.
+
+        Series-moment piece (Dunn-Smyth + chain rule on log W_j = j·log z
+        - lgamma(j+1) - lgamma(-j·α)):
+
+            ∂log W_j/∂p = j·K_j/(1-p)² + j/(2-p)
+            K_j         = log φ + log(p-1) + ψ(-j·α) - log y - (2-p)
+            ∂log a/∂p   = E[j·K_j]/(1-p)² + E[j]/(2-p)
+
+        ``E[j]`` and ``E[j·ψ(-j·α)]`` are returned by
+        :func:`_tweedie_log_a_one` (see j_bar, j_psi_bar).
+
+        Saturated cumulant cum_sat = y^(2-p)/((1-p)(2-p)); its p-derivative is
+            ∂cum_sat/∂p = y^(2-p) · [(3 - 2p) - log(y)·(1-p)·(2-p)]
+                          / [(1-p)·(2-p)]²
+        """
+        y = np.asarray(y, dtype=float)
+        wt = np.asarray(wt, dtype=float)
+        good = wt > 0
+        if not np.any(good):
+            return 0.0
+        y_g = y[good]
+        w_g = wt[good]
+        phi_i = float(scale) / w_g
+        p = self.p
+        om1 = 1.0 - p
+        tm = 2.0 - p
+        om1_tm = om1 * tm
+
+        zero = (y_g == 0.0)
+        y_safe = np.where(zero, 1.0, y_g)
+        log_y = np.where(zero, 0.0, np.log(y_safe))
+        log_phi = np.log(phi_i)
+
+        # ∂cum_sat/∂p (per-obs)
+        y_tm = y_safe ** tm
+        dcum_dp = np.where(
+            zero, 0.0,
+            y_tm * ((3.0 - 2.0 * p) - log_y * om1_tm) / (om1_tm * om1_tm)
+        )
+
+        # ∂log a/∂p via series moments. Need (j_bar, j_psi_bar) over y>0 rows.
+        j_bar = np.zeros_like(y_g)
+        j_psi_bar = np.zeros_like(y_g)
+        if np.any(~zero):
+            _, jb_, _, jpb_ = _tweedie_log_a_vec(
+                y_g[~zero], phi_i[~zero], p
+            )
+            j_bar[~zero] = jb_
+            j_psi_bar[~zero] = jpb_
+        # K_const_i = log φ_i + log(p-1) - log y_i - (2-p)
+        # E[j·K_j] = j_bar · K_const + j_psi_bar (since ψ has E[j·ψ(-jα)])
+        K_const = log_phi + np.log(p - 1.0) - log_y - tm
+        E_jK = j_bar * K_const + j_psi_bar
+        dlog_a_dp = np.where(zero, 0.0, E_jK / (om1 * om1) + j_bar / tm)
+
+        dlog_f_dp = np.where(zero, 0.0, dlog_a_dp + dcum_dp / phi_i)
+        return float(np.sum(w_g * dlog_f_dp))
+
+    def __repr__(self):
+        return f"Tweedie(p={self.p:.4g}, link={self.link.name})"
+
+
+class tw(Tweedie):
+    """Tweedie family with the power parameter ``p`` estimated jointly with
+    the smoothing parameters — mgcv's ``tw()`` extended family.
+
+    ``p`` is reparametrised through a scalar ``θ`` to keep the optimisation
+    unconstrained:
+
+        p(θ) = (a + b·exp(θ)) / (1 + exp(θ))    ⇒ p ∈ (a, b) as θ ∈ ℝ
+
+    with default ``a = 1.01``, ``b = 1.99``. Initial p defaults to 1.5
+    (mgcv's start) unless ``theta`` is passed (sets p = p(theta)).
+
+    Joint estimation in ``hea.gam`` is via Brent's method on θ over the
+    interior of ``(a, b)``: each Brent iterate fits the full GAM at a fixed
+    candidate ``p``; the score returned is the converged REML/ML criterion
+    at that ``p``. Cheaper than analytical joint outer-Newton but typically
+    converges in 10-20 inner fits. The fitted ``p̂`` is stored on
+    ``family.p``; the converged θ̂ on ``family.theta``.
+    """
+    name = "Tweedie"
+    n_theta = 1
+
+    def __init__(self, theta: float | None = None, link=None,
+                 a: float = 1.01, b: float = 1.99):
+        if not (1.0 <= a < b <= 2.0):
+            raise ValueError(
+                f"tw() requires 1 ≤ a < b ≤ 2; got a={a!r}, b={b!r}"
+            )
+        self.a = float(a)
+        self.b = float(b)
+        if theta is None:
+            # mgcv's tw() starts at p=1.5; θ such that p(θ)=1.5 is
+            # θ = log((1.5 - a)/(b - 1.5)).
+            p_init = 1.5
+            theta_init = float(np.log((p_init - self.a) / (self.b - p_init)))
+        else:
+            theta_init = float(theta)
+            p_init = self._p_of_theta(theta_init)
+        self.theta = theta_init
+        # Tweedie.__init__ validates 1 < p < 2 and sets p, link.
+        super().__init__(p=p_init, link=link)
+
+    def _p_of_theta(self, theta: float) -> float:
+        # p(θ) = (a + b·e^θ)/(1 + e^θ); use sigmoid form for stability.
+        s = float(expit(theta))
+        return self.a * (1.0 - s) + self.b * s
+
+    def dp_dtheta(self) -> float:
+        """``dp/dθ = (b - a)·σ(θ)·(1 - σ(θ))`` where σ is the logistic.
+        Used by the outer Newton chain rule when joint-estimating θ_tw.
+        """
+        s = float(expit(self.theta))
+        return (self.b - self.a) * s * (1.0 - s)
+
+    def d2p_dtheta2(self) -> float:
+        """``d²p/dθ² = (b-a)·σ·(1-σ)·(1 - 2σ)``."""
+        s = float(expit(self.theta))
+        return (self.b - self.a) * s * (1.0 - s) * (1.0 - 2.0 * s)
+
+    def set_theta(self, theta) -> None:
+        """Update θ (and the implied ``p``). Accepts a scalar or a 1-element
+        array (consistent with the Family base ``n_theta``-array signature).
+        """
+        if hasattr(theta, "__len__"):
+            if len(theta) != 1:
+                raise ValueError(
+                    f"tw expects a single theta; got length {len(theta)}"
+                )
+            theta = theta[0]
+        self.theta = float(theta)
+        self.p = self._p_of_theta(self.theta)
+
+    def get_theta(self) -> np.ndarray:
+        return np.array([self.theta], dtype=float)
+
+    def __repr__(self):
+        return (f"tw(p={self.p:.4g}, link={self.link.name}, "
+                f"a={self.a!r}, b={self.b!r})")
+
+
 # Convenience exports — mirror R's lowercase/CapCase convention so user code
 # reads almost identically: ``gam(..., family=Gamma(link='log'))``.
 gaussian = Gaussian
@@ -749,6 +1291,7 @@ __all__ = [
     "Binomial", "binomial",
     "InverseGaussian", "inverse_gaussian",
     "Quasi", "quasi",
+    "Tweedie", "tw",
     "IdentityLink", "LogLink", "InverseLink",
     "SqrtLink", "LogitLink", "ProbitLink", "CauchitLink", "CloglogLink",
     "InverseSquareLink",

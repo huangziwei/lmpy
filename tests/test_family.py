@@ -23,6 +23,8 @@ from hea.family import (
     Poisson,
     ProbitLink,
     SqrtLink,
+    Tweedie,
+    tw,
 )
 
 
@@ -405,3 +407,263 @@ def test_family_link_resolution():
 def test_family_link_unknown_raises():
     with pytest.raises(ValueError, match="unknown link"):
         Poisson(link="banana")
+
+
+# ---------------------------------------------------------------------------
+# Tweedie / tw — oracles pinned to mgcv 1.9-4.
+#
+# All numeric oracles in this section are produced by R/mgcv:
+#   Tweedie(p, link='log')$variance / dev.resids / dvar / d2var / d3var
+#   ldTweedie(y, mu, rho=log(phi), theta, a, b)              # log f + derivs
+# The (rho, theta) parametrisation matches hea's tw() exactly:
+#   p(theta) = (a + b·exp(theta))/(1 + exp(theta));  rho = log(phi).
+# ---------------------------------------------------------------------------
+
+
+def test_tweedie_static_fields():
+    f = Tweedie(p=1.5)
+    assert f.name == "Tweedie"
+    assert f.canonical_link_name == "log"
+    assert f.scale_known is False
+    assert f.link.name == "log"
+    assert f.p == 1.5
+    assert f.n_theta == 0  # fixed-p Tweedie isn't "estimable"
+
+
+def test_tweedie_p_out_of_range_raises():
+    with pytest.raises(ValueError, match="1 < p < 2"):
+        Tweedie(p=1.0)
+    with pytest.raises(ValueError, match="1 < p < 2"):
+        Tweedie(p=2.0)
+    with pytest.raises(ValueError, match="1 < p < 2"):
+        Tweedie(p=0.5)
+
+
+def test_tweedie_validmu_and_initialize():
+    f = Tweedie(p=1.5)
+    assert f.validmu(np.array([0.1, 1.0, 5.0]))
+    assert not f.validmu(np.array([0.0, 1.0]))
+    assert not f.validmu(np.array([-0.1, 1.0]))
+    y = np.array([0.0, 1.0, 2.5])
+    np.testing.assert_allclose(f.initialize(y, np.ones(3)), y + 0.1)
+    with pytest.raises(ValueError, match="negative values"):
+        f.initialize(np.array([-1.0, 1.0]), np.ones(2))
+
+
+_TW_MUS = np.array([0.5, 1.0, 2.0, 5.0])
+
+
+@pytest.mark.parametrize(
+    "p, V, dV, d2V, d3V",
+    [
+        (
+            1.1,
+            [0.466516495768403705, 1.0, 2.143546925072586262, 5.873094715440095648],
+            [1.02633629069048826, 1.10000000000000009, 1.17895080878992253, 1.29208083739682111],
+            [0.2052672581380978467, 0.1100000000000001116, 0.0589475404394961822, 0.0258416167479364467],
+            [-0.3694810646485760519, -0.0990000000000000879, -0.0265263931977732792, -0.0046514910146285603],
+        ),
+        (
+            1.5,
+            [0.353553390593273786, 1.0, 2.828427124746190291, 11.180339887498949025],
+            [1.06066017177982141, 1.50000000000000000, 2.12132034355964283, 3.35410196624968471],
+            [1.060660171779821415, 0.750000000000000000, 0.530330085889910707, 0.335410196624968460],
+            [-1.0606601717798214146, -0.3750000000000000000, -0.1325825214724776768, -0.0335410196624968474],
+        ),
+        (
+            1.9,
+            [0.267943365634073283, 1.0, 3.732131966147229640, 21.283498063019610669],
+            [1.01818478940947843, 1.89999999999999991, 3.54552536783986794, 8.08772926394745184],
+            [1.83273262093706091, 1.70999999999999974, 1.59548641552794046, 1.45579126751054133],
+            [-0.3665465241874125146, -0.1710000000000001241, -0.0797743207763970952, -0.0291158253502108513],
+        ),
+    ],
+)
+def test_tweedie_variance_oracle(p, V, dV, d2V, d3V):
+    """mgcv:::fix.family.var(Tweedie(p, link='log'))$dvar/d2var/d3var at mu=(0.5,1,2,5)."""
+    f = Tweedie(p=p)
+    np.testing.assert_allclose(f.variance(_TW_MUS), V, rtol=1e-13)
+    np.testing.assert_allclose(f.dvar(_TW_MUS), dV, rtol=1e-13)
+    np.testing.assert_allclose(f.d2var(_TW_MUS), d2V, rtol=1e-13)
+    np.testing.assert_allclose(f.d3var(_TW_MUS), d3V, rtol=1e-13)
+
+
+_TW_DEV_Y = np.array([0.0, 0.5, 1.0, 2.5, 4.0])
+_TW_DEV_MU = np.array([0.6, 0.7, 1.2, 2.0, 3.5])
+
+
+@pytest.mark.parametrize(
+    "p, dev_oracle",
+    [
+        (
+            1.1,
+            [1.4032130388652341857, 0.0665577307825964692,
+             0.0349267878477985683, 0.1071552861439123427, 0.0599447148388876361],
+        ),
+        (
+            1.5,
+            [3.0983866769659336171, 0.0802430753127092444,
+             0.0332641767424362023, 0.0788114206843384402, 0.0356745147454633482],
+        ),
+        (
+            1.9,
+            [19.0040043301135099796, 0.0968397017685943551,
+             0.0316900713608997964, 0.0579905047662896411, 0.0212341107387551409],
+        ),
+    ],
+)
+def test_tweedie_dev_resids_oracle(p, dev_oracle):
+    """Tweedie(p)$dev.resids(y, mu, wt=1)."""
+    f = Tweedie(p=p)
+    np.testing.assert_allclose(
+        f.dev_resids(_TW_DEV_Y, _TW_DEV_MU, np.ones(5)),
+        dev_oracle, rtol=1e-13,
+    )
+
+
+def test_tweedie_dev_resids_weighted_oracle():
+    """Tweedie(p=1.5)$dev.resids with non-unit prior weights."""
+    f = Tweedie(p=1.5)
+    wt = np.array([0.5, 1.0, 2.0, 1.0, 0.5])
+    oracle = [1.5491933384829668086, 0.0802430753127092444,
+              0.0665283534848724045, 0.0788114206843384402, 0.0178372573727316741]
+    np.testing.assert_allclose(
+        f.dev_resids(_TW_DEV_Y, _TW_DEV_MU, wt), oracle, rtol=1e-13,
+    )
+
+
+def test_tweedie_dev_resids_zero_at_y_equals_mu():
+    f = Tweedie(p=1.5)
+    y = np.array([0.5, 1.0, 2.0, 5.0])
+    np.testing.assert_allclose(f.dev_resids(y, y, np.ones(4)), 0.0, atol=1e-13)
+
+
+def test_tweedie_dev_limit_to_poisson():
+    """Tweedie deviance → Poisson deviance as p → 1."""
+    y = np.array([1.0, 2.0, 5.0, 10.0])
+    mu = np.array([1.5, 1.5, 4.0, 8.0])
+    pois = Poisson().dev_resids(y, mu, np.ones(4))
+    np.testing.assert_allclose(
+        Tweedie(p=1.001).dev_resids(y, mu, np.ones(4)), pois, rtol=1e-2,
+    )
+
+
+def test_tweedie_dev_limit_to_gamma():
+    """Tweedie deviance → Gamma deviance as p → 2."""
+    y = np.array([0.5, 1.0, 2.0, 5.0])
+    mu = np.array([0.6, 1.5, 2.5, 4.0])
+    gam_dev = Gamma().dev_resids(y, mu, np.ones(4))
+    np.testing.assert_allclose(
+        Tweedie(p=1.999).dev_resids(y, mu, np.ones(4)), gam_dev, rtol=1e-2,
+    )
+
+
+def test_tweedie_log_density_oracle_p15():
+    """ldTweedie(y, mu, rho=0, theta=0, a=1.01, b=1.99)[, 1] at p=1.5, phi=1."""
+    f = Tweedie(p=1.5)
+    log_f = f._log_density(_TW_DEV_Y, _TW_DEV_MU, phi=1.0, wt=np.ones(5))
+    oracle = [-1.549193338482966809, -0.608940759999017533,
+              -1.045247308713201040, -1.710387087424116714,
+              -2.026689918613598707]
+    np.testing.assert_allclose(log_f, oracle, rtol=1e-12)
+
+
+def test_tweedie_log_density_oracle_p17():
+    """Same at p=1.7, phi=2.0 — exercises the Dunn-Smyth series at off-default p."""
+    f = Tweedie(p=1.7)
+    log_f = f._log_density(_TW_DEV_Y, _TW_DEV_MU, phi=2.0, wt=np.ones(5))
+    oracle = [-1.429862000740157901, -0.970520782376560809,
+              -1.491788879150033331, -2.222992852580873091,
+              -2.589272021845887117]
+    np.testing.assert_allclose(log_f, oracle, rtol=1e-12)
+
+
+def test_tweedie_ls_saturated_oracle_p15():
+    """tw() at default theta=0 ⇒ p=1.5, scale=1; sums of ldTweedie(y, y, ...)[, 1:3]."""
+    f = tw()
+    assert f.p == pytest.approx(1.5, abs=1e-12)
+    ls = f.ls(_TW_DEV_Y, np.ones(5), scale=1.0)
+    np.testing.assert_allclose(ls[0], -5.2772684810074608, rtol=1e-12)
+    np.testing.assert_allclose(ls[1], -2.4805433077476438, rtol=1e-12)
+    np.testing.assert_allclose(ls[2], -0.6812533145450566, rtol=1e-9)
+
+
+def test_tweedie_ls_saturated_oracle_p17():
+    """tw().set_theta(...) → p=1.7, scale=2."""
+    f = tw()
+    f.set_theta(np.log((1.7 - 1.01) / (1.99 - 1.7)))
+    assert f.p == pytest.approx(1.7, abs=1e-12)
+    ls = f.ls(_TW_DEV_Y, np.ones(5), scale=2.0)
+    np.testing.assert_allclose(ls[0], -7.22064210632427717, rtol=1e-12)
+    np.testing.assert_allclose(ls[1], -2.8497276172663244, rtol=1e-12)
+    np.testing.assert_allclose(ls[2], -0.837451847912255021, rtol=1e-9)
+
+
+def test_tweedie_ls_weighted_oracle():
+    """Weighted saturated ls; per-obs scale phi_i = phi/wt_i (mgcv tw()$ls)."""
+    f = Tweedie(p=1.5)
+    wt = np.array([0.5, 1.0, 2.0, 1.0, 0.5])
+    ls = f.ls(_TW_DEV_Y, wt, scale=1.5)
+    np.testing.assert_allclose(ls[0], -5.85919331444838587, rtol=1e-12)
+    np.testing.assert_allclose(ls[1], -3.06707140557613522, rtol=1e-12)
+
+
+def test_tweedie_ls_zero_weights_dropped():
+    """Rows with wt=0 should drop out of ls (mgcv's good-subset convention)."""
+    f = Tweedie(p=1.5)
+    y = np.array([0.0, 1.0, 2.5])
+    wt_drop = np.array([1.0, 0.0, 1.0])
+    ls_drop = f.ls(y, wt_drop, 1.0)
+    ls_two = f.ls(np.array([0.0, 2.5]), np.array([1.0, 1.0]), 1.0)
+    np.testing.assert_allclose(ls_drop, ls_two, rtol=1e-12)
+
+
+def test_tw_dls_dp_chain_to_theta_oracle_p15():
+    """dls/dp · dp/dθ_tw must equal Σ ldTweedie[, 'th'] at default (a=1.01, b=1.99)."""
+    f = tw()
+    dls_dp = f.dls_dp(_TW_DEV_Y, np.ones(5), scale=1.0)
+    np.testing.assert_allclose(dls_dp * f.dp_dtheta(),
+                               -0.1740833687231026, rtol=1e-9)
+
+
+def test_tw_dls_dp_chain_to_theta_oracle_p17():
+    f = tw()
+    f.set_theta(np.log((1.7 - 1.01) / (1.99 - 1.7)))
+    dls_dp = f.dls_dp(_TW_DEV_Y, np.ones(5), scale=2.0)
+    np.testing.assert_allclose(dls_dp * f.dp_dtheta(),
+                               -0.0302015497694411161, rtol=1e-9)
+
+
+def test_tw_default_theta_zero_gives_p_15():
+    """θ=0 with default (a,b)=(1.01, 1.99) → p = (1.01+1.99)/2 = 1.5."""
+    f = tw()
+    assert f.theta == 0.0
+    assert f.p == pytest.approx(1.50, abs=1e-12)
+    assert f.n_theta == 1
+    np.testing.assert_array_equal(f.get_theta(), np.array([0.0]))
+
+
+def test_tw_set_theta_array_or_scalar():
+    """set_theta accepts both scalar and length-1 array (Family-base contract)."""
+    f = tw()
+    f.set_theta(0.5)
+    p_scalar = f.p
+    f.set_theta(np.array([0.5]))
+    np.testing.assert_allclose(f.p, p_scalar, rtol=1e-13)
+
+
+def test_tw_dp_dtheta_default_a_b():
+    f = tw()
+    np.testing.assert_allclose(f.dp_dtheta(), 0.245, rtol=1e-13)
+    f.set_theta(2.0)
+    s = 1.0 / (1.0 + np.exp(-2.0))
+    np.testing.assert_allclose(f.dp_dtheta(), 0.98 * s * (1.0 - s), rtol=1e-13)
+
+
+def test_tw_invalid_a_b_raises():
+    with pytest.raises(ValueError, match="1 ≤ a < b ≤ 2"):
+        tw(a=2.0, b=1.5)
+    with pytest.raises(ValueError, match="1 ≤ a < b ≤ 2"):
+        tw(a=0.9, b=1.5)
+    with pytest.raises(ValueError, match="1 ≤ a < b ≤ 2"):
+        tw(a=1.5, b=2.5)
